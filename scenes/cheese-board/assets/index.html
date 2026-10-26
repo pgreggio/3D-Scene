@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Artisan Cheese Board — Interactive 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+    :root{--ink:#f4ead6;--muted:#cdbd9f;--gold:#d4ab5f;--panel:rgba(27,20,14,.74);--line:rgba(212,171,95,.30)}
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;background:#16100b;overflow:hidden;font-family:'Jost',sans-serif;color:var(--ink)}
+    #app { position: fixed; inset: 0; }
+    canvas{display:block;touch-action:none}
+    .panel{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);z-index: 10;}
+    #hud{position:fixed;left:26px;top:24px;width:318px;max-width:calc(100vw - 52px);max-height:calc(100vh - 48px);overflow-y:auto;padding:18px 20px 16px;border-radius:14px}
+    #hud .t{display:flex;align-items:center;gap:11px}
+    #hud h1{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:29px;line-height:1;margin:0;letter-spacing:.2px;color:#f7e6c2}
+    #hud p{margin:9px 0 13px;font-size:13px;line-height:1.5;color:var(--muted);font-weight:300}
+    #hud ul{list-style:none;margin:0;padding:11px 0 0;border-top:1px solid var(--line);display:grid;gap:8px}
+    #hud li{display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:400}
+    #hud li i{width:12px;height:12px;border-radius:3px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.28)}
+    #hud li span{color:var(--muted);font-weight:300;margin-left:auto;font-size:12px}
+    #knife{position:fixed;left:26px;bottom:26px;display:flex;align-items:center;gap:10px;padding:10px 16px 10px 13px;border-radius:999px;font-size:13.5px;cursor:pointer;user-select:none;transition:border-color .2s;z-index:10;}
+    #knife:hover{border-color:rgba(212,171,95,.65)}
+    #knife b{font-weight:500;color:#f7e6c2}
+    #knife .c{margin-left:6px;padding-left:11px;border-left:1px solid var(--line);color:var(--gold);font-variant-numeric:tabular-nums}
+    #orbit{position:fixed;right:26px;bottom:26px;font-size:12.5px;color:var(--muted);display:flex;gap:9px;align-items:center;padding:9px 15px;border-radius:999px;font-weight:300;z-index:10;}
+    svg{flex:none}
+    @media (max-width:640px){#hud{left:12px;right:12px;top:12px;width:auto;max-width:none;max-height:calc(100vh - 80px);padding:14px 16px}#hud h1{font-size:24px}#orbit{display:none}#knife{left:12px;bottom:12px}}
+    #loader {
+        position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 14px;
+        background: radial-gradient(circle at 50% 45%, #2a2018, #0e0b08);
+        color: #e8c98a; font-size: 13px; letter-spacing: 0.4px;
+        transition: opacity 0.6s ease, visibility 0.6s ease;
+    }
+    #loader.hidden { opacity: 0; visibility: hidden; }
+    .ring {
+        width: 44px; height: 44px; border-radius: 50%;
+        border: 3px solid rgba(232, 201, 138, 0.18);
+        border-top-color: #e8c98a;
+        animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #toast {
+        position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 20;
+        background: rgba(60, 34, 18, 0.92); color: #ffe9c2;
+        font-size: 12px; padding: 9px 18px; border-radius: 20px;
+        border: 1px solid rgba(232, 180, 110, 0.4);
+        opacity: 0; transition: opacity 0.3s ease; pointer-events: none; text-align: center;
+    }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+<div id="loader">
+    <div class="ring"></div>
+    <div id="loaderText">Setting the table…</div>
+</div>
+<div id="hud" class="panel">
+  <div class="t">
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 22.5 27.5 9.5c.9 2.6 1.4 5.3 1.4 8.1v6.9H3Z" fill="#e8c476"/><path d="M3 22.5 27.5 9.5l-4-2.3L3 22.5Z" fill="#b98a3e"/><circle cx="12" cy="20.6" r="1.6" fill="#b98a3e"/><circle cx="20.5" cy="19" r="2.1" fill="#b98a3e"/><circle cx="24.6" cy="22.6" r="1.1" fill="#b98a3e"/><path d="M3 24.5h25.9" stroke="#8e6a2f" stroke-width="1.2"/></svg>
+    <h1>The Evening Board</h1>
+  </div>
+  <p>Oiled olive wood with four cheeses, walnuts and a glossy bunch of grapes. Take a turn around the board.</p>
+  <ul>
+    <li><i style="background:#e7c77e"></i>Aged wedge<span>hard, crumbly</span></li>
+    <li><i style="background:#f2eee2"></i>Bloomy round<span>soft, white rind</span></li>
+    <li><i style="background:linear-gradient(135deg,#ece2c6 45%,#4e6c70 46% 60%,#ece2c6 61%)"></i>Blue<span>cut veining</span></li>
+    <li><i style="background:#d8d4cb"></i>Goat log<span>ash rind</span></li>
+  </ul>
+</div>
+<div id="knife" class="panel" role="button" tabindex="0">
+  <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.2 14.6 5.6c1.2-1.2 3.4-1.4 4.8-.3L7.9 16.8Z" fill="#d9dde0"/><path d="M7.9 16.8 4.6 20.1c-.7.7-1.9.7-2.6 0s-.7-1.9 0-2.6l1-1" stroke="#8a4a2a" stroke-width="2.6" stroke-linecap="round" fill="none"/><circle cx="4.7" cy="18.4" r=".6" fill="#e2b85a"/></svg>
+  <span id="knifeHint"><b>Click the knife</b> to slice the goat log</span><span class="c" id="count">0 / 2</span>
+</div>
+<div id="orbit" class="panel">
+  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#d4ab5f" stroke-width="1.7" stroke-linecap="round"><path d="M4 12a8 8 0 0 1 13.7-5.6M20 12a8 8 0 0 1-13.7 5.6"/><path d="M18 3v4h-4M6 21v-4h4"/></svg>
+  Drag to walk around · scroll to lean in
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="assets/brie_paste_diff.jpg.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/EXRLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="assets/evening_board_asset.glb.js"></script>
+<script src="assets/hdri/warm_reception_dinner_2k.exr.js"></script>
+<script>
+(function () {
+    var container = document.getElementById('app');
+    var toastEl = document.getElementById('toast');
+    var loaderEl = document.getElementById('loader');
+    var loaderText = document.getElementById('loaderText');
+    var toastTimeout = null;
+    function toast(msg) {
+        toastEl.textContent = msg;
+        toastEl.style.opacity = 1;
+        clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(function () { toastEl.style.opacity = 0; }, 3200);
+    }
+    function setLoader(text) {
+        loaderText.textContent = text;
+    }
+
+    function getResponsiveSettings() {
+        var w = window.innerWidth;
+        if (w <= 640) return { maxDist: 5.5, camPos: [3.0, 3.8, 3.2], boxRad: 5.5, boxY: 6.5 };
+        if (w <= 768) return { maxDist: 4.0, camPos: [2.7, 3.4, 2.9], boxRad: 4.5, boxY: 5.5 };
+        if (w <= 900) return { maxDist: 3.6, camPos: [2.5, 3.1, 2.6], boxRad: 3.6, boxY: 4.6 };
+        if (w <= 1024) return { maxDist: 2.8, camPos: [2.2, 2.7, 2.4], boxRad: 2.8, boxY: 3.8 };
+        if (w <= 1150) return { maxDist: 2.2, camPos: [2.0, 2.5, 2.1], boxRad: 2.2, boxY: 3.2 };
+        return { maxDist: 1.7, camPos: [1.9, 2.35, 2.0], boxRad: 1.5, boxY: 2.5 };
+    }
+
+    var renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.9;
+    container.appendChild(renderer.domElement);
+
+    var scene = new THREE.Scene();
+    var rs = getResponsiveSettings();
+    // HDRI-driven world (the look of the Blender render) — assigned below.
+    var camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.01, 100);
+    camera.position.set(rs.camPos[0], rs.camPos[1], rs.camPos[2]);
+    var controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 0.9, 0.05);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.07;
+    controls.minDistance = 0.45;
+    controls.maxDistance = rs.maxDist;
+    controls.minPolarAngle = THREE.MathUtils.degToRad(18);
+    controls.maxPolarAngle = THREE.MathUtils.degToRad(78);
+    controls.minAzimuthAngle = THREE.MathUtils.degToRad(-5);
+    controls.maxAzimuthAngle = THREE.MathUtils.degToRad(85);
+    controls.enablePan = false;
+
+    // ---------- Warm punctual light that casts soft, realistic shadows ----------
+    var key = new THREE.DirectionalLight(0xffe2b8, 1.4);
+    key.position.set(3.3, 3.0, 1.5);
+    key.castShadow = true;
+    key.shadow.mapSize.set(7680  , 7680  );
+    key.shadow.camera.left = -2; key.shadow.camera.right = 2;
+    key.shadow.camera.top = 2;   key.shadow.camera.bottom = -2;
+    key.shadow.camera.near = 0.5;  key.shadow.camera.far = 10;
+    key.shadow.bias = -0.0004;
+    key.shadow.radius = 0.5;
+    scene.add(key);
+    scene.add(key.target);
+    var rim = new THREE.DirectionalLight(0xb8c8e8, 0.1);
+    rim.position.set(-3, 2.5, -2.5);
+    scene.add(rim);
+    var hemi = new THREE.HemisphereLight(0xffe3c4, 0x241a12, 0.15);
+    scene.add(hemi);
+    // candle glow that hugs the board like the reference render
+    var candleLight = new THREE.PointLight(0xffab6a, 1.15, 10, 2);
+    candleLight.position.set(0.46, 1.05, -0.2);
+    scene.add(candleLight);
+
+    var pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+
+    function onEnvReady(hdriTex) {
+        hdriTex.mapping = THREE.EquirectangularReflectionMapping;
+        scene.background = hdriTex;
+        var envRT = pmremGenerator.fromEquirectangular(hdriTex);
+        scene.environment = envRT.texture;
+        pmremGenerator.dispose();
+    }
+
+    // ---------- Base64 → ArrayBuffer (assets ship as JS globals so the page
+    // opens straight from file:// with no fetch/CORS issues) ----------
+    function b64ToArrayBuffer(b64) {
+        var bin = atob(b64);
+        var len = bin.length;
+        var bytes = new Uint8Array(len);
+        for (var i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+        return bytes.buffer;
+    }
+
+    // ---------- Load HDRI environment (image-based lighting + background) ----------
+    var exrLoader = new THREE.EXRLoader();
+    try {
+        var texData = exrLoader.parse(b64ToArrayBuffer(window.WARM_RECEPTION_HDRI_B64));
+        var hdriTex = new THREE.DataTexture(texData.data, texData.width, texData.height, texData.format, texData.type);
+        hdriTex.encoding = THREE.LinearEncoding;
+        hdriTex.minFilter = THREE.LinearFilter;
+        hdriTex.magFilter = THREE.LinearFilter;
+        hdriTex.generateMipmaps = false;
+        hdriTex.flipY = false;
+        hdriTex.needsUpdate = true;
+        onEnvReady(hdriTex);
+    } catch (err) {
+        toast('Could not load the HDRI environment.');
+    }
+    maybeStart();
+
+    // ---------- Load the extracted Blender model (GLB) ----------
+    var model;
+    var knife, mixer, actions = {};
+    // Create an array to track each goblet/bottle and its dedicated CubeCamera for real-time reflections
+    var mirrorObjects = [];
+    var gltfLoader = new THREE.GLTFLoader();
+    try {
+    gltfLoader.parse(
+        b64ToArrayBuffer(window.EVENING_BOARD_GLB_B64), '',
+        function (gltf) {
+            model = gltf.scene;
+            model.traverse(function (child) {
+                if (child.name.endsWith('_shell')) return;
+                
+                if (child.isMesh) {
+                    child.castShadow = /(Floor|Wall|Skirting)/i.test(child.name) ? false : true;
+                    child.receiveShadow = true;
+                    
+                    if (child.material) {
+                        var materials = Array.isArray(child.material) ? child.material : [child.material];
+                        materials.forEach(function(mat) {
+                            mat.envMapIntensity = 0.4; // default low env map for dark shadows
+                            mat.side = THREE.DoubleSide; // Fix see-through meshes like the candlestick
+                            
+                            // Fix the wine cups: change from dull copper to highly reflective gold
+                            var isGoblet = child.name.toLowerCase().includes('goblet') || (mat.name && mat.name.toLowerCase().includes('goblet'));
+                            child.traverseAncestors(function(a) { if (a.name && a.name.toLowerCase().includes('goblet')) isGoblet = true; });
+                            
+                            if (isGoblet) {
+                                // 1. Restore the base cup material so it keeps its detailed metal look
+                                mat.metalness = 1.0;
+                                mat.roughness = 0.2; // Antique polished brass (slightly soft, not perfect chrome)
+                                mat.envMapIntensity = 1.0; // Normal intensity so it doesn't wash out the dark textures
+                                
+                                // 2. CRITICAL: Remove the baked roughness map so the mirror shine comes through
+                                mat.roughnessMap = null;
+                                mat.metalnessMap = null;
+                                
+                                // 3. Create a dedicated CubeCamera for THIS specific goblet
+                                var cubeRT = new THREE.WebGLCubeRenderTarget(1024, { format: THREE.RGBAFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
+                                var gobletCam = new THREE.CubeCamera(0.05, 0.8, cubeRT);
+                                scene.add(gobletCam);
+                                
+                                // 4. Upgrade to a Physical Material to add the clearcoat!
+                                var physMat = new THREE.MeshPhysicalMaterial({
+                                    map: mat.map,
+                                    normalMap: mat.normalMap,
+                                    aoMap: mat.aoMap,
+                                    side: THREE.DoubleSide
+                                });
+                                if (mat.color) physMat.color.copy(mat.color);
+                                physMat.color.setHex(0xcca033); // Tint the base texture with a rich, darker gold
+                                if (mat.normalScale) physMat.normalScale.copy(mat.normalScale);
+                                
+                                physMat.metalness = 1.0;
+                                physMat.roughness = 0.2; // The base brass mirror
+                                physMat.envMapIntensity = 1.5; // Keep rich colors
+                                
+                                // Add the glossy clearcoat layer!
+                                physMat.clearcoat = 1.0;
+                                physMat.clearcoatRoughness = 0.1; // Extra sharp shine on top
+                                
+                                // Assign the dedicated camera texture
+                                physMat.envMap = cubeRT.texture;
+                                physMat.needsUpdate = true;
+                                child.material = physMat;
+                                
+                                mirrorObjects.push({ mesh: child, camera: gobletCam, offsetY: 0.15 }); // Track this pair
+                            }
+                            
+                            // Apply real-time reflections to the wine bottle (glass & foil), skipping the paper label
+                            var isBottle = false;
+                            child.traverseAncestors(function(a) { if (a.name && a.name.toLowerCase().includes('bottle')) isBottle = true; });
+                            if (child.name.toLowerCase().includes('bottle') || (mat.name && mat.name.toLowerCase().includes('bottle'))) isBottle = true;
+                            if (mat.name && mat.name.toLowerCase().includes('label')) isBottle = false;
+                            
+                            if (isBottle) {
+                                // 1. Create a dedicated CubeCamera for THIS specific bottle part
+                                var cubeRT = new THREE.WebGLCubeRenderTarget(1024, { format: THREE.RGBAFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
+                                var bottleCam = new THREE.CubeCamera(0.15, 1.8, cubeRT);
+                                scene.add(bottleCam);
+                                
+                                // 2. Upgrade to a Physical Material to add the clearcoat
+                                var physMat = new THREE.MeshPhysicalMaterial({
+                                    map: mat.map,
+                                    normalMap: mat.normalMap,
+                                    aoMap: mat.aoMap,
+                                    side: THREE.DoubleSide
+                                });
+                                if (mat.color) physMat.color.copy(mat.color);
+                                if (mat.normalScale) physMat.normalScale.copy(mat.normalScale);
+                                
+                                physMat.metalness = 0.9; // Highly metallic glass/foil
+                                physMat.roughness = 0.1; // Very smooth
+                                physMat.envMapIntensity = 1.5;
+                                
+                                // Add clearcoat to the bottle glass
+                                physMat.clearcoat = 1.0;
+                                physMat.clearcoatRoughness = 0.05;
+                                
+                                // Remove baked roughness maps
+                                physMat.roughnessMap = null;
+                                physMat.metalnessMap = null;
+                                
+                                // Assign the dedicated camera texture
+                                physMat.envMap = cubeRT.texture;
+                                physMat.needsUpdate = true;
+                                child.material = physMat;
+                                
+                                mirrorObjects.push({ mesh: child, camera: bottleCam, offsetY: 0.20 });
+                            }
+
+                            // Fix wine label flickering (Z-fighting) by pushing the label slightly forward in the depth buffer
+                            if (mat.name === 'bottle_label_plain') {
+                                mat.polygonOffset = true;
+                                mat.polygonOffsetFactor = -1;
+                                mat.polygonOffsetUnits = -1;
+                            }
+                        });
+                    }
+                }
+            });
+            scene.add(model);
+            
+            // Generate solid keep-out boxes for collision
+            model.updateMatrixWorld(true);
+            model.traverse(function (child) {
+                if (!child.isMesh || SHELL.test(child.name)) return;
+                var b = new THREE.Box3().setFromObject(child);
+                var s = b.getSize(new THREE.Vector3());
+                var tall = s.y >= 0.05 && Math.max(s.x, s.z) >= 0.05;
+                var broad = s.x >= 0.1 && s.z >= 0.1;
+                if (!tall && !broad) return;
+                keepOuts.push(b.expandByScalar(0.06));
+            });
+            
+            knife = model.getObjectByName('Knife');
+
+            if (gltf.animations && gltf.animations.length) {
+                mixer = new THREE.AnimationMixer(model);
+                // How many seconds of dead/idle time to skip at the start of knife clips
+                var TRIM_START = 6;
+                gltf.animations.forEach(function (clip) {
+                    if (clip.name === 'Candle_FlameAction') {
+                        var action = mixer.clipAction(clip);
+                        action.setLoop(THREE.LoopRepeat);
+                        action.play();
+                    } else {
+                        // Trim idle lead-in from each track so the cut starts immediately
+                        var trimmedTracks = [];
+                        clip.tracks.forEach(function (track) {
+                            var times = [];
+                            var values = [];
+                            var stride = track.getValueSize();
+                            for (var i = 0; i < track.times.length; i++) {
+                                if (track.times[i] >= TRIM_START) {
+                                    times.push(track.times[i] - TRIM_START);
+                                    for (var v = 0; v < stride; v++) {
+                                        values.push(track.values[i * stride + v]);
+                                    }
+                                }
+                            }
+                            if (times.length > 0) {
+                                var TrkCtor = track.constructor;
+                                trimmedTracks.push(new TrkCtor(track.name, new Float32Array(times), new Float32Array(values)));
+                            }
+                        });
+                        var trimmedClip = new THREE.AnimationClip(clip.name, -1, trimmedTracks);
+                        var action = mixer.clipAction(trimmedClip);
+                        action.setLoop(THREE.LoopOnce);
+                        action.clampWhenFinished = true;
+                        actions[clip.name] = action;
+                    }
+                });
+            }
+
+            var flame = model.getObjectByName('Candle_Flame');
+            window.flame = flame; // Expose globally so animate() can update uTime
+            if (flame) {
+                flame.getWorldPosition(candleLight.position);
+                candleLight.position.y += 0.02;
+                
+                // Compute geometry bounds to calculate accurate vertical gradients
+                flame.geometry.computeBoundingBox();
+                var bY = flame.geometry.boundingBox;
+                var flameMinY = bY.min.y;
+                var flameHeight = bY.max.y - bY.min.y;
+
+                // Create a base material with AdditiveBlending for a hot glow
+                flame.material = new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0.9,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    side: THREE.DoubleSide
+                });
+
+                // Inject custom shader logic for realistic colors and wind flutter
+                flame.material.onBeforeCompile = function(shader) {
+                    shader.uniforms.uTime = { value: 0 };
+                    flame.material.userData.shader = shader;
+
+                    shader.vertexShader = `
+                        uniform float uTime;
+                        varying vec3 vPos;
+                    ` + shader.vertexShader.replace(
+                        `#include <begin_vertex>`,
+                        `
+                        #include <begin_vertex>
+                        vPos = position;
+                        float localY = clamp((position.y - (${flameMinY.toFixed(5)})) / (${flameHeight.toFixed(5)}), 0.0, 1.0);
+                        
+                        // Realistic wind flutter: more flutter at the top, none at the wick
+                        float flutter = sin(uTime * 15.0) * sin(uTime * 7.0 + localY * 5.0) * 0.003 * pow(localY, 2.0);
+                        transformed.x += flutter;
+                        transformed.z += flutter * 0.8;
+                        `
+                    );
+
+                    shader.fragmentShader = `
+                        varying vec3 vPos;
+                    ` + shader.fragmentShader.replace(
+                        `vec4 diffuseColor = vec4( diffuse, opacity );`,
+                        `
+                        float localY = clamp((vPos.y - (${flameMinY.toFixed(5)})) / (${flameHeight.toFixed(5)}), 0.0, 1.0);
+                        
+                        vec3 colBase = vec3(0.05, 0.2, 1.0); // Blue base
+                        vec3 colMid  = vec3(1.0, 0.3, 0.0); // Deep Orange
+                        vec3 colCore = vec3(1.0, 0.9, 0.4); // Hot Yellow/White
+                        
+                        vec3 finalCol;
+                        if (localY < 0.15) {
+                            finalCol = mix(colBase, colMid, localY / 0.15); // Fade blue to orange
+                        } else {
+                            finalCol = mix(colMid, colCore, (localY - 0.15) / 0.85); // Fade orange to hot core
+                        }
+                        
+                        // Smooth fade out at the very top and very bottom
+                        float a = 1.0;
+                        if (localY < 0.05) a = smoothstep(0.0, 0.05, localY);
+                        if (localY > 0.6)  a = 1.0 - smoothstep(0.6, 1.0, localY);
+                        
+                        finalCol *= 1.5; // Boost brightness for additive blending
+                        
+                        vec4 diffuseColor = vec4(finalCol, opacity * a);
+                        `
+                    );
+                };
+            }
+            maybeStart();
+        },
+        function () {
+            toast('Could not load the GLB model.');
+            maybeStart();
+        }
+    );
+    } catch (err) {
+        toast('Could not load the GLB model.');
+        maybeStart();
+    }
+
+    var started = false;
+    function maybeStart() {
+        if (started) return;
+        if (scene.background && model) {
+            started = true;
+            loaderEl.classList.add('hidden');
+            window.scene = scene;
+            window.camera = camera;
+            window.controls = controls;
+            window.renderer = renderer;
+            window.key = key;
+            window.candleLight = candleLight;
+            window.hemi = hemi;
+            window.rim = rim;
+            window.model = model;
+            window.__ready = true;
+            animate();
+        }
+    }
+
+    // ---------- Click the knife: it lifts, hovers, settles back ----------
+    var raycaster = new THREE.Raycaster();
+    var pointer = new THREE.Vector2();
+    var liftT = -10;
+    var clock = new THREE.Clock();
+    var t = 0;
+    var hint = document.getElementById('knifeHint');
+
+    function knifeMeshes() {
+        var arr = [];
+        if (knife) knife.traverse(function (c) { if (c.isMesh) arr.push(c); });
+        return arr;
+    }
+    var knifeActive = false;
+    function liftKnife() {
+        if (knifeActive) return;
+        knifeActive = true;
+
+        var countEl = document.getElementById('count');
+        if (countEl && countEl.textContent === '2 / 2') {
+            countEl.textContent = '0 / 2';
+        }
+
+        hint.innerHTML = '<b>Click the knife</b> to slice the goat log';
+        
+        clearTimeout(window._knifeTimeout1);
+        clearTimeout(window._knifeTimeout2);
+        clearTimeout(window._knifeTimeout3);
+        clearTimeout(window._knifeTimeout4);
+        
+        // Timings adjusted to match the trimmed animation (7s of dead time removed)
+        window._knifeTimeout1 = setTimeout(function () {
+            hint.innerHTML = '<b><b>Click the knife</b> to slice the goat log</b>';
+        }, 1000);
+
+        window._knifeTimeout2 = setTimeout(function () {
+            if (countEl) countEl.textContent = '1 / 2';
+        }, 7500);
+
+        window._knifeTimeout3 = setTimeout(function () {
+            if (countEl) countEl.textContent = '2 / 2';
+        }, 20500);
+
+        window._knifeTimeout4 = setTimeout(function () {
+            hint.innerHTML = '<b>Click the knife</b> to slice the goat log';
+            knifeActive = false;
+        }, 24500);
+
+        if (mixer) {
+            Object.values(actions).forEach(function(action) {
+                action.setEffectiveTimeScale(1.0);
+                action.reset().play();
+            });
+        }
+    }
+    renderer.domElement.addEventListener('pointerdown', function (ev) {
+        if (!knife || model == null) return;
+        pointer.x = (ev.clientX / window.innerWidth) * 2 - 1;
+        pointer.y = -(ev.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        var hits = raycaster.intersectObjects(knifeMeshes(), true);
+        if (hits.length > 0) liftKnife();
+    });
+    renderer.domElement.addEventListener('pointermove', function (ev) {
+        if (!knife || model == null) { renderer.domElement.style.cursor = 'grab'; return; }
+        pointer.x = (ev.clientX / window.innerWidth) * 2 - 1;
+        pointer.y = -(ev.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        renderer.domElement.style.cursor =
+            raycaster.intersectObjects(knifeMeshes(), true).length ? 'pointer' : 'grab';
+    });
+    // --- Camera bounds — keep the viewer inside the room ----------------------
+    var camBox = new THREE.Box3(
+        new THREE.Vector3(-rs.boxRad, 0.82, -rs.boxRad), 
+        new THREE.Vector3(rs.boxRad, rs.boxY, rs.boxRad)
+    );
+    var tgtBox = new THREE.Box3(new THREE.Vector3(-0.6, 0.79, -0.6), new THREE.Vector3(0.6, 1.5, 0.6));
+    var keepOuts = [];
+    var SHELL = /^(Floor|Wall|Skirting|Candle)/i;
+
+    function clearFurniture(p) {
+        for (var pass = 0; pass < 2; pass++) {
+            for (var i = 0; i < keepOuts.length; i++) {
+                var b = keepOuts[i];
+                if (p.x < b.min.x || p.x > b.max.x || p.y < b.min.y || p.y > b.max.y ||
+                    p.z < b.min.z || p.z > b.max.z) continue;
+                var west = p.x - b.min.x, east = b.max.x - p.x;
+                var south = p.z - b.min.z, north = b.max.z - p.z;
+                var sky = b.max.y - p.y;
+                var flat = Math.min(west, east, south, north);
+                if (sky <= flat) { p.y = b.max.y; continue; }
+                if (flat === west) p.x = b.min.x;
+                else if (flat === east) p.x = b.max.x;
+                else if (flat === south) p.z = b.min.z;
+                else p.z = b.max.z;
+            }
+        }
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        var dt = Math.min(clock.getDelta(), 0.05);
+        t += dt;
+        if (mixer) mixer.update(dt);
+        // gentle candlelight flicker for warmth
+        candleLight.intensity = 1.15 + Math.sin(t * 2.6) * 0.06 + Math.sin(t * 5.1) * 0.03;
+        
+        // Pass the elapsed time to the custom flame shader for wind flutter
+        if (window.flame && window.flame.material.userData.shader) {
+            window.flame.material.userData.shader.uniforms.uTime.value = t;
+        }
+        
+        // Update real-time mirror reflections for each object from its own unique position
+        if (mirrorObjects.length > 0) {
+            mirrorObjects.forEach(function(g) {
+                // Position this specific camera in the center of this specific object
+                g.mesh.getWorldPosition(g.camera.position);
+                g.camera.position.y += g.offsetY;
+                
+                // Hide ONLY this object, so it doesn't block its own camera, but CAN reflect the others!
+                g.mesh.visible = false;
+                g.camera.update(renderer, scene);
+                g.mesh.visible = true;
+            });
+        }
+        
+        controls.update();
+        
+        // however hard the viewer drags, they stay inside the room
+        camera.position.clamp(camBox.min, camBox.max);
+        controls.target.clamp(tgtBox.min, tgtBox.max);
+        
+        // and out of anything solid they have pushed the camera into
+        clearFurniture(camera.position);
+        
+        renderer.render(scene, camera);
+    }
+
+    if (!started) {
+        // If nothing loaded within 12s, reveal whatever we have so the page never stays blank
+        window.setTimeout(function () {
+            loaderEl.classList.add('hidden');
+        }, 12000);
+    }
+
+    window.addEventListener('resize', function () {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        
+        var rs = getResponsiveSettings();
+        if (window.controls) {
+            window.controls.maxDistance = rs.maxDist;
+        }
+        camBox.min.set(-rs.boxRad, 0.82, -rs.boxRad);
+        camBox.max.set(rs.boxRad, rs.boxY, rs.boxRad);
+    });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Revelo - 3D Scenes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+<style>
+:root{
+  --bg:#000000; --panel:#0B0B0B; --raise:#161616; --line:#2A2A2A;
+  --text:#DDDDDD; --dim:#8A8A8A; --amber:#B0B0B0;
+  --pass:#43A16F; --fail:#D14C4E; --none:#4A4A4A;
+  --ui:'Archivo','Helvetica Neue',Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--ui);font-size:14px;line-height:1.5;
+     overflow:hidden;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+.shell{display:grid;grid-template-rows:auto 1fr;height:100%}
+.bar{display:flex;align-items:center;gap:20px;padding:0 18px;height:52px;
+     border-bottom:1px solid var(--line);background:var(--panel)}
+.mark{font-weight:700;letter-spacing:-.015em;font-size:15px}
+.mark span{color:var(--amber)}
+.sub{color:var(--dim);font-size:12.5px}
+.btn{border:1px solid var(--line);border-radius:5px;padding:6px 11px;font-size:12.5px;
+     font-weight:500;background:var(--raise)}
+.btn:hover{border-color:var(--dim)}
+.btn.hero{border-color:var(--amber);color:var(--amber)}
+.btn.hero:hover{background:var(--amber);color:#000}
+
+.cols{display:grid;grid-template-columns:190px minmax(0,1fr);height:100%;min-height:0}
+.col{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.col.mid{border-left:1px solid var(--line)}
+
+/* nav */
+.nav{padding:12px 0}
+.nav-h{padding:4px 16px 8px;font-size:11px;font-weight:600;color:var(--dim);letter-spacing:.03em}
+.game{display:block;width:100%;text-align:left;padding:11px 16px;border-left:3px solid transparent}
+.game:hover{background:var(--panel)}
+.game.sel{background:var(--panel);border-left-color:var(--amber)}
+.game-t{font-weight:600;font-size:14px;letter-spacing:-.01em}
+.game-m{margin-top:2px;color:var(--dim);font-size:11.5px;font-variant-numeric:tabular-nums}
+
+/* prompt */
+.prompt-box{padding:16px 24px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+.ptitle{font-size:19px;font-weight:700;letter-spacing:-.02em;margin:0 0 8px}
+.ptext{border-left:2px solid var(--amber);padding:2px 0 2px 12px;margin:0 0 9px;max-width:84ch;
+       max-height:62px;overflow:auto;white-space:pre-wrap;font-size:13.5px;color:#C4C4C4}
+.ptext.open{max-height:none}
+.pmeta{display:flex;gap:14px;color:var(--dim);font-size:12px;align-items:center;flex-wrap:wrap}
+.more{color:var(--amber);font-size:12px;font-weight:500;text-decoration:underline}
+.src{color:var(--dim);font-size:12px}
+.src b{color:var(--text);font-weight:600}
+
+/* tabs */
+.tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--line);background:var(--bg);
+      position:sticky;top:0;z-index:6}
+.tab{padding:13px 18px;border-right:1px solid var(--line);border-bottom:2px solid transparent;text-align:left;min-width:170px}
+.tab:hover{background:var(--panel)}
+.tab.sel{border-bottom-color:var(--amber);background:var(--panel)}
+.tab-n{font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px}
+.tab-k{font-size:10.5px;font-weight:500;color:var(--dim);font-family:var(--mono);margin-left:auto}
+.frame-tools{margin-left:auto;display:flex;align-items:center;gap:8px;padding:0 16px}
+.stage{padding:16px 24px;background:var(--bg)}
+.holder{height:clamp(520px,72vh,900px);background:#000;border:1px solid var(--line);
+        border-radius:6px;overflow:hidden;position:relative}
+.holder iframe,.holder model-viewer{width:100%;height:100%;border:0;display:block}
+.holder model-viewer{background:#000;--poster-color:transparent}
+.holder:fullscreen{border:0;border-radius:0}
+.empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+       gap:8px;color:var(--dim);font-size:13px;text-align:center;padding:24px}
+.empty b{color:var(--text);font-size:14px}
+.empty code{font-family:var(--mono);font-size:12.5px;background:var(--raise);padding:1px 5px;border-radius:3px;color:var(--text)}
+
+.s-hi{color:var(--pass)} .s-mid{color:var(--amber)} .s-lo{color:var(--fail)}
+
+/* rubric table */
+.sheet{padding:6px 24px 60px}
+.sheet-h{display:flex;align-items:baseline;gap:12px;margin:0 0 3px}
+.sheet-h h2{margin:0;font-size:15px;font-weight:700;letter-spacing:-.015em}
+.sheet-h span{color:var(--dim);font-size:12px}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+thead th{position:sticky;top:41px;z-index:5;background:var(--bg);
+         padding:9px 10px;text-align:center;font-size:12px;font-weight:600;
+         border-bottom:1px solid var(--line)}
+thead th:first-child{text-align:left;padding-left:0}
+.col-c{width:118px}
+tbody tr:hover td{background:var(--panel)}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;font-size:13px}
+td.crit{padding-left:0;max-width:0;color:#C4C4C4}
+td.crit strong{color:#fff;font-weight:600}
+td.m{text-align:center;font-size:15px;font-weight:700;width:118px}
+.y{color:var(--pass)} .n{color:var(--fail)} .u{color:var(--none)}
+tr.tier td{background:var(--raise);border-bottom:1px solid var(--line);
+           padding:7px 10px;font-size:11.5px;font-weight:600;color:var(--amber);letter-spacing:.02em}
+tr.tier td:first-child{padding-left:0}
+td.v{text-align:center;font-family:var(--mono);font-size:13.5px;font-variant-numeric:tabular-nums}
+td.m.num{font-family:var(--mono);font-size:13.5px;font-weight:500;color:var(--text)}
+th.col-c.on,td.m.on,td.v.on{background:var(--panel)}
+tbody tr:hover td.on{background:var(--raise)}
+tr.avg td{font-weight:600}
+tr.avg td.crit{color:var(--text)}
+.gap td{border-bottom:0;height:22px;padding:0}
+.legend{margin-top:14px;color:var(--dim);font-size:11.5px}
+.legend b{color:var(--text);font-weight:600}
+.extra{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);
+        display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.extra span{color:var(--dim);font-size:12px}
+.extra code{font-family:var(--mono);font-size:12px;color:var(--text)}
+
+/* modal */
+.back{position:fixed;inset:0;background:rgba(0,0,0,.86);display:none;align-items:center;
+      justify-content:center;padding:34px 24px;z-index:50}
+.back.open{display:flex}
+.modal{background:var(--bg);border:1px solid var(--line);border-radius:9px;width:min(820px,100%);
+       max-height:100%;display:flex;flex-direction:column;overflow:hidden}
+.modal header{display:flex;align-items:center;gap:12px;padding:14px 20px;
+              border-bottom:1px solid var(--line);background:var(--panel)}
+.modal header h2{margin:0;font-size:15px;font-weight:700;letter-spacing:-.015em}
+.modal header .x{margin-left:auto;font-size:21px;color:var(--dim);line-height:1;padding:0 4px}
+.modal header .x:hover{color:var(--text)}
+.doc{padding:22px 30px 40px;overflow-y:auto;font-size:14px}
+.doc h1{font-size:20px;margin:0 0 14px;letter-spacing:-.02em}
+.doc h2{font-size:16px;margin:26px 0 8px;letter-spacing:-.015em;color:var(--amber)}
+.doc h3{font-size:14px;margin:20px 0 6px}
+.doc p{margin:0 0 11px;color:#C4C4C4;max-width:72ch}
+.doc ul,.doc ol{margin:0 0 12px;padding-left:20px;color:#C4C4C4;max-width:72ch}
+.doc li{margin:0 0 5px}
+.doc strong{color:#fff;font-weight:600}
+.doc hr{border:0;border-top:1px solid var(--line);margin:22px 0}
+.doc blockquote{margin:0 0 12px;padding:9px 14px;border-left:2px solid var(--amber);
+                background:var(--panel);border-radius:0 5px 5px 0;color:#C4C4C4;white-space:pre-wrap}
+.doc code{font-family:var(--mono);font-size:12.5px;background:var(--raise);padding:1px 5px;border-radius:3px}
+@media (max-width:900px){.cols{grid-template-columns:150px minmax(0,1fr)} .col-c,td.m{width:84px} .tab{min-width:140px}}
+@media (max-width:600px){
+  body{overflow:auto} .shell{height:auto}
+  .cols{grid-template-columns:1fr} .col{overflow:visible}
+  .col.mid{border-left:0;border-top:1px solid var(--line)}
+  .nav{display:flex;overflow-x:auto;padding:0} .nav-h{display:none}
+  .game{width:auto;flex:0 0 auto;border-left:0;border-bottom:3px solid transparent}
+  .game.sel{border-bottom-color:var(--amber)}
+  .tabs{flex-wrap:wrap} .tab{min-width:0;flex:1} .frame-tools{padding:8px 16px;width:100%}
+  .prompt-box,.stage,.sheet{padding-left:16px;padding-right:16px}
+  .holder{height:60vh}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="bar">
+    <div class="mark">Revelo <span>- 3D Scenes</span></div>
+  </header>
+  <div class="cols">
+    <nav class="col"><div class="nav" id="nav"></div></nav>
+    <main class="col mid">
+      <div class="prompt-box" id="prompt"></div>
+      <div class="tabs" id="tabs"></div>
+      <div class="stage"><div class="holder" id="holder"></div></div>
+      <div class="sheet" id="sheet"></div>
+    </main>
+  </div>
+</div>
+
+<div class="back" id="back"><div class="modal">
+  <header><h2 id="modal-title"></h2><button class="x" id="modal-x" title="Close">×</button></header>
+  <div class="doc" id="modal-doc"></div>
+</div></div>
+
+<script src="scenes.js"></script>
+<script>
+const DATA  = window.SCENES || [];
+const state = { game:0, col:0 };
+
+const esc   = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const plain = s => esc(String(s ?? '').replace(/\*\*/g,''));
+const band  = r => r >= 1 ? 'hi' : r >= .5 ? 'mid' : 'lo';
+const cur   = () => DATA[state.game]?.versions?.[state.col];
+
+/* ---------- scores, computed from marks ----------
+   Questions with `rating: true` take a 1–5 number; every other question is a
+   pass/fail check. null (or a missing mark) means "not scored yet". */
+function score(g, v){
+  const qs = g.questions || [], marks = v.marks || [];
+  const out = { passed:0, total:0, scored:false, tiers:{}, ratings:[] };
+  qs.forEach((q,i) => {
+    const m = marks[i];
+    if (m !== null && m !== undefined) out.scored = true;
+    if (q.rating){ if (typeof m === 'number') out.ratings.push(m); return; }
+    const t = out.tiers[q.tier] ||= [0,0];
+    t[1]++; out.total++;
+    if (m === true){ t[0]++; out.passed++; }
+  });
+  out.avg = out.ratings.length ? out.ratings.reduce((a,b) => a+b, 0) / out.ratings.length : null;
+  return out;
+}
+const scoreText = s => s.scored ? s.passed + '/' + s.total : '—';
+function cell(q, m){
+  if (q.rating) return typeof m === 'number' ? { v:String(m), k:'num' } : { v:'–', k:'u' };
+  return m === true ? { v:'✓', k:'y' } : m === false ? { v:'✗', k:'n' } : { v:'–', k:'u' };
+}
+
+function drawNav(){
+  const nav = document.getElementById('nav');
+  nav.innerHTML = '<div class="nav-h">Scenes</div>' + DATA.map((g,i) =>
+    `<button class="game ${i===state.game?'sel':''}" data-i="${i}">
+       <div class="game-t">${esc(g.nav || g.title)}</div>
+       <div class="game-m">${(g.versions||[]).map(v => scoreText(score(g,v))).join(' → ')}</div>
+     </button>`).join('');
+  nav.querySelectorAll('.game').forEach(b =>
+    b.onclick = () => { state.game = +b.dataset.i; state.col = 0; drawAll(); });
+}
+
+function drawMid(){
+  const g = DATA[state.game];
+  if (!g){
+    document.getElementById('prompt').innerHTML = '<h1 class="ptitle">No scenes yet</h1>';
+    document.getElementById('tabs').innerHTML = '';
+    loadScene();
+    return;
+  }
+
+  document.getElementById('prompt').innerHTML = `
+    <h1 class="ptitle">${esc(g.title)}</h1>
+    ${g.description ? `<div class="ptext" id="ptext">${esc(g.description)}</div>` : ''}
+    <div class="pmeta">
+      ${g.category ? `<span>${esc(g.category)}</span>` : ''}
+      ${g.description ? '<button class="more" id="expand">Full description</button>' : ''}
+      ${g.source ? `<span class="src">Source: <b>${esc(g.source)}</b></span>` : ''}
+    </div>`;
+  const ex = document.getElementById('expand');
+  if (ex) ex.onclick = e => {
+    const p = document.getElementById('ptext'); p.classList.toggle('open');
+    e.target.textContent = p.classList.contains('open') ? 'Collapse' : 'Full description';
+  };
+
+  const vs = g.versions || [];
+  document.getElementById('tabs').innerHTML =
+    vs.map((v,i) => {
+      const s   = score(g,v);
+      const cls = s.scored && s.total ? 's-' + band(s.passed / s.total) : 'u';
+      return `<button class="tab ${state.col===i?'sel':''}" data-k="${i}">
+        <div class="tab-n">${esc(v.label)}<span class="${cls}">${scoreText(s)}</span>
+          <span class="tab-k">${!v.file ? 'empty' : v.type === 'model' ? '3D model' : 'HTML'}</span></div>
+      </button>`;
+    }).join('') +
+    `<div class="frame-tools">
+       ${cur()?.notes ? '<button class="btn" id="notes">Notes</button>' : ''}
+       <button class="btn" id="reload">Restart</button>
+       <button class="btn hero" id="full">Open full screen</button></div>`;
+
+  document.getElementById('tabs').querySelectorAll('.tab').forEach(b =>
+    b.onclick = () => { state.col = +b.dataset.k; drawAll(); });
+  document.getElementById('reload').onclick = loadScene;
+  document.getElementById('full').onclick = openFull;
+  const notes = document.getElementById('notes');
+  if (notes) notes.onclick = openNotes;
+
+  loadScene();
+}
+
+/* ---------- stage ---------- */
+function emptyStage(msg){
+  document.getElementById('holder').innerHTML = `<div class="empty">${msg}</div>`;
+}
+
+let loadToken = 0;                                    // ignore errors from a scene we already left
+function loadScene(){
+  const holder = document.getElementById('holder');
+  const v = cur(), token = ++loadToken;
+  if (!v || !v.file){
+    emptyStage(`<b>No scene here yet</b>
+      <span>Drop your file into <code>scenes/</code> and register it in <code>scenes.js</code>.</span>`);
+    return;
+  }
+  holder.innerHTML = '';
+
+  if (v.type === 'model'){
+    const mv = document.createElement('model-viewer');  // fresh node = clean restart
+    mv.setAttribute('src', v.file);
+    mv.setAttribute('alt', v.label || 'Model');
+    mv.setAttribute('camera-controls', '');
+    mv.setAttribute('touch-action', 'pan-y');
+    mv.setAttribute('shadow-intensity', '1');
+    if (v.autoRotate !== false) mv.setAttribute('auto-rotate', '');
+    if (v.environment) mv.setAttribute('environment-image', v.environment);
+    if (v.skybox) mv.setAttribute('skybox-image', v.skybox);
+    if (v.poster) mv.setAttribute('poster', v.poster);
+    mv.addEventListener('error', () => {
+      if (token === loadToken) emptyStage(`<b>Couldn't load ${esc(v.file)}</b>
+        <span>Check the path, and serve this folder over http (models can't load from <code>file://</code>).</span>`);
+    });
+    holder.appendChild(mv);
+    return;
+  }
+
+  const f = document.createElement('iframe');          // fresh node = clean restart
+  f.title = v.label || 'Scene';
+  // Scenes are multi-file projects (glb, hdr, textures by relative path), so they load by URL
+  // and keep their origin; inlining them as srcdoc would block those asset requests.
+  f.setAttribute('sandbox','allow-scripts allow-same-origin allow-pointer-lock allow-modals allow-forms');
+  f.setAttribute('allow','fullscreen; xr-spatial-tracking; gamepad');
+  f.src = v.file;
+  holder.appendChild(f);
+}
+
+function openFull(){
+  const v = cur();
+  if (!v || !v.file) return;
+  if (v.type === 'model'){
+    const h = document.getElementById('holder');
+    (h.requestFullscreen || h.webkitRequestFullscreen)?.call(h);
+    return;
+  }
+  const w = window.open(v.file, '_blank');
+  if (!w) alert('Your browser blocked the new tab. Allow pop-ups for this page and try again.');
+}
+
+/* ---------- notes modal ---------- */
+function md(src){
+  const inline = s => esc(s)
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/(^|[\s(])\*([^*]+)\*/g,'$1<em>$2</em>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>');
+  const out = []; let list = null, quote = [];
+  const closeList  = () => { if (list){ out.push(`</${list}>`); list = null; } };
+  const closeQuote = () => { if (quote.length){ out.push(`<blockquote>${inline(quote.join('\n'))}</blockquote>`); quote = []; } };
+  src.replace(/\r/g,'').split('\n').forEach(line => {
+    const q = /^>\s?(.*)/.exec(line);
+    if (q){ closeList(); quote.push(q[1]); return; }
+    closeQuote();
+    if (/^---+\s*$/.test(line)){ closeList(); out.push('<hr>'); return; }
+    const h = /^(#{1,4})\s+(.*)/.exec(line);
+    if (h){ closeList(); out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`); return; }
+    const ol = /^\s*\d+\.\s+(.*)/.exec(line), ul = /^\s*[-*]\s+(.*)/.exec(line);
+    if (ol || ul){
+      const want = ol ? 'ol' : 'ul';
+      if (list !== want){ closeList(); out.push(`<${want}>`); list = want; }
+      out.push(`<li>${inline((ol || ul)[1])}</li>`); return;
+    }
+    if (!line.trim()){ closeList(); return; }
+    if (list) out.push(`<li>${inline(line.trim())}</li>`);
+    else out.push(`<p>${inline(line)}</p>`);
+  });
+  closeList(); closeQuote();
+  return out.join('\n');
+}
+function openNotes(){
+  const v = cur();
+  if (!v?.notes) return;
+  document.getElementById('modal-title').textContent =
+    DATA[state.game].title + ' — ' + v.label + ' notes';
+  const doc = document.getElementById('modal-doc');
+  doc.innerHTML = md(v.notes);
+  doc.scrollTop = 0;
+  document.getElementById('back').classList.add('open');
+}
+const closeNotes = () => document.getElementById('back').classList.remove('open');
+document.getElementById('modal-x').onclick = closeNotes;
+document.getElementById('back').onclick = e => { if (e.target.id === 'back') closeNotes(); };
+
+/* ---------- rubric table ---------- */
+function drawSheet(){
+  const sheet = document.getElementById('sheet');
+  const g = DATA[state.game];
+  if (!g || !(g.versions||[]).length){ sheet.innerHTML = ''; return; }
+  if (!(g.questions||[]).length){ sheet.innerHTML = trajectoryBar(); bindTrajectory(); return; }
+  const vs = g.versions, n = vs.length, scores = vs.map(v => score(g,v));
+
+  let h = `<div class="sheet-h"><h2>Rubric and scores</h2>
+    <span>${g.questions.length} questions · same rubric for every version</span></div>
+    <table><thead><tr><th>Criterion</th>
+      ${vs.map((v,i) => `<th class="col-c ${state.col===i?'on':''}">${esc(v.label)}</th>`).join('')}
+    </tr></thead><tbody>`;
+
+  let tier = null;
+  g.questions.forEach((q,r) => {
+    if (q.tier !== tier){
+      tier = q.tier;
+      h += `<tr class="tier"><td colspan="${n+1}">${esc(tier)}</td></tr>`;
+    }
+    h += `<tr><td class="crit">${plain(q.q)}${q.rating ? ' (1–5)' : ''}</td>` +
+         vs.map((v,i) => { const c = cell(q, (v.marks||[])[r]);
+           return `<td class="m ${c.k} ${state.col===i?'on':''}">${esc(c.v)}</td>`; }).join('') +
+         `</tr>`;
+  });
+
+  // the roll-up, in the same table so the columns stay aligned
+  const rowOf = (label, get, avg) =>
+    `<tr class="${avg?'avg':''}"><td class="crit">${esc(label)}</td>` +
+    scores.map((s,i) => `<td class="v ${state.col===i?'on':''}">${esc(get(s))}</td>`).join('') + `</tr>`;
+
+  h += `<tr class="gap"><td colspan="${n+1}"></td></tr>
+        <tr class="tier"><td colspan="${n+1}">Score</td></tr>`;
+  [...new Set(g.questions.filter(q => !q.rating).map(q => q.tier))].forEach(t =>
+    h += rowOf(t.split('—')[0].trim() + ' checks',
+               s => s.scored && s.tiers[t] ? s.tiers[t][0] + '/' + s.tiers[t][1] : '—'));
+  h += rowOf('Checks passed', scoreText, true);
+  if (g.questions.some(q => q.rating))
+    h += rowOf('Rating average (1–5)', s => s.avg === null ? '—' : s.avg.toFixed(2), true);
+
+  h += `</tbody></table>
+    <div class="legend"><b>✓</b> passed &nbsp; <b>✗</b> failed &nbsp;
+      <b>1–5</b> rated &nbsp; <b>–</b> not scored</div>`;
+  sheet.innerHTML = h + trajectoryBar();
+  bindTrajectory();
+}
+
+/* ---------- trajectory download ----------
+   A version's own `trajectory` wins; otherwise the scene-level one is used. */
+const trajectoryOf = () => cur()?.trajectory || DATA[state.game]?.trajectory || null;
+const fileName = p => decodeURIComponent(String(p).split(/[?#]/)[0].split('/').pop()) || 'trajectory';
+function trajectoryBar(){
+  const t = trajectoryOf();
+  return `<div class="extra">
+    <button class="btn hero" id="traj" ${t ? '' : 'disabled style="opacity:.4;cursor:not-allowed"'}>Download trajectory</button>
+    <span>${t ? `${esc(cur()?.label || '')} · <code>${esc(fileName(t))}</code>`
+                : 'No trajectory registered for this version — add <code>trajectory</code> in scenes.js'}</span>
+  </div>`;
+}
+function bindTrajectory(){
+  const b = document.getElementById('traj');
+  if (b && trajectoryOf()) b.onclick = downloadTrajectory;
+}
+async function downloadTrajectory(){
+  const t = trajectoryOf();
+  if (!t) return;
+  const a = document.createElement('a');
+  a.download = fileName(t);
+  try {
+    // Fetching first makes cross-origin files download instead of opening in the tab.
+    const res = await fetch(t);
+    if (!res.ok) throw new Error(res.status);
+    a.href = URL.createObjectURL(await res.blob());
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  } catch(e) {
+    a.href = t;                                          // file:// or blocked fetch: let the browser handle it
+  }
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+function drawAll(){ drawNav(); drawMid(); drawSheet(); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape'){ closeNotes(); return; }
+  if (document.getElementById('back').classList.contains('open')) return;
+  if (/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  const g = DATA[state.game];
+  if (!g) return;
+  if (e.key >= '1' && e.key <= '9' && g.versions?.[+e.key-1]) state.col = +e.key-1;
+  else if (e.key === 'ArrowDown' && state.game < DATA.length-1){ state.game++; state.col = 0; }
+  else if (e.key === 'ArrowUp'   && state.game > 0)            { state.game--; state.col = 0; }
+  else if (e.key.toLowerCase() === 'r'){ loadScene(); e.preventDefault(); return; }
+  else if (e.key.toLowerCase() === 'f'){ openFull();  e.preventDefault(); return; }
+  else return;
+  drawAll(); e.preventDefault();
+});
+
+drawAll();
+</script>
+</body>
+</html>

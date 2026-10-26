@@ -1,0 +1,2114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>The Old Oak — Treehouse Builder</title>
+<style>
+    /* The primitive's panels: its dark green glass is the dark scheme; the light scheme is the same glass in daylight. */
+    :root {
+        --panel-bg: rgba(242, 248, 233, 0.84);
+        --panel-edge: rgba(98, 130, 62, 0.30);
+        --panel-shadow: 0 6px 24px rgba(30, 45, 20, 0.22);
+        --ink: #22301a;
+        --title: #4a7228;
+        --button-bg: #5b7a30;
+        --button-hover: #6a8c3a;
+        --button-ink: #ffffff;
+        --hint-bg: rgba(242, 248, 233, 0.78);
+        --hint-edge: rgba(98, 130, 62, 0.25);
+        --hint-ink: #2c3a22;
+        --bar-track: rgba(98, 130, 62, 0.22);
+        --page: #a9c3d6;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --panel-bg: rgba(24, 34, 18, 0.75);
+            --panel-edge: rgba(180, 220, 140, 0.28);
+            --panel-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+            --ink: #eef6e2;
+            --title: #b8e986;
+            --button-bg: #7a9a4a;
+            --button-hover: #8fb45a;
+            --button-ink: #ffffff;
+            --hint-bg: rgba(24, 34, 18, 0.6);
+            --hint-edge: rgba(180, 220, 140, 0.2);
+            --hint-ink: rgba(240, 250, 225, 0.9);
+            --bar-track: rgba(180, 220, 140, 0.2);
+            --page: #32404a;
+        }
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif; background: var(--page); }
+    #app { position: fixed; inset: 0; touch-action: none; }
+    canvas { display: block; outline: none; }
+    .panel {
+        background: var(--panel-bg); color: var(--ink);
+        border: 1px solid var(--panel-edge); box-shadow: var(--panel-shadow);
+        -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    }
+    #hud {
+        position: fixed; z-index: 10;
+        top: max(16px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left));
+        max-width: min(265px, calc(100vw - 32px)); padding: 13px 17px; border-radius: 12px;
+    }
+    #hud h1 { font-size: 15px; letter-spacing: 0.5px; margin-bottom: 4px; color: var(--title); }
+    #hud p { font-size: 11px; opacity: 0.9; line-height: 1.6; }
+    #resetBtn {
+        margin-top: 9px; width: 100%; padding: 7px 10px; font-size: 12px; font-weight: 600; font-family: inherit;
+        border: none; border-radius: 8px; cursor: pointer;
+        background: var(--button-bg); color: var(--button-ink); transition: background 0.2s, opacity 0.2s;
+    }
+    #resetBtn:hover { background: var(--button-hover); }
+    #resetBtn:focus-visible { outline: 2px solid var(--title); outline-offset: 2px; }
+    #resetBtn:disabled { opacity: 0.55; cursor: default; }
+    #resetBtn:disabled:hover { background: var(--button-bg); }
+    #hint {
+        position: fixed; z-index: 10; left: 50%; transform: translateX(-50%);
+        bottom: max(14px, env(safe-area-inset-bottom));
+        color: var(--hint-ink); font-size: 11px; letter-spacing: 0.5px;
+        background: var(--hint-bg); padding: 6px 14px; border-radius: 20px;
+        white-space: nowrap; border: 1px solid var(--hint-edge);
+        -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    }
+    #hint .touch { display: none; }
+    @media (pointer: coarse) { #hint .mouse { display: none; } #hint .touch { display: inline; } }
+    #loading {
+        position: fixed; z-index: 20; left: 50%; top: 50%; transform: translate(-50%, -50%);
+        width: min(280px, calc(100vw - 40px)); padding: 14px 17px; border-radius: 12px; text-align: center;
+        transition: opacity 0.6s ease;
+    }
+    #loading p { font-size: 12px; margin-bottom: 9px; }
+    #loading .track { height: 5px; border-radius: 3px; background: var(--bar-track); overflow: hidden; }
+    #loading .fill { height: 100%; width: 0%; border-radius: 3px; background: var(--button-bg); transition: width 0.25s ease; }
+    #loading.done { opacity: 0; pointer-events: none; }
+    #toast {
+        position: fixed; z-index: 30; left: 50%; bottom: 60px; transform: translate(-50%, 12px);
+        max-width: min(400px, calc(100vw - 32px)); padding: 9px 15px; border-radius: 12px;
+        font-size: 12px; line-height: 1.45; opacity: 0; pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    #toast.show { opacity: 1; transform: translate(-50%, 0); }
+    @media (max-width: 600px) {
+        #hud { max-width: min(240px, calc(100vw - 32px)); padding: 11px 14px; }
+        #hint { width: max-content; max-width: calc(100vw - 20px); white-space: normal; text-align: center; border-radius: 16px; }
+    }
+    @media (max-height: 520px) {
+        #hud p { display: none; }
+        #resetBtn { margin-top: 6px; }
+    }
+</style>
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+}
+</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="hud" class="panel">
+    <h1>The Old Oak</h1>
+    <p><b>Drag to rotate</b> the view. Grab any platform and pull it <b>up or down</b> along the trunk — the bridge and ladders follow, and your layout is still here when you come back.</p>
+    <button id="resetBtn" type="button" disabled>Reset platform heights</button>
+</div>
+<div id="hint"><span class="mouse">Drag to rotate &nbsp;•&nbsp; Scroll to zoom &nbsp;•&nbsp; Drag platforms vertically</span><span class="touch">Drag to rotate &nbsp;•&nbsp; Pinch to zoom &nbsp;•&nbsp; Drag platforms vertically</span></div>
+<div id="loading" class="panel" role="status" aria-live="polite"><p>Growing the old oak…</p><div class="track"><div class="fill"></div></div></div>
+<div id="toast" class="panel" role="status" aria-live="polite"></div>
+<script type="module">
+
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { RectAreaLightTexturesLib } from 'three/addons/lights/RectAreaLightTexturesLib.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+// ---------------------------------------------------------------------------------------------------------
+// Settings. The numbers come from the designer's ots03_casa_na_arvore_asset.blend (Blender 5.1, EEVEE), converted to
+// three.js axes: three (x, y, z) = Blender (x, z, -y).
+// ---------------------------------------------------------------------------------------------------------
+const PACKAGE = {
+    scene: 'ots03_casa_na_arvore_asset.glb',                                    // the .blend's meshes, Draco
+    trunk: 'meshy/Meshy_AI_Bare_Tree_Trunk_1001065119_texture.glb',             // Meshy trunk as decimated in the .blend
+    cabin: 'meshy/Meshy_AI_Mossy_Roof_Cottage_1001065040_texture.glb',          // Meshy cottage as decimated in the .blend
+    sky: 'hdri/kloofendal_48d_partly_cloudy_puresky_4k.hdr',                    // the world texture as linear radiance
+    textureDir: 'textures/',
+    dracoPath: 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'
+};
+
+// The delivery camera CAM_ENTREGA: 23.6 m from (0, 5.80, 0) at azimuth 290 and 8 degrees up, 40 degree vertical lens.
+// The video holds this view for two seconds before its fly-round starts.
+const VIEW = {
+    eye: [7.9931, 9.0857, 21.9609],
+    target: [0, 5.8013, 0],
+    fov: 40,
+    near: 0.3,
+    far: 600,
+    designAspect: 16 / 9,
+    minDistance: 9,           // from here the lens is still 1.6 m off the canopy and 5 m off the cabin and the decks
+    maxDistance: 44,          // the far hills still close the view behind the tree
+    minPolarAngle: 0.18,
+    maxPolarAngle: 1.47,      // the eye stays at least 0.9 m above the hills at full zoom-out
+    rotateSpeed: 0.6,
+    zoomSpeed: 0.8,
+    damping: 0.08
+};
+
+// Light, as the .blend's EEVEE render makes it. SOL is the sun lamp (strength 4.2, 38 degrees up from the
+// east-north-east, 1 degree wide). The world is the Poly Haven sky, rotated 130.5 degrees, at strength 1.1 for lighting
+// and 1.15 where the camera sees it. Its own sun (75,000 at the core, 47.9 degrees up from the west-south-west) is over
+// the world's sun threshold of 10,000, so EEVEE lifts the excess out as a second sun lamp with a sharp shadow: skySun.
+// The rest of the sky lights diffusely as first-order harmonics: irradiance = ambient + lean . normal. EEVEE resamples
+// the sky before it sums, so skySun and the harmonics are the numbers a white sphere rendered with the .blend returns.
+// Reflections read the sky clipped at 10 (the scene's Clamp Surface Indirect) up to roughness 0.5 and the harmonics
+// along the lobe's main direction from roughness 0.7, as EEVEE's ray tracing with Fast GI does.
+const DAYLIGHT = {
+    sol: { color: [1.0, 0.95, 0.87], strength: 4.2, towards: [0.7612, 0.6157, -0.2040] },
+    skySun: { color: [0.998, 1.0, 0.939], strength: 2.956, towards: [-0.6472, 0.7416, 0.1763] },
+    sky: {
+        ambient: [1.429, 1.585, 2.054],
+        lean: [[-0.833, 0.906, 0.219], [-0.903, 0.945, 0.247], [-1.043, 1.076, 0.307]]       // red, green, blue: x, y, z
+    },
+    worldRotation: 2.2777,
+    lightStrength: 1.1,
+    cameraStrength: 1.15,
+    reflectCap: 10,
+    traceMaxRoughness: 0.5,
+    // each sun's two shadow maps: `still` holds what never moves (the canopy's shadows reach 14 and 10 m from the
+    // trunk, and the meadow's blades need a texel near 1 cm), `moving` what a drag moves, all within 6 m of the trunk;
+    // radius: the filter's reach in texels, the softness that matches the video's meadow best (tried 1, 1.6, 3, 5)
+    shadow: { still: { centre: [0, 4, 0], half: 22, mapSize: 4096 }, moving: { centre: [0, 4.5, 0], half: 8, mapSize: 2048 }, bias: -0.0001, normalBias: 0.025, radius: 3 }
+};
+
+// Blender's display transform: AgX with the "AgX - Medium High Contrast" look, baked from Blender 5.1's OCIO config
+// into a 25^3 table (linear Rec.709 in, sRGB display out) over log2 exposures -12.5 to +4.5.
+const DISPLAY_LUT = { size: 25, log2Min: -12.5, log2Max: 4.5, data: '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muaFmuaFmuaFmuaFm+aFm+aFm+aFm+aFm+aFnOaGnOaGneaGn+aGouaHpuWIrOWKtuSMw+SQ1OOV5+Gf9t2q/926/+DI/+bX/+3ktvGmtvGmtvGmtvGmtvGmtvGmtvGmtvGmtvGmtvGmtvGmt/GmuPGmufGmu/GnvvGow/Gpy/Cr1e+u4u+y8u25/erC/+rO/+za//Hly/u/y/u/y/u/y/u/y/u/y/u/y/u/y/u/y/u/y/u/y/u/y/u/zPq/zfq/zvq/z/rA0vrA1frB2/nD4/nF7vjJ+/fO//TV//Te//bn3P/S3P/S3P/S3P/S3P/S3P/S3P/S3P/S3P/S3P/S3P/S3P/S3P/S3P/S3f/S3v/T3//T4f/T5P/U6f/V7//X+P7a//7e//3k//zr6f/h6f/h6f/h6f/h6f/h6f/h6f/h6f/h6f/h6f/h6f/h6f/i6f/i6f/i6f/i6v/i6//i7P/i7f/i7//j8//k+P/l/v/o///r///v8//u8//u8//u8//u8//u8//u8//u8//u8//u8//u8//u8//u9P/u9P/u9P/u9P/u9P/u9f/u9v/u9//u+f/v/P/w/v/x///y///1AAABAAABAAABAAABAAABAAABAQABAgABBgACDAACFQACIAADMAADRAAEXwADgwACqwIB0xIA70Av/m1f/5KH/6+n/8a//9jT/+biAAABAAABAAABAAABAAABAAABAQABAwABBgACDAACFQACIAADMAADRAAEYAADgwABqwIB0xIA70Av/m5f/5KH/6+n/8a//9jT/+biAAABAAABAAABAAABAAABAAABAQABAwACBgACDAACFQACIQADMAADRAADYAACgwABqwIA0xIA70Av/m5f/5KH/6+n/8a//9jT/+biAAABAAABAAABAAABAAABAQABAQABAwACBgACDQACFQACIQACMAADRQACYAACgwABqwMA0xMA70Av/m5f/5KH/6+n/8a//9jT/+biAAABAAABAAABAAABAAABAQACAQACAwACBwACDQACFgACIgACMQACRQABYAABgwAAqwMA0xQA70Ev/m5f/5KH/6+n/8a//9jT/+biAAEBAAEBAAEBAAEBAAECAQECAgECAwECBwECDgABFwABIgABMgAARgAAYQAAhAAArAQA0xYA70Ev/m5f/5OH/6+n/8a//9jT/+bi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9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9f/u9v/u9//v+f/v/P/w/v/x///z///1ABFHABFHABFHABFHABBHABBIAA9IAQ5KAwxLCwtMGAtNJQpONgdPSwFQZgBRiABRsABS1RlT7Uxi/XN4/5OR/66p/8XA/9fT/+biABFHABFHABFHABFHABBHABBIAA9IAQ5KAwxLCgtMGAtNJQpONghPSwFQZgBRiABRsABS1RlT7Uxi/XN4/5OR/66p/8XA/9fT/+biABFHABFHABFHABFHABFHABBIAA9IAQ5KAw1LCgtNGAtNJQpONghPSwFQZgBRiQBRsABS1RpT7Uxi/XN4/5OR/66p/8XA/9fT/+biABJHABJHABFHABFHABFHABBIABBJAQ9KAw1LCgxNGAtNJQtONghPSwFQZwBRiQBRsABS1RpU7Uxi/XN4/5OR/66p/8XA/9fT/+biABJHABJHABJHABJHABFIABFIABBJAQ9KAw1MCgxNGAxNJQtONghPSwJQZwBRiQBRsABS1RtU7Uxi/XN4/5OR/66p/8XA/9fT/+biABNHABNHABNHABNIABJIABJIABFJARBKAg5MCg1NFw1OJQxONglPSwNQZwFRiQBRsABS1RxU7U1j/XN4/5OR/66p/8XA/9fT/+biABRIABRIABRIABRIABRIABNJABJKABFLARBMCg5OFw5OJQ1PNgtQTAVQZwFRigBSsQBS1R1U7U5j/XR4/5SR/66p/8XA/9fT/+biABZIABZIABZJABZJABVJABVJABRKABNLARFNBxBOFxBPJQ9PNg5QTAtQaANRiwBRsQBS1SBU7U9j/XR4/5SR/66p/8XA/9fT/+biABlJABlJABlKABhKABhKABhKABdLABZMABVOBBROFxRPJRNQNxJQTBBRaQpRiwFRsgJS1SRU7VFj/XV4/5SR/6+p/8XA/9fT/+biAB5KAB5KAB5KAB5KAB1KAB1LABxMABtNARtOBhpPFhlQJhlQNxlQTRhRaRNRjQlSswtR1CtV7VRj/HZ5/5WR/6+p/8XA/9jT/+biACRLACRLACRLACRMACRMACRMACRNACNNASNOByJQFiJQJiJQOCJRTiFRah9SjhtStBxR1DVV7Fdk/Hh5/5WR/6+p/8XA/9jT/+bi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3f/V3f/V3f/V3f/V3f/V3f/V3f/V3f/V3f/V3f/V3f/V3f/V3f/V3f/W3v/W3//W4P/W4v/W5f/X6f/Y7/7a+P7c//7g//3l//zs6f/j6f/j6f/j6f/j6f/j6f/j6f/j6f/j6f/j6f/j6f/j6f/j6v/j6v/j6v/j6v/j6//j7P/k7f/k8P/k9P/l+f/n/v/p///s///w9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9f/u9f/v9v/v9//v+f/v/P/w/v/x///z///1ACiFACiFACiFACiFACiFACiGACeGASeHAiaIBiSKECGMICCONR+PTB6QaByRixaRsg6Q0zKM61iN+36X/5ym/7O1/8fF/9fU/+XiACiFACiFACiFACiFACiFACiGACeGASeHAiaIBiSKECGMICCONR+PTB6QaByRixaRsg+Q0zKM61iN+36X/5ym/7O1/8fF/9fU/+XiACiFACiFACiFACiFACiFACiGACeGASeHAiaIBiSKECKMICCONR+PTB+QaByRixaRsg+Q0zKM61iN+36X/5ym/7O1/8fF/9fU/+XiACmFACmFACmFACiFACiFACiGACiGASeHAiaIBiSKECKNICCONSCPTB+QaByRixeRshCQ0zKM61iN+36X/5ym/7S1/8fF/9fU/+XiACmFACmFACmFACmFACmFACiGACiGASeHAiaIBiWKDyKNHyCONSCPTB+QaByRixeRshGQ0zOM61mN+36X/5ym/7S1/8fF/9fU/+XiACmFACmFACmFACmFACmGACmGACiGASiHAieIBSWKDyKNHyGPNSCPTCCQaB2RjBiRshOQ0zOM61mN+36X/5ym/7S1/8fF/9fU/+XiACqFACqFACqFACqGACqGACqGACmGACiHAieIBSaKDiONHyGPNSGPTCCQaB6RjBmRshaQ0zWM61qN+36X/52m/7S1/8fF/9fU/+XiACuGACuGACuGACuGACuGACuGACqHACqIASmJBCeKDCSNHyOPNSOQTCKQaSCRjBuRshuQ0zeM61uO+3+X/52m/7S1/8fF/9fU/+XiAC6GAC2GAC2GAC2GAC2HAC2HAC2HACyIACuKAimLByeOHyWQNCWQTCSRaSKRjB+SsiKQ0zqM6l2O+oCX/52m/7S1/8fF/9fU/+XiADGHADGHADGHADCHADCHADCIADCIAC+JAC6LACyNAyqPGimRNCiRTCiRaSeSjCaSsimQ0z6M6l+O+oGY/56n/7S1/8fF/9fU/+XiADWIADWIADWIADWJADWJADWJADSKADSLADOMADGOAC+REy+RNC+STS+Sai6SjS6SsjKQ0kWN6WOO+oOY/5+n/7S1/8fF/9fU/+XiAD6JAD6JAD6JAD6JAD6JAD6KAD2KAD2LADyMADqOBDqQGjmRNDmSTjmSazmSjTqSsj6Q0U6N6WmP+YaZ/6Cn/7W2/8jF/9jU/+XiAEmLAEmLAEmLAEmLAEmLAEmLAEmMAEmMAEmNAUiOCEeQHUeSNkeST0eSbEiSjkmSsU2Q0FuO53GQ+Iua/6Kn/7a2/8jF/9jU/+biAFuNAFuNAFuNAFuNAFuNAFuNAFuNAFqOAFqOAlqPClqRH1qSN1qSUVuSbVuSjl2RsGGQzmyP5X2S95Gc/6Wo/7i2/8nG/9jU/+biAHKQAHKQAHKQAHKQAHKQAHKQAXKQAXKQAXKQAnKRCXKRHnKSOHOSVHOScHSRj3aRr3mQy4CR4ouV9Zmd/6mp/7q3/8rG/9nV/+biAZCRAZCRAZCRAZCRAZCRAZCRApCRA5CRBJCRCpCRFpCRKZCRQ5CRWZCRdJCRkZGRrZKRyJWT35uX86Sf/rCq/764/8zH/9rV/+biMqyPMqyPMqyPMqyPM6yPM6yPNKyQNqyQOayQPqyQRKyQTayQW6uQa6uRfquRlKqSraqTxqqV3Kya8LCi/bis/8O5/8/H/9zW/+fiacOTacOTacOTacOTacOTacOTasOTasOUa8OUbcOUb8OUc8OUeMKUgcKVjcKWm8GXrsGYxMGa2b+e7MCm+8Ow/8q7/9PJ/97X/+nji9adi9adi9adi9adjNadjNadjNadjNadjdadjdadjtadkNadk9Wel9WendWeptWfs9Sgw9Si19Om6dCs+NG1/9S//9nL/+LY/+vkpuWqpuWqpuWqpuWqpuWqpuWqpuWqp+Wqp+Wqp+WqqOWqqOWqquWqrOSqr+SrteSrvOSsx+Ou1eOx5uG09N+8/9/E/+HO/+bZ/+3lvPG5vPG5vPG5vPG5vPG5vPG5vPG5vPG5vPG5vfG5vfG5vfG5vvG5v/C6wfC6w/C6yPC7zvC81+++4+7A8e3E/evL/+vT/+3c//HnzvrJzvrJzvrJzvrJzvrJzvrJzvrJzvrJzvrJz/rJz/rJz/rJz/rJ0PrJ0frJ0vrJ1PrK2PnK3fnL5fnN7vjQ+/fT//XZ//Th//bo3f/X3f/X3f/X3f/X3f/X3f/X3f/X3f/X3f/X3f/X3f/X3v/X3v/X3v/X3//X3//Y4P/Y4v/Y5f/Z6f/a8P7b+P7d//7h//3m//zs6v/k6v/k6v/k6v/k6v/k6v/k6v/k6v/k6v/k6v/k6v/k6v/k6v/k6v/k6v/k6//k6//k7P/k7v/l8P/l9P/m+f/n/v/p///s///w9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9f/v9f/v9v/v9//v+f/w/P/x/v/y///z///2ATioATioATioATipATepATepATepAjeqBDaqCDWrEjStIjOvNDKwTDGxZjKxhzKxrTWx0EOt6WKn+YKp/6Cy/7e+/8nL/9jX/+XjATioATioATioATipATepATepATepAjeqAzaqCDWrEjStIjOvNDKwTDGxZjKxhzKxrTWx0EOt6WKn+YKp/6Cy/7e+/8nL/9jX/+XjATioATioATipATipATipATepATepAjeqAzaqCDWrEjStIjOvNDKwTDKxZjKxhzKxrTax0EOt6WOn+YKp/6Cy/7e+/8nL/9jX/+XjATioATioATipATipATipATipATepAjeqAzaqBzWrEjStIjOvNDKwTDKxZjKxhzKxrTax0ESt6WOn+YKp/6Cy/7e+/8nL/9jX/+XjADipADipADipATipATipATipATepAjeqAzaqBzarETWtITOvNDKxTDKxZjKxhzKxrTax0ESt6WOn+YKp/6Cy/7e+/8nL/9jX/+XjADipADipADipADipADipATipATipATeqAzeqBjasEDWtITOvNDKxTDKxZjOxhzOxrTex0ESt6WOn+YOp/6Cy/7e//8nL/9jX/+XjADmpADmpADmpADmpADmpADipATipATiqAjerBjasDzWtHzSvMzOxTDOxZjOyiDSxrTex0EWt6WSn+YOp/6Cy/7e//8nL/9jX/+XjADmpADmpADmpADmpADmpADmpADmqATiqATirBTesDjatHjSwMzSxTDSxZjSyiDWyrTix0Eet6GSn+YOq/6Cy/7i//8nL/9nX/+Xj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r+TFr+TFr+TFr+TFr+TFr+TFr+TFr+TFr+TFsOTFsOTFseTGsuTGtOTGt+TGvOTHwuPHy+PI1uPJ5eLK8uHN/uHS/+TY/+jf/+7nw/DMw/DMw/DMw/DMw/DMw/DMw/DMw/DMw/DMw/DMw/DMxPDMxPDMxfDMx/DNyfDNze/N0u/N2u/O5O7Q8e7S/OzW/+zb/+7i//Lp0/rU0/rU0/rU0/rU0/rU0/rU0/rU0/rU0/rU0/rU0/rU0/rU0/nU1PnV1fnV1vnV2PnV2/nV4PnW5vjX7/jZ+vfb//Xf//Xl//fr4P/e4P/e4P/e4P/e4P/e4P/e4P/e4P/e4P/e4P/e4P/e4P/e4P/e4f/e4f/e4v/e4//e5P/f5//f6//g8P7h+P7i//7l//3p//3u6//o6//o6//o6//o6//o6//o6//o6//o6//o6//o6//o6//o6//o6//o7P/o7P/o7f/o7f/o7//o8f/p9P/p+f/q/v/s///u///y9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9v/x9//x+P/x+v/y/P/y///z///1///3N2TiN2TiN2TiN2TiN2TiOGTiOGTiOWXiOmXiPWXiQmXiSWbiU2fiYmnhc2vhiGzhoXLfvXne2oTb85TW/qnR/73T/87Z/93h/+jpN2TiN2TiN2TiN2TiN2TiOGTiOGTiOWXiOmXiPWXiQmXiSWbiU2fiYmnhc2vhiGzhoXLfvXne2oTb85TW/qnR/73T/87Z/93h/+jpN2TiN2TiN2TiN2TiN2TiOGTiOGTiOWXiOmXiPWXiQmXiSWbiU2fiYmnhc2vhiGzhoXLfvXne2oTb85TW/qnR/73T/87Z/93h/+jpN2TiN2TiN2TiN2TiN2TiN2TiOGTiOWXiOmXiPWXiQmXiSWbiU2fiYmnhc2vhiG3hoXLfvXne2oXb85TW/qnR/73T/87Z/93h/+jpN2TiN2TiN2TiN2TiN2TiN2TiOGTiOWXiOmXiPWXiQWXiSWbiU2fiYmnhc2vhiG3hoXLfvXne2oXb85TW/qnR/73T/87Z/93h/+jpNmTiNmTiNmTiN2TiN2TiN2TiOGXiOGXiOmXiPWXiQWbiSGbiU2fiYmnhc2vhiG3hoXLfvXre2oXb85TW/qnR/73T/87Z/93h/+jpNmTiNmTiNmTiNmTiNmTiN2XiN2XiOGXiOmXiPGXiQWbiSGbiU2fiYWrhc2vhiG3hoXLfvXre2oXb85XW/qnR/73T/87Z/93h/+jpNWTiNWTiNWXiNmXiNmXiNmXiN2XiOGXiOWXiPGXiQGbiSGbiUmfiYWric2vhiG7hoXPfvXre2oXb85XW/qnR/73T/87Z/93h/+jpNGXiNGXiNGXiNWXiNWXiNWXiNmXiNmXiOGXiO2XiQGbiR2biUWjiYGric2vhiW7hoXTfvXve2obb85XW/qrR/73T/8/Z/93h/+jpM2XjM2XjM2XjM2XjM2XjM2XjNGXjNWXjN2XjOmbjPmbjRWfjT2jjX2ric23hiXDhoXXfvXze2ofb8pbW/qrR/73T/8/Z/93h/+jpL2bjL2bjL2bjMGbjMGbjMGbjMWbjM2bjNWbjOGbjPWfjRWjjT2rjX2zidG/hiXLhonbfvX7e2ojb8pfW/qvR/77T/8/Z/93h/+jpKmnjKmnjK2njK2njK2njLGnjLWnjL2njMmrjN2rjPmrjRWvjUG3jYHDidHPhinXhonnfvYHd2orb8pnW/qzS/77T/8/Z/93h/+jpJm7jJm7jJm7jJm/jJ2/jJ2/jKW/jKm/jLW/jMm/jOm/kRXHjUXLjYXXidXjhi3vgo3/fvoXd2Y/b8Z3W/q7S/8DU/9Da/97h/+jpJnfkJnfkJnfkJnfkJ3fkJ3fkKXfkKnfkLXfkMXjkN3jjQXrjUHvjZX7idoDhjYTgpIjevo3c2ZXa8KHW/bHS/8HU/9Ha/97h/+jpMoXiMoXiMoXiM4XiM4XiNIXiNYXiN4XiOYXiPYbiQ4biTYfiXInhaovhfI7fkZHep5Tdvpjb2J7Z7qjV/LXS/8TV/9La/9/i/+npSpjgSpjgSpjgSpjgS5jgS5jgTZjgTpjgUZjgVpjgWpngYJngZ5rfc5vfhJ7elqDcqaPbv6ba16rY7LHV+7zT/8jV/9Tb/9/i/+npZazdZazdZazdZqzdZqzdZqzdZqzdZ6zdaKzdaq3dbK3dca3deK7cga/cjK/bnLHarrTZwbXY1rjX6bzV+cPU/83X/9fc/+Hi/+rpf8Laf8Laf8Laf8Laf8LagMLagMLagMLagcLagsLag8LahsLaisLZkMPZmcPZpMTYs8XXw8bW1cfW58nV9s3V/9TY/9vd/+Pj/+vpl9bXl9bXl9bXl9bXmNbXmNbXmNbXmNbXmNbXmdbXmtbXm9bXntbXotbXp9bWr9bWutXWx9XW1dXV5dbW89jX/tvZ/+De/+bj/+3qseXUseXUseXUseXUseXUseXUseXUseXUseXUseXUsuXUs+XVtOXVtuTVueTVvuTVxOTVzePW1+PW5OPX8ePY/ePb/+bf/+rk/+/rxvDXxvDXxvDXxvDXxvDXxvDXxvDXxvDXxvDXxvDXxvDXx/DXx/DXyPDXyvDYzO/Y0O/Y1e/Z2+/Z5e7a8O7b++3d/+3h/+/m//Ps1vnd1vnd1vnd1vnd1vnd1vnd1vnd1vnd1vnd1vnd1vnd1vnd1vnd1/nd1/nd2fnd2vnd3fnd4fne5/je7/jf+vfh//bk//bo//ju4v/j4v/j4v/j4v/j4v/j4v/j4v/j4v/j4v/j4v/j4v/j4v/j4v/j4v/j4//j4//j5P/j5v/k6P/k7P/k8f7l+P7m///o//7s//3w7P/r7P/r7P/r7P/r7P/r7P/r7P/r7P/r7P/r7P/r7P/r7P/r7P/r7f/r7f/r7f/r7v/r7//r8P/r8v/s9f/s+v/t/v/u///w///09f/y9f/y9f/y9f/y9f/y9f/y9f/y9f/y9f/y9f/z9f/z9f/z9f/z9f/z9f/z9v/z9v/z9v/z9//z+P/z+v/z/f/0///1///2///4ZITyZITyZITyZITyZITyZITyZITyZYXyZYXxZoXxaYXxbIbxcofxe4jxh4vwlIzwpY7vupPu0Zrs6aTp/LHl/8Hg/9Hi/97n/+rtZITyZITyZITyZITyZITyZITyZITyZYXyZYXyZoXxaYXxbIbxcofxe4jxh4vwlIzwpY7vupPu0Zrs6aTp/LHl/8Hg/9Hi/97n/+rtZITyZITyZITyZITyZITyZITyZITyZYXyZYXyZoXxaYXxbIbxcofxe4jxh4vwlIzwpY7vupPu0Zvs6aTp/LHl/8Hg/9Hi/97n/+rtZITyZITyZITyZITyZITyZITyZITyZYXyZYXyZoXxaYXxbIbxcofxe4jxh4vwlIzwpY7vupTu0Zvs6aTp/LHl/8Hg/9Hi/97n/+rtY4TyY4TyZITyZITyZITyZITyZITyZIXyZYXyZoXxaYXxbIbxcofxe4jxh4vwlIzwpY7vupTu0Zvs6aTp/LHl/8Hg/9Hi/97n/+rtY4TyY4TyY4TyY4TyZITyZITyZITyZIXyZYXyZoXyaIXxbIbxcofxe4jxhovwlIzwpY7vupTu0Zvs6aTp/LHl/8Hh/9Hi/97n/+rtY4TyY4TyY4TyY4TyY4TyZITyZIXyZIXyZYXyZoXyaIXxbIbxcofxe4jxhovwlIzwpY/vupTu0Zvs6aTp/LHl/8Hh/9Hi/97n/+rtY4TyY4TyY4TyY4TyY4TyY4TyZIXyZIXyZYXyZoXyaIXybIbxcYfxeojxhovwlIzwpY/vupTt0Zvs6aTp/LHl/8Hh/9Hi/97n/+rtYoTyYoTyYoTyY4XyY4XyY4XyY4XyY4XyZIXyZoXyaIXya4bycYfxeonxhovwlI3wpY/vupTt0Zvs6aXp/LHl/8Hh/9Hi/9/n/+rtYoXyYoXyYoXyYoXyYoXyYoXyYoXyY4XyY4XyZYXyZ4bya4bycIfyeYnxhYvxlI3wppDvupXt0Zzs6aXp/LLl/8Lh/9Hi/9/n/+rtYIXyYIXyYYXyYYXyYYXyYYXyYYXyYoXyYoXyZIXyZobyaobycIfyeInyhIvxlY7wppHvupbt0Zzs6Kbp/LLl/8Lh/9Hi/9/n/+rtXYXzXYXzXYXzXYXzXoXzXoXzX4XzYIbzYYbzYobzZYbzaYfyb4jyeIryhY3xlZDwppPvupjt0Z7r6Kfp/LPl/8Ph/9Hi/9/n/+rtXYjzXYjzXYjzXYjzXYjzXonzXonzX4nzYInzYonzZYrzaorycIzyeI3yhZDxlpPwp5bvuprt0aDr6Knp+7Xl/8Ph/9Li/9/n/+rtXI3zXI3zXI3zXI3zXI3zXY3zXY3zXo3zX47zYY7zZI7zaY/ycZDyepLxh5XxlpjwqJvuu57t0aTr6Kzp+7fk/8Xh/9Pi/+Dn/+vtYJXzYJXzYJXzYJXzYJXzYZXyYZXyYpXyY5XyZZbyaJbybJfycpjxfJrxipzwmJ/vqqLtvKbs0arq57Ho+rvk/8fh/9Tj/+Dn/+vua6Hxa6Hxa6Hxa6Hxa6Hxa6HxbKHxbKHxbaLxb6LxcaLwdaPwe6TwhKbvj6funartra3sv7Dr0rPp5rjn+cDk/8vh/9bj/+Ho/+vufLLufLLufLLufLLufLLufLLufbLufbLufrLuf7LugbLuhLLuiLPtjrTtl7Xso7frsbnqwbzp0r7o5cLm98fj/9Di/9nk/+Po/+zujsLrjsLrjsLrjsLrjsLrjsLrj8Prj8Prj8PrkMPrkcPrk8PrlsPrm8TqosXqqsXpt8foxMnn08rm5Mzl9NDj/9bj/93l/+Xp/+3uotTootTootTootTootTootTootTootTootToo9TopNTopdTop9ToqdXnrtXntdXnvdbmyNbl1tfl5Njk8trj/t7k/+Pm/+jq/+/utOXltOXltOXltOXltOXltOXltOXltOXltOXlteXlteXltuXlt+XlueXlvOTlwOTlxuTlzuTk2OTk5OTk8OTk++bl/+jn/+zq//Hvx/Djx/Djx/Djx/Djx/Djx/Djx/Djx/DjyPDjyPDjyPDjyPDjyfDjyvDjy/DjzvDj0fDk1u/k3e/k5u/l8O/l+u7m/+/o//Hs//Tw2Pnl2Pnl2Pnl2Pnl2Pnl2Pnl2Pnl2Pnl2Pnl2Pnl2Pnl2Pnl2fnl2fnl2vnl2/nm3fnm4Pnm4/jm6fjn8Pjn+fjo//fq//ft//nx5P/q5P/q5P/q5P/q5P/q5P/q5P/q5P/q5P/q5P/q5P/q5P/q5P/q5f/q5f/q5v/q5v/q6P/q6v7q7f7q8v7r+f7s///t//7w//7z7v/v7v/v7v/v7v/v7v/v7v/v7v/v7v/v7v/v7v/v7v/v7v/v7v/v7v/v7v/v7//v7//v8P/v8f/v8//w9v/w+v/x/v/y///z///29v/19v/19v/19v/19v/19v/19v/19v/19v/19v/19v/19v/19v/19v/19v/19//19//19//1+P/1+f/1+//2/f/2///3///4///5iqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8i6L8i6L8jKP8jqP8kaP8laT8nKb7paj7sKn6vav5zq/44LX29L30/8fw/9Tt/+Du/+vyiqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8i6L8i6L8jKP8jqP8kaP8laT8nKb7paj7sKn6vav5zq/44LX29L30/8fw/9Tt/+Du/+vyiqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8i6L8i6L8jKP8jqP8kaP8laT8nKb7paj7sKn6vav5zq/44LX29L30/8fw/9Tt/+Du/+vyiqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8i6L8i6L8jKP8jqP8kaP8laT8nKb7paj7sKn6vav5zq/44LX29L30/8fw/9Tt/+Du/+vyiqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8i6L8i6L8jKP8jqP8kaP8laT8nKb7paj7sKn6vav5zq/44LX29L30/8fw/9Tt/+Du/+vyiqL8iqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8i6L8jKP8jqP8kaP8laT8nKb7paj7sKn6vav5zq/44LX29L30/8fw/9Tt/+Du/+vyiqL8iqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8i6L8jKP8jqP8kaP8laT8nKb7paj7sKn6vav5zrD44LX29L30/8fw/9Tt/+Du/+vyiqL8iqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8i6L8jKP8jqP8kaT8laT8nKb7paj7sKn6vav5zrD44Lb29L30/8fw/9Tt/+Du/+vyiqL8iqL8iqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8jKP8jqP8kKT8laT8nKb7paj7sKn6vaz5zrD44Lb29L30/8fw/9Tt/+Du/+vyiaL9iaL9iaL9iaL9iaL9iaL9iqL9iqL9iqL8i6L8jKP8jaP8kKT8lKT8m6b7paj7sKr6vaz5zrD44Lb29L70/8jw/9Tt/+Du/+vyiaL9iaL9iaL9iaL9iaL9iaL9iaL9iaL9iaL9iqP9i6P8jaP8kKT8lKX8m6b7pKj7sKr6vqz5zrH44Lb29L70/8jw/9Tt/+Du/+vyiKL9iKL9iKL9iKL9iKL9iKL9iKL9iKL9iaP9iaP9iqP9jKP9j6T8k6X8mqb8o6j7sKv6vq35zrH44Lf29L70/8jw/9Xt/+Du/+vyhqP9hqP9hqP9hqP9hqP9hqP9hqP9h6P9h6P9iKP9iaP9i6T9jqT8k6b8mqf8pKr7sK36vq/5zrP44Lj29L/0/8nw/9Xt/+Hu/+vyhqX9hqX9hqX9hqX9hqX9hqX9hqX9h6X9h6X9iKb9iab9jKb9j6f8lKj8m6r7pKz7sa/6vrH5zrX44Lr288H0/8rw/9bt/+Hu/+zyhqn9hqn9hqn9hqn9hqn9hqn9hqn9h6n9h6n9iKr9iar9jKr8j6v8laz8nK77pbD7srP6v7X5z7j34L3288Pz/8zw/9ft/+Lu/+zyia/9ia/9ibD9ibD9ibD8ibD8ibD8irD8irD8i7D8jLD8jrH8krH8l7L7nrT7qLb6s7j5wbv40L724ML18sfz/s/w/9nt/+Pu/+3ykrr7krr7krr7krr7krr7krr7krr7krr7k7r7k7r7lLr7lrr7mbv6nbz6pL35rb/5t8H4xMP20sb14cn08s3y/tPw/9vt/+Xv/+3zn8f4n8f4n8f4n8f4n8f4n8f4n8f4n8f4oMf4oMf4ocf4o8f4pcj4qMj4rMn3s8r3vMz2x8711M/04dHz8dTx/tnv/9/u/+fv/+/zrdX2rdX2rdX2rdX2rdX2rdX2rdX2rdX2rdX2rtX2rtX2r9X2sNX1s9X1ttb1vNb0wtf0y9jz1try4tvx8N3w/eDv/+Tu/+rw//HzvOPzvOPzvOPzvOPzvOPzvOPzvOPzvOPzvOPzvOPzvePzvePzvuPzv+PzwuPyxePyyuTy0eTx2uXx5OXw7+bw++jv/+rv/+7x//P0yvDxyvDxyvDxyvDxyvDxyvDxyvDxyvDxyvDxyvDxy/Dxy/Dxy/DxzPDwzvDw0PDw0/Dw2PDw3vDw5u/w7+/v+fDw//Hw//Py//b12fnv2fnv2fnv2fnv2fnv2fnv2fnv2fnv2fnv2fnv2fnv2fnv2vnv2vnv2/nv3Pnv3vnv4fnv5fnv6vjw8fjw+fjw//jx//jz//r25v/x5v/x5v/x5v/x5v/x5v/x5v/x5v/x5v/x5v/x5v/x5v/x5v/x5//x5//x5//x6P/x6v/x7P7x7/7y8/7y+f/y///z//71//738P/08P/08P/08P/08P/08P/08P/08P/08P/08P/08P/08P/08P/08P/08P/08P/08f/08v/08//09P/19//1+//1///2///3///59//49//49//49//49//49//49//49//49//49//49//49//4+P/4+P/4+P/4+P/4+P/4+P/4+f/5+v/5/P/5/v/5///6///6///8qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qLv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qLv/qLv/qLv/qLv/qLv/qLv/qLv/qbv/qbv/qbv/qbv/qrv/q7z/rrz/sb3/tr7/vsD/xsH/0cP/3sb+7Mv+/NH9/9n5/+P3/+34qLv/qLv/qLv/qLv/qLv/qLv/qLv/qLv/qLv/qbv/qbv/qrv/q7z/rbz/sb3/tr7/vcD/xsH/0cP/3sb+7Mv+/NH9/9n5/+P3/+34qLv/qLv/qLv/qLv/qLv/qLv/qLv/qLv/qLv/qLv/qbv/qrv/q7z/rbz/sL3/tb7/vcD/xsH/0cP/3sf+7Mv+/NH9/9n5/+P3/+34p7v/p7v/p7v/p7v/p7v/p7v/p7v/p7v/p7v/qLv/qLv/qbv/qrz/rLz/sL3/tb7/vMD/xsL/0cT/3sf+7Mz+/NL9/9r5/+P3/+34prv/prv/prv/prv/prv/prv/prv/prv/prv/p7v/p7z/qLz/qrz/rL3/sL7/tb//vcH/x8P/0cX/3sj+7M3++9L8/9r5/+T3/+34pr3/pr3/pr3/pr3/pr3/pr3/pr3/pr3/pr3/p73/p77/qL7/qr7/rb//sMD/tsH/vcP/x8X/0sf/3sr+7M7++9T8/9v5/+T3/+34psD/psD/psD/psD/psD/psD/psD/psD/p8D/p8H/qMH/qcH/qsH/rcL/scP/t8T/vsb/yMj/0sr/383+7dD++9b8/935/+X3/+74qMX/qMX/qMX/qMX/qMX/qcX/qcX/qcX/qcb/qcb/qsb/q8b/rMb/r8f/s8j/uMn/wMv/yc3/1M/+39H+7dT9+9n8/9/5/+f3/+/4r87/r87/r87/sM7/sM7/sM7/sM7/sM7/sM7/sM7/sc7/sc7/s87/tc//uND/vdH/xNL+zNT+1tb94dj97dr8+t37/+L5/+n3//D4udj+udj+udj+udj+utj+utj+utj+utj+utj+utj+u9j+u9n+vNn+vtn+wNn+xNr9ydv90Nz92d7949/87eH7+uP6/+f5/+z3//L5xOP9xOP9xOP9xOP9xOP9xOP9xeP9xeP9xeP9xeP9xeP9xeP9xuP9x+T9yeT9zOT90OX91eX83Ob85ef77uj6+er6/+z4//D4//T50O/80O/80O/80O/80O/80O/80O/80O/80O/80O/80e/80e/80e/80u/70+/71e/71+/72+/74O/65/D68PH5+fH5//L4//X5//j62/n62/n62/n62/n62/n62/n62/n62/n62/n62/n62/n62/n63Pn63Pn63fn63vn64Pn64vn55vn56/n58fn5+fn5//n5//r6//z75//45//45//45//45//45//45//45//45//45//45//45//45//45//46P/46P/46f/46//47f/58P/59P/5+v/5///6///6///88f/68f/68f/68f/68f/68f/68f/68f/68f/68f/68f/68f/68f/68f/68v/68v/68v/68//69P/69v/6+f/6/P/7///7///8///9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+v/9+v/9+v/9+//9/f/9/v/9///9///9///+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tz//+D//+f//+/+wM//wM//wM//wM//wM//wM//wM//wM//wc//wc//wc//wc//ws//w8//xND/x9D/y9H/0dP/2NT/4NX/6tj/9tz//+H//+f//+/+wM//wM//wM//wM//wM//wM//wM//wM//wM//wM//wc//wc//ws//w8//xND/x9D/y9H/0dP/2NT/4Nb/6tj/9tz//+H//+f//+/+v8//v8//v8//wM//wM//wM//wM//wM//wM//wM//wM//wM//wc//ws//xND/xtD/ytH/0NP/2NX/4Nb/69n/9tz//+H//+f//+/+vs//vs//vs//vs//vs//vs//v8//v8//v8//v8//v8//wM//wM//wtD/w9D/xtH/ytL/0dT/2Nb/4df/69r/9t3//+L//+j//+/+v9H/v9H/v9H/v9H/v9H/v9H/v9H/v9H/v9H/v9H/v9H/wNH/wdH/wtH/xNL/x9P/y9T/0dX/2df/4dn/69v/9t7//+P//+n///D+v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/wNP/wNP/wdP/wtT/xNT/x9X/zNb/0tj/2dn/4dv/693/9uD//+T//+r///H+wdf/wdf/wdf/wdf/wdf/wdf/wdf/wdf/wdf/wdf/wdf/wtf/w9f/xNj/xtj/ydn/zdr/09v/2t3/49//7OH/9uP//+f//+z///L+xt7/xt7/xt7/xt7/xt7/xt7/xt7/xt7/xt7/x97/x97/x97/yN7/yd7/y9//zd//0eD/1uH/3eP/5OT/7eb/9+f//+r//+7///P+zub/zub/zub/zub/zub/zub/zub/zub/zub/zub/z+b/z+b/0Ob/0Ob/0ef/0+f/1uf/2uj/4On/5+v/7uz/9+3//u////L///b/1+//1+//1+//1+//1+//1+//1+//1+//1+//1+//1+//1+//2O//2O//2e//2u//3PD/3/D/5PH/6fH/8PL/+PP//vT///b///n/4Pj/4Pj/4Pj/4Pj/4Pj/4Pj/4Pj/4Pj/4Pj/4Pj/4Pj/4Pj/4Pj/4fj/4fj/4vj/4/j/5fj/6fn/7fn/8vn/+fr//vr///v///3/6P//6P//6P//6P//6f//6f//6f//6f//6f//6f//6f//6f//6f//6f//6f//6v//6///7P//7v//8f//9f//+v//////////////8v/+8v/+8v/+8v/+8v/+8v/+8v/+8v/+8v/+8v/+8v/+8v/+8v/+8v/+8v/+8//+8//+9P//9f//9///+f///P//////////////+v//+v//+v//+v//+v//+v//+v//+v//+v//+v//+v//+v//+v//+v//+v//+///+///+////P///f///v//////////////////1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1N//1N//1N//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N//1N//1N//1N//1N//1N//1N//1N//1N//1N//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N//1N//1N//1N//1N//1N//1N//1N//1N//1N//1N//1N//1N//1d//1t//19//2eD/3OH/4OL/5uP/7OT/9eb//un//+3///L/09//09//1N//1N//1N//1N//1N//1N//1N//1N//1N//1N//1N//1d//1d//19//2eD/3OH/4OL/5uP/7OT/9eb//un//+3///L/09//09//09//09//09//09//09//09//09//09//09//1N//1N//1N//1d//1t//2OD/2+H/4OL/5uP/7eT/9eb//un//+3///L/09//09//09//09//09//09//09//09//09//09//09//09//09//1N//1d//1t//2OD/2+H/4OL/5uP/7eX/9ef//en//+3///L/0t//0t//0t//0t//0t//0t//0t//0t//0t//0t//0t//09//09//09//1N//1uD/2OD/2+H/4OP/5uT/7eX/9ef//er//+7///P/0uD/0uD/0uD/0uD/0uD/0uD/0uD/0uD/0uD/0uD/0uD/0+D/0+D/1OD/1eH/1uH/2OL/2+L/4OT/5uX/7eb/9ej//uv//+7///P/0uL/0uL/0uL/0uL/0uL/0uL/0uL/0uL/0uL/0+L/0+L/0+L/0+L/1OL/1eL/1uP/2eP/3OT/4eb/5+f/7ej/9er//uz///D///T/1OX/1OX/1OX/1OX/1OX/1OX/1OX/1OX/1OX/1OX/1OX/1OX/1eX/1eb/1ub/2Ob/2uf/3uj/4un/6Or/7uv/9u3//u////L///b/2Or/2Or/2Or/2Or/2Or/2Or/2Or/2Or/2Or/2Or/2Or/2Or/2er/2ev/2uv/3Ov/3ez/4ez/5O3/6u//8PD/9/H//vL///X///j/3vH/3vH/3vH/3vH/3vH/3vH/3vH/3vH/3vH/3vH/3/H/3/H/3/H/3/H/4PH/4fL/4vL/5PL/6PP/7PT/8vX/+Pb//vf///j///v/5fj/5fj/5fj/5fj/5fj/5fj/5fj/5fj/5fj/5fj/5fj/5fj/5fj/5vj/5vj/5/n/6Pn/6fn/7Pn/7/r/9Pr/+fv//vz///3///7/7P//7P//7P//7P//7P//7P//7P//7P//7P//7P//7P//7P//7f//7f//7f//7f//7v//7///8f//8///9///+////v//////////8///8///8///8///8///8///8///8///8///8///8///8///8///8///9P//9P//9P//9f//9v//+P//+v///f//////////////+///+///+///+///+///+///+///+///+///+///+///+///+///+///+///+///+////P///P///f///v//////////////////4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///f/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///f/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///f/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///f/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4+v/4+v/4+v/5Oz/5ez/5uz/6e3/7O7/8e//9vD//fH///T///f/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4+v/4+z/5Oz/5uz/6O3/7O7/8e//9/D//fL///T///f/4ev/4ev/4ev/4ev/4ev/4ev/4ev/4ev/4ev/4ev/4ev/4uv/4uv/4uz/4uz/4+z/5Oz/5u3/6O3/7O7/8fD/9/H//fL///T///f/4ez/4ez/4ez/4ez/4ez/4ez/4ez/4ez/4ez/4ez/4uz/4uz/4uz/4u3/4+3/4+3/5e3/5u7/6e7/7e//8fH/9/H//fP///X///j/4u7/4u7/4u7/4u7/4u7/4u7/4u7/4u7/4u7/4u7/4u7/4u7/4u7/4u7/4+7/4+7/5e//5+//6fD/7fH/8vL/9/P//fT///b///n/4/D/4/D/4/D/4/D/4/D/4/D/4/D/4/D/4/D/4/D/4/H/4/H/4/H/4/H/5PH/5fH/5vH/5/L/6vL/7vP/8vT/+PX//ff///j///v/5vX/5vX/5vX/5vX/5vX/5vX/5vX/5vX/5vX/5vX/5vX/5vX/5vX/5/X/5/X/6PX/6fX/6vb/7fb/8Pf/9Pj/+fn//vr///v///3/6/r/6/r/6/r/6/r/6/r/6/r/6/r/6/r/6/r/6/r/6/r/6/r/6/r/7Pr/7Pr/7Pr/7fr/7vv/8Pv/8vv/9vz/+/3//v7///7/////8P//8P//8P//8P//8P//8P//8P//8P//8P//8P//8P//8P//8f//8f//8f//8f//8v//8///9P//9v//+f///P//////////////9v//9v//9v//9v//9v//9v//9v//9v//9v//9v//9v//9v//9v//9v//9///9///9///+P//+P//+v///P///v///////////////P///P///P///P///P///P///P///P///P///P///P///P///P///P///P///P///P///P///f///f///v//////////////////' };
+
+// Materials of the .blend (Image Texture, Normal Map and Principled BSDF, plus the designer's tints). level is the
+// Principled "Specular IOR Level" (edge: the reflectance left at a grazing angle for that weaker Fresnel, which
+// EEVEE's table gives the deck's IOR; 1 otherwise); translucency the share of the Translucent BSDF mixed in; alpha the map that cuts
+// a card. tint multiplies the colour map, as the .blend's MULTIPLY mix nodes do. skyShare is how much of the sky
+// light that skyView lets through reaches a leaf card inside the canopy (the .blend's render, leaves no sun reaches).
+const T = name => name + '.jpg';
+const FINISHES = {
+    A_deck_oak_veneer_01: { map: T('oak_veneer_01_diff_2k_warm'), roughnessMap: T('oak_veneer_01_rough_2k'), normalMap: T('oak_veneer_01_nor_gl_2k'), level: 0.2, edge: 0.9 },
+    A_beam_wood_table_worn: { map: T('wood_table_worn_diff_2k'), roughnessMap: T('wood_table_worn_rough_2k'), normalMap: T('wood_table_worn_nor_gl_2k') },
+    A_rope_Rope001: { map: T('Rope001_2K-JPG_Color'), roughnessMap: T('Rope001_2K-JPG_Roughness'), normalMap: T('Rope001_2K-JPG_NormalGL'), tint: [0.923, 0.881, 0.8075] },
+    A_leaf_Leaf001: { map: T('Leaf001_2K-JPG_Color'), roughnessMap: T('Leaf001_2K-JPG_Roughness'), normalMap: T('Leaf001_2K-JPG_NormalGL'), alphaMap: T('Leaf001_2K-JPG_Opacity'), vertexColors: true, translucency: 0.3, leaf: true, skyShare: 0.68 },
+    A_litter_Leaf001_autumn: { map: T('Leaf001_2K-JPG_Color'), roughnessMap: T('Leaf001_2K-JPG_Roughness'), normalMap: T('Leaf001_2K-JPG_NormalGL'), alphaMap: T('Leaf001_2K-JPG_Opacity'), vertexColors: true, tint: [1.0, 0.677, 0.405], translucency: 0.3, leaf: true, decal: true },
+    A_leafcore_Leaf001: { map: T('Leaf001_2K-JPG_Color'), roughness: 0.9, tint: [0.32, 0.36, 0.26], boxScale: 5 },
+    A_ground_sparse_grass_forest_leaves: { ground: true },
+    grass_medium_01: { map: T('grass_medium_01_diff_2k'), roughnessMap: T('grass_medium_01_arm_2k'), roughnessChannel: 1, normalMap: T('grass_medium_01_nor_gl_2k'), alphaMap: 'grass_medium_01_alpha_2k.png', tint: [1.9, 3.0, 1.6], translucency: 0.25, leaf: true, coverGain: 1.3, skyShare: 0.72 },
+    dandelion_01: { map: T('dandelion_01_diff_1k'), roughnessMap: T('dandelion_01_arm_1k'), roughnessChannel: 1, normalMap: T('dandelion_01_nor_gl_1k') },
+    celandine_01: { map: T('celandine_01_diff_1k'), roughnessMap: T('celandine_01_arm_1k'), roughnessChannel: 1, normalMap: T('celandine_01_nor_gl_1k'), alphaMap: 'celandine_01_alpha_1k.png', leaf: true },
+    fern_02: { map: T('fern_02_diff_1k'), roughnessMap: T('fern_02_arm_1k'), roughnessChannel: 1, normalMap: T('fern_02_nor_gl_1k') },
+    rock_moss_set_02: { map: T('rock_moss_set_02_diff_1k'), roughnessMap: T('rock_moss_set_02_rough_1k'), roughnessChannel: 1, normalMap: T('rock_moss_set_02_nor_gl_1k') },
+    tree_stump_01: { map: T('tree_stump_01_diff_1k'), roughnessMap: T('tree_stump_01_arm_1k'), roughnessChannel: 1, normalMap: T('tree_stump_01_nor_gl_1k') },
+    dead_tree_trunk_02: { map: T('dead_tree_trunk_02_diff_1k'), roughnessMap: T('dead_tree_trunk_02_arm_1k'), roughnessChannel: 1, normalMap: T('dead_tree_trunk_02_nor_gl_1k') },
+    wooden_bucket_02: { map: T('wooden_bucket_02_diff_1k'), roughnessMap: T('wooden_bucket_02_arm_1k'), roughnessChannel: 1, normalMap: T('wooden_bucket_02_nor_gl_1k') },
+    wooden_crate_02: { map: T('wooden_crate_02_diff_1k'), roughnessMap: T('wooden_crate_02_arm_1k'), roughnessChannel: 1, normalMap: T('wooden_crate_02_nor_gl_1k') },
+    A_flagR: { map: T('rough_linen_diff_2k'), normalMap: T('rough_linen_nor_gl_2k'), roughness: 0.85, flag: [0.52, 0.12, 0.07], boxScale: 6, translucency: 0.25 },
+    A_flagY: { map: T('rough_linen_diff_2k'), normalMap: T('rough_linen_nor_gl_2k'), roughness: 0.85, flag: [0.70, 0.40, 0.06], boxScale: 6, translucency: 0.25 },
+    A_flagT: { map: T('rough_linen_diff_2k'), normalMap: T('rough_linen_nor_gl_2k'), roughness: 0.85, flag: [0.06, 0.23, 0.21], boxScale: 6, translucency: 0.25 },
+    A_flagC: { map: T('rough_linen_diff_2k'), normalMap: T('rough_linen_nor_gl_2k'), roughness: 0.85, flag: [0.86, 0.78, 0.62], boxScale: 6, translucency: 0.25 },
+    Material_0: { hero: 'trunk' },
+    'Material_0.001': { hero: 'cabin' }
+};
+
+// The ground (A_ground_sparse_grass_forest_leaves): sparse grass every 2.6 m, forest leaves every 1.8 m in a ring round
+// the trunk (1.3 to 2.6 m, its edge broken by noise) and in two patches worn under the swing and at the foot of the
+// ladder; a 14 m wash of brightness, a green tint, a haze from 40 to 150 m, and a final green multiply.
+const GROUND = {
+    grass: { map: T('sparse_grass_diff_2k'), roughnessMap: T('sparse_grass_rough_2k'), normalMap: T('sparse_grass_nor_gl_2k'), tile: 2.6 },
+    leaves: { map: T('forest_leaves_02_diffuse_2k'), roughnessMap: T('forest_leaves_02_rough_2k'), normalMap: T('forest_leaves_02_nor_gl_2k'), tile: 1.8 },
+    ring: [1.3, 2.6],
+    patches: [[-2.147, 0.3786, 0.57, 0.95], [-4.108, -3.188, 0.42, 0.70]],      // Blender x, y, inner and outer radius
+    jitter: { scale: 1.7, detail: 6, roughness: 0.5 },
+    wash: { scale: 0.07, detail: 2, roughness: 0.6, from: [0.3, 0.7], to: [0.86, 1.14] },
+    tint: { colour: [0.20, 0.34, 0.08], amount: 0.2 },
+    haze: { colour: [0.48, 0.56, 0.58], from: 40, to: 150, amount: 0.42 },
+    finish: { colour: [0.58, 0.84, 0.34], amount: 0.8 }
+};
+
+// Grass and flowers: the .blend's 17,000 grass_medium_01 tufts and 420 dandelions and celandines, instanced from its
+// geometry-nodes scatter. Each grass blade keeps its UVs at the rows kept: three segments near the eye, two further off.
+const MEADOW = { nearUntil: 16 };
+
+// Platform drag: each deck moves up and down as one piece between these heights, and never closer than minGap to
+// another deck's height, so the three always stand at different levels.
+const DRAG = { min: [1.75, 2.10, 5.35], max: [3.05, 3.70, 6.45], minGap: 0.30, ladderMin: 1.60, threshold: 5 };
+// The frame behind the picture: at most `pixels` of them (a larger window is drawn smaller and stretched); while
+// something moves and frames take longer than `slow` ms it shrinks by `step` down to `least`, and returns at rest.
+const PACE = { pixels: 4.0e6, slow: 55, step: 0.8, least: 0.5, window: 6 };
+
+// ---------------------------------------------------------------------------------------------------------
+// Page furniture: loading bar and toast.
+// ---------------------------------------------------------------------------------------------------------
+const loadingEl = document.getElementById('loading');
+const loadingFill = loadingEl.querySelector('.fill');
+const toastEl = document.getElementById('toast');
+let toastTimer = 0;
+function toast(message, ms = 5000) {
+    toastEl.textContent = message;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms);
+}
+function progress(done, total) { loadingFill.style.width = Math.round(100 * done / Math.max(total, 1)) + '%'; }
+
+// ---------------------------------------------------------------------------------------------------------
+// Package files. Every file in assets/ has a data-only .js twin holding the same bytes as a data URL in
+// window.OAK_FILES, read with a classic script tag, so the page also opens straight from disk (file://), where
+// fetch is refused.
+// ---------------------------------------------------------------------------------------------------------
+const shelf = () => (window.OAK_FILES = window.OAK_FILES || {});
+function readPackageFile(rel) {
+    return new Promise((resolve, reject) => {
+        if (shelf()[rel]) { resolve(shelf()[rel]); return; }
+        const tag = document.createElement('script');
+        tag.src = 'assets/' + rel + '.js';
+        tag.onload = () => { tag.remove(); shelf()[rel] ? resolve(shelf()[rel]) : reject(new Error('Empty package file: ' + rel)); };
+        tag.onerror = () => { tag.remove(); reject(new Error('Missing package file: assets/' + rel + '.js')); };
+        document.head.appendChild(tag);
+    });
+}
+function dataUrlBytes(url) {
+    const raw = atob(url.slice(url.indexOf(',') + 1));
+    const bytes = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    return bytes;
+}
+async function readPicture(rel) {
+    const url = await readPackageFile(PACKAGE.textureDir + rel);
+    const bytes = dataUrlBytes(url);
+    // colorSpaceConversion none: normal, roughness and alpha maps must arrive untouched. Not flipped: every UV in the
+    // page is in glTF's convention (v down the picture), the GLB's and the frame builder's alike.
+    return createImageBitmap(new Blob([bytes], { type: rel.endsWith('.png') ? 'image/png' : 'image/jpeg' }), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Renderer, the linear frame and the finish: Blender's AgX "Medium High Contrast" display transform. (The
+// .blend's compositor, a vignette and a faint bloom, is not in the reference video, which is a viewport capture.)
+// ---------------------------------------------------------------------------------------------------------
+const holder = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.NoToneMapping;            // the display transform runs in finishPass
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;          // 17 look-ups spread over DAYLIGHT.shadow.radius texels
+renderer.shadowMap.autoUpdate = false;                  // redrawn on request (redrawShadows)
+holder.appendChild(renderer.domElement);
+
+const linearFrame = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4, colorSpace: THREE.LinearSRGBColorSpace });
+linearFrame.depthTexture = new THREE.DepthTexture(1, 1, THREE.FloatType);       // skyView scans it
+
+const finishPass = (() => {
+    const bytes = Uint8Array.from(atob(DISPLAY_LUT.data), c => c.charCodeAt(0));
+    const n = DISPLAY_LUT.size;
+    const rgba = new Uint8Array(n * n * n * 4);
+    for (let i = 0; i < n * n * n; i++) { rgba[i * 4] = bytes[i * 3]; rgba[i * 4 + 1] = bytes[i * 3 + 1]; rgba[i * 4 + 2] = bytes[i * 3 + 2]; rgba[i * 4 + 3] = 255; }
+    const lut = new THREE.Data3DTexture(rgba, n, n, n);
+    lut.minFilter = lut.magFilter = THREE.LinearFilter;
+    lut.wrapS = lut.wrapT = lut.wrapR = THREE.ClampToEdgeWrapping;
+    lut.unpackAlignment = 1;
+    lut.needsUpdate = true;
+    const material = new THREE.ShaderMaterial({
+        uniforms: { tScene: { value: null }, tLut: { value: lut }, uLog: { value: new THREE.Vector2(DISPLAY_LUT.log2Min, DISPLAY_LUT.log2Max) }, uSize: { value: n } },
+        vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+        fragmentShader: `
+            precision highp sampler3D;
+            uniform sampler2D tScene; uniform sampler3D tLut; uniform vec2 uLog; uniform float uSize;
+            varying vec2 vUv;
+            void main() {
+                vec3 c = max(texture2D(tScene, vUv).rgb, vec3(0.0));
+                vec3 s = clamp((log2(max(c, vec3(1e-7))) - uLog.x) / (uLog.y - uLog.x), 0.0, 1.0);
+                vec3 display = texture(tLut, s * ((uSize - 1.0) / uSize) + 0.5 / uSize).rgb;
+                float grain = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
+                gl_FragColor = vec4(display + grain / 255.0, 1.0);
+            }`,
+        depthTest: false, depthWrite: false
+    });
+    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+    quad.frustumCulled = false;
+    const stage = new THREE.Scene(); stage.add(quad);
+    const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    return { render(source) { material.uniforms.tScene.value = source; renderer.setRenderTarget(null); renderer.render(stage, cam); } };
+})();
+
+// ---------------------------------------------------------------------------------------------------------
+// Scene and camera.
+// ---------------------------------------------------------------------------------------------------------
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(VIEW.fov, window.innerWidth / window.innerHeight, VIEW.near, VIEW.far);
+const viewTarget = new THREE.Vector3(...VIEW.target);
+const viewDirection = new THREE.Vector3(...VIEW.eye).sub(viewTarget);
+const designDistance = viewDirection.length();
+viewDirection.normalize();
+
+// ---------------------------------------------------------------------------------------------------------
+// Light: the two suns, the sky as low-order diffuse light and as a reflection probe, and the sky behind everything.
+// ---------------------------------------------------------------------------------------------------------
+// Each sun has two shadow maps: one of everything that never moves, the meadow included, drawn once, and one of what a
+// drag moves (decks, cabin, bridge, ladders, lashings), redrawn while it moves. The second map belongs to a lamp of no
+// strength standing with the sun, and the materials take both maps for the sun's light. three.js offers every caster
+// to every map, so a caster says whether it casts by the set being drawn (casts).
+let castingSet = 'still';
+function casts(object, set) {
+    Object.defineProperty(object, 'castShadow', { get: () => castingSet === set, set() {}, configurable: true });
+    object.receiveShadow = true;
+    return object;
+}
+function sunLamps(spec) {
+    const [still, moving] = ['still', 'moving'].map(set => {
+        const box = DAYLIGHT.shadow[set];
+        const light = new THREE.DirectionalLight(new THREE.Color(...spec.color), set === 'still' ? spec.strength : 0);
+        light.target.position.set(...box.centre);
+        light.position.copy(light.target.position).addScaledVector(new THREE.Vector3(...spec.towards).normalize(), 60);
+        light.castShadow = true;
+        light.shadow.mapSize.set(box.mapSize, box.mapSize);
+        Object.assign(light.shadow.camera, { left: -box.half, right: box.half, top: box.half, bottom: -box.half, near: 25, far: 100 });
+        light.shadow.camera.updateProjectionMatrix();
+        light.shadow.bias = DAYLIGHT.shadow.bias;
+        light.shadow.normalBias = DAYLIGHT.shadow.normalBias;
+        light.shadow.radius = DAYLIGHT.shadow.radius;
+        light.shadow.autoUpdate = false;
+        const fit = light.shadow.updateMatrices.bind(light.shadow);
+        light.shadow.updateMatrices = lamp => { castingSet = set; fit(lamp); };
+        scene.add(light, light.target);
+        return light;
+    });
+    return { still, moving };
+}
+const suns = [sunLamps(DAYLIGHT.sol), sunLamps(DAYLIGHT.skySun)];       // lamp order: SOL, its moving set, sky sun, its moving set
+function redrawShadows(set) {
+    for (const sun of suns) sun[set].shadow.needsUpdate = true;
+    renderer.shadowMap.needsUpdate = true;
+}
+const skyProbe = new THREE.LightProbe();
+scene.add(skyProbe);
+
+// Directions of the world texture, as Blender reads it: the HDRI's u turns the other way round from three's
+// equirectangular lookup and the .blend's Mapping turns the world by worldRotation about the vertical.
+function worldDirection(u, v, out) {
+    const el = (v - 0.5) * Math.PI, phi = (0.5 - u) * 2 * Math.PI - DAYLIGHT.worldRotation;
+    return out.set(Math.cos(el) * Math.cos(phi), Math.sin(el), -Math.cos(el) * Math.sin(phi));
+}
+
+async function loadSky() {
+    const bytes = dataUrlBytes(await readPackageFile(PACKAGE.sky));
+    const hdr = new RGBELoader().setDataType(THREE.FloatType).parse(bytes.buffer);
+    const { width: w, height: h, data } = hdr;      // rows from the top of the image
+    const sky = new THREE.DataTexture(data, w, h, THREE.RGBAFormat, THREE.FloatType);
+    sky.colorSpace = THREE.LinearSRGBColorSpace;
+    sky.mapping = THREE.EquirectangularReflectionMapping;
+    sky.minFilter = sky.magFilter = THREE.LinearFilter;
+    sky.generateMipmaps = false;
+    sky.flipY = true;
+    sky.needsUpdate = true;
+    scene.background = sky;
+    scene.backgroundIntensity = DAYLIGHT.cameraStrength;
+    scene.backgroundRotation.set(0, -DAYLIGHT.worldRotation, 0);
+    // diffuse sky: the world's first-order harmonics, in three.js's order (constant, y, z, x)
+    const { ambient, lean } = DAYLIGHT.sky, sh = skyProbe.sh.coefficients;
+    sh[0].set(...ambient).multiplyScalar(1 / 0.886227);
+    [1, 2, 0].forEach((axis, k) => sh[k + 1].set(lean[0][axis], lean[1][axis], lean[2][axis]).multiplyScalar(1 / 1.023328));
+    // reflections: the sky clipped at reflectCap, prefiltered
+    const clipped = new THREE.DataTexture(new Float32Array(data.length), w, h, THREE.RGBAFormat, THREE.FloatType);
+    for (let i = 0; i < data.length; i += 4) {
+        const m = Math.max(data[i], data[i + 1], data[i + 2]) * DAYLIGHT.lightStrength;
+        const k = (m > DAYLIGHT.reflectCap ? DAYLIGHT.reflectCap / m : 1) * DAYLIGHT.lightStrength;
+        clipped.image.data[i] = data[i] * k; clipped.image.data[i + 1] = data[i + 1] * k;
+        clipped.image.data[i + 2] = data[i + 2] * k; clipped.image.data[i + 3] = 1;
+    }
+    Object.assign(clipped, { colorSpace: THREE.LinearSRGBColorSpace, mapping: THREE.EquirectangularReflectionMapping, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: false, flipY: true });
+    clipped.needsUpdate = true;
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromEquirectangular(clipped).texture;
+    scene.environmentRotation.set(0, -DAYLIGHT.worldRotation, 0);
+    pmrem.dispose(); clipped.dispose();
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Sky visibility. EEVEE's Fast GI keeps the sky's diffuse light off a surface wherever the frame shows something in
+// the way (the canopy over a deck, the ground below a wall). From every pixel it scans the depth buffer along a few
+// screen directions, marks which of 32 sectors of the surface's hemisphere each hit covers (a hit is 0.25 m thick and
+// at least 45 degrees deep, the scene's Fast GI thickness), and takes a share of what is covered, counted once plus
+// twice its cosine to the normal, away from the sky. This pass does that on the frame just drawn, at half size, and
+// smooths its 4 x 4 dither; the materials read it in the next frame, each point at its place in this one (the
+// first frame at a new size is drawn twice, once only to be scanned).
+// EEVEE's share is a half of what its own scan finds; this scan finds more, and 0.36 is the share that returns the
+// sky light the .blend's render shows on the ground, the decks, the beams, the rocks and the trunk.
+// ---------------------------------------------------------------------------------------------------------
+const SKY_VIEW = { slices: 4, steps: 8, thickness: 0.25, depth: 0.7854, bias: 1.053, share: 0.36 };
+const skyView = (() => {
+    const make = () => new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: false, minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
+    const raw = make(), smooth = make();
+    const far = new THREE.WebGLRenderTarget(1, 1, { type: THREE.FloatType, depthBuffer: false, minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
+    const vertexShader = 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
+    // hits are read from the farthest depth of each 2 x 2 block (EEVEE scans its depth pyramid one level up), so an
+    // edge or a piece thinner than the block hides nothing
+    const farthest = new THREE.ShaderMaterial({
+        uniforms: { tDepth: { value: null }, uPixels: { value: new THREE.Vector2(1, 1) } },
+        vertexShader,
+        fragmentShader: `
+            uniform highp sampler2D tDepth; uniform vec2 uPixels;
+            varying vec2 vUv;
+            void main() {
+                vec2 h = 0.5 / uPixels;
+                float a = textureLod( tDepth, vUv + vec2( - h.x, - h.y ), 0.0 ).x, b = textureLod( tDepth, vUv + vec2( h.x, - h.y ), 0.0 ).x;
+                float c = textureLod( tDepth, vUv + vec2( - h.x, h.y ), 0.0 ).x, d = textureLod( tDepth, vUv + vec2( h.x, h.y ), 0.0 ).x;
+                gl_FragColor = vec4( max( max( a, b ), max( c, d ) ), 0.0, 0.0, 1.0 );
+            }`,
+        depthTest: false, depthWrite: false
+    });
+    const scan = new THREE.ShaderMaterial({
+        uniforms: { tDepth: { value: null }, tFar: { value: far.texture }, uUnproject: { value: new THREE.Matrix4() }, uPixels: { value: new THREE.Vector2(1, 1) } },
+        vertexShader,
+        fragmentShader: `
+            uniform highp sampler2D tDepth, tFar; uniform mat4 uUnproject; uniform vec2 uPixels;
+            varying vec2 vUv;
+            const float PI = 3.14159265;
+            vec3 viewPoint( vec2 uv, float depth ) { vec4 p = uUnproject * vec4( uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0 ); return p.xyz / p.w; }
+            vec3 viewPoint( vec2 uv ) { return viewPoint( uv, textureLod( tDepth, uv, 0.0 ).x ); }
+            float countBits( uint v ) {
+                v = v - ( ( v >> 1u ) & 0x55555555u );
+                v = ( v & 0x33333333u ) + ( ( v >> 2u ) & 0x33333333u );
+                return float( ( ( ( v + ( v >> 4u ) ) & 0x0F0F0F0Fu ) * 0x01010101u ) >> 24u );
+            }
+            // the run of sectors between two angles from the normal, each within a quarter turn of it
+            uint sectors( float from, float to ) {
+                float a = clamp( from / PI + 0.5, 0.0, 1.0 ), b = clamp( to / PI + 0.5, 0.0, 1.0 );
+                uint first = uint( floor( 32.0 * a ) ), count = uint( ceil( 32.0 * ( b - a ) ) );
+                if ( count == 0u || first >= 32u ) return 0u;
+                return ( count >= 32u ? 0xFFFFFFFFu : ( 1u << count ) - 1u ) << first;
+            }
+            void main() {
+                float depth = textureLod( tDepth, vUv, 0.0 ).x;
+                if ( depth >= 1.0 ) { gl_FragColor = vec4( 1.0, 1e5, 0.0, 1.0 ); return; }
+                vec3 P = viewPoint( vUv, depth );
+                vec2 px = 1.0 / uPixels;
+                // the face normal, from the nearer neighbour along each screen axis
+                vec3 Pl = viewPoint( vUv - vec2( px.x, 0.0 ) ), Pr = viewPoint( vUv + vec2( px.x, 0.0 ) );
+                vec3 Pd = viewPoint( vUv - vec2( 0.0, px.y ) ), Pu = viewPoint( vUv + vec2( 0.0, px.y ) );
+                vec3 dx = abs( Pl.z - P.z ) < abs( Pr.z - P.z ) ? P - Pl : Pr - P;
+                vec3 dy = abs( Pd.z - P.z ) < abs( Pu.z - P.z ) ? P - Pd : Pu - P;
+                vec3 N = normalize( cross( dx, dy ) ), V = normalize( - P );
+                ivec2 cell = ivec2( gl_FragCoord.xy ) & 3;
+                int tile = cell.x + cell.y * 4;
+                float turn = float( ( tile * 7 + cell.y * 5 ) & 15 ) / 16.0, jitter = ( float( ( tile * 11 + 5 ) & 15 ) + 0.5 ) / 16.0;
+                vec2 here = vUv * uPixels;
+                float covered = 0.0, total = 0.0;
+                for ( int s = 0; s < ${SKY_VIEW.slices}; s ++ ) {
+                    float angle = ( float( s ) + turn ) * PI / ${SKY_VIEW.slices.toFixed(1)};
+                    vec2 along = vec2( cos( angle ), sin( angle ) );
+                    vec3 across = normalize( cross( V, vec3( along, 0.0 ) ) ), tangent = cross( across, V );
+                    vec3 inPlane = N - across * dot( N, across );
+                    float reach = length( inPlane );
+                    if ( reach < 1e-4 ) continue;
+                    inPlane /= reach;
+                    float tilt = sign( dot( inPlane, tangent ) ) * acos( clamp( dot( inPlane, V ), - 1.0, 1.0 ) );
+                    uint taken = 0u;
+                    float slice = 0.0;
+                    for ( int side = 0; side < 2; side ++ ) {
+                        vec2 way = side == 0 ? along : - along;
+                        vec2 room = vec2( way.x > 0.0 ? ( uPixels.x - here.x ) / way.x : way.x < 0.0 ? - here.x / way.x : 1e9,
+                                          way.y > 0.0 ? ( uPixels.y - here.y ) / way.y : way.y < 0.0 ? - here.y / way.y : 1e9 );
+                        float far = min( room.x, room.y );
+                        for ( int j = 0; j < ${SKY_VIEW.steps}; j ++ ) {
+                            float t = ( float( j ) + jitter ) / ${SKY_VIEW.steps.toFixed(1)};
+                            vec2 uv = ( here + way * ( 1.0 + t * t * far ) ) * px;
+                            if ( uv.x <= 0.0 || uv.x >= 1.0 || uv.y <= 0.0 || uv.y >= 1.0 ) break;
+                            float d = textureLod( tFar, uv, 0.0 ).x;
+                            if ( d >= 1.0 ) continue;
+                            vec3 hit = viewPoint( uv, d );
+                            vec3 front = normalize( hit - P ), back = normalize( hit - V * ${SKY_VIEW.thickness.toFixed(3)} - P );
+                            float near = acos( clamp( dot( front, V ), - 1.0, 1.0 ) );
+                            float deep = max( near + ${SKY_VIEW.depth.toFixed(4)}, acos( clamp( dot( back, V ), - 1.0, 1.0 ) ) );
+                            vec2 span = ( ( side == 0 ? vec2( near, deep ) : vec2( - deep, - near ) ) - tilt ) * ${SKY_VIEW.bias.toFixed(3)};
+                            uint run = sectors( span.x, span.y );
+                            float share = countBits( run & ~ taken ) / 32.0;
+                            slice += share * ( 1.0 + 2.0 * dot( front, N ) );
+                            taken |= run;
+                        }
+                    }
+                    covered += slice * reach;
+                    total += reach;
+                }
+                gl_FragColor = vec4( clamp( 1.0 - ${SKY_VIEW.share.toFixed(3)} * covered / max( total, 1e-4 ), 0.0, 1.0 ), - P.z, 0.0, 1.0 );
+            }`,
+        depthTest: false, depthWrite: false
+    });
+    const blur = new THREE.ShaderMaterial({
+        uniforms: { tRaw: { value: raw.texture }, uTexel: { value: new THREE.Vector2(1, 1) } },
+        vertexShader,
+        fragmentShader: `
+            uniform sampler2D tRaw; uniform vec2 uTexel;
+            varying vec2 vUv;
+            void main() {
+                float z = textureLod( tRaw, vUv, 0.0 ).g, sum = 0.0, weight = 0.0;
+                for ( int y = - 2; y < 2; y ++ ) for ( int x = - 2; x < 2; x ++ ) {
+                    vec4 s = textureLod( tRaw, vUv + vec2( x, y ) * uTexel, 0.0 );
+                    float w = max( 0.0, 1.0 - abs( s.g - z ) / ( 0.06 * z ) );
+                    sum += s.r * w; weight += w;
+                }
+                gl_FragColor = vec4( weight > 0.0 ? sum / weight : 1.0, z, 0.0, 1.0 );
+            }`,
+        depthTest: false, depthWrite: false
+    });
+    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), scan);
+    quad.frustumCulled = false;
+    const stage = new THREE.Scene(); stage.add(quad);
+    const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    const uniforms = { oakSkyView: { value: smooth.texture }, oakSkyViewMatrix: { value: new THREE.Matrix4() }, oakSkyViewSize: { value: new THREE.Vector2(1, 1) } };
+    let blank = true;
+    return {
+        uniforms, raw, smooth,
+        setSize(w, h) {
+            const hw = Math.max(1, w >> 1), hh = Math.max(1, h >> 1);
+            raw.setSize(hw, hh); smooth.setSize(hw, hh); far.setSize(hw, hh);
+            scan.uniforms.uPixels.value.set(w, h); farthest.uniforms.uPixels.value.set(w, h); blur.uniforms.uTexel.value.set(1 / hw, 1 / hh);
+            uniforms.oakSkyViewSize.value.set(hw, hh);
+            blank = true;
+        },
+        // nothing scanned yet at this size: every point sees the whole sky, and the caller draws once just to scan
+        get blank() { return blank; },
+        open() {
+            const colour = renderer.getClearColor(new THREE.Color()), alpha = renderer.getClearAlpha();
+            renderer.setClearColor(0xff0000, 1); renderer.setRenderTarget(smooth); renderer.clear(); renderer.setClearColor(colour, alpha);
+        },
+        // after a frame is drawn with `eye`
+        scan(frame, eye) {
+            scan.uniforms.tDepth.value = farthest.uniforms.tDepth.value = frame.depthTexture;
+            quad.material = farthest; renderer.setRenderTarget(far); renderer.render(stage, cam);
+            scan.uniforms.uUnproject.value.copy(eye.projectionMatrixInverse);
+            quad.material = scan; renderer.setRenderTarget(raw); renderer.render(stage, cam);
+            quad.material = blur; renderer.setRenderTarget(smooth); renderer.render(stage, cam);
+            uniforms.oakSkyViewMatrix.value.multiplyMatrices(eye.projectionMatrix, eye.matrixWorldInverse);
+            blank = false;
+        }
+    };
+})();
+
+// ---------------------------------------------------------------------------------------------------------
+// Materials. One shader patch serves every material:
+//  - the GGX lobe's reflectance comes from a table integrated at start-up the way EEVEE's is (separable Smith
+//    shadowing, then its multiple-scattering scale), and the roughness is the map's own (three.js adds to it where
+//    the normal turns fast, which EEVEE does not);
+//  - the Principled BSDF's layering: the diffuse layer loses what the specular layer over it reflects;
+//  - a sun's reflection is the lobe as a linearly transformed cosine (three.js's own table for area lights), the
+//    form EEVEE lights with: on a half-rough plank its tail is a fifth of the exact GGX one;
+//  - diffuse sky light comes only from the first-order harmonics in skyProbe (the reflection probe adds none);
+//  - leaves, grass and flags mix in the .blend's Translucent BSDF: light from behind passes through the card;
+//  - the frame (decks, braces, ladders, bridge) is cut away inside the bark, so a deck meets the trunk wherever it is
+//    dragged, the way the designer cut each piece to the bark at the delivered heights;
+//  - box-projected maps (canopy core, bunting) take their coordinates from the object, like Blender's Box projection.
+// ---------------------------------------------------------------------------------------------------------
+const specularTable = (() => {
+    // scale and bias of F0 in the lobe's reflectance at each (N.V, roughness), with the shadowing of the two
+    // directions taken apart (Smith G1 times G1), as in EEVEE's table
+    const N = 32, S = 256, data = new Uint16Array(N * N * 4);
+    const radical = i => { let b = i, r = 0, f = 0.5; while (b) { if (b & 1) r += f; b >>= 1; f *= 0.5; } return r; };
+    for (let j = 0; j < N; j++) {
+        const a = Math.max(j / (N - 1), 0.03) ** 2, a2 = a * a;
+        const g1 = x => 2 * x / (x + Math.sqrt(a2 + (1 - a2) * x * x));
+        for (let i = 0; i < N; i++) {
+            const nv = Math.max(i / (N - 1), 0.01), vx = Math.sqrt(1 - nv * nv);
+            let scale = 0, bias = 0;
+            for (let k = 0; k < S; k++) {
+                const phi = 2 * Math.PI * (k + 0.5) / S, u = radical(k);
+                const ct = Math.sqrt((1 - u) / (1 + (a2 - 1) * u)), st = Math.sqrt(1 - ct * ct);
+                const hx = st * Math.cos(phi), vh = vx * hx + nv * ct, nl = 2 * vh * ct - nv;
+                if (nl <= 0 || vh <= 0) continue;
+                const apart = g1(nv) * g1(nl) * vh / (ct * nv), fc = (1 - vh) ** 5;
+                scale += (1 - fc) * apart; bias += fc * apart;
+            }
+            const o = (j * N + i) * 4, h = THREE.DataUtils.toHalfFloat;
+            data[o] = h(scale / S); data[o + 1] = h(bias / S); data[o + 2] = 0; data[o + 3] = h(1);
+        }
+    }
+    const t = new THREE.DataTexture(data, N, N, THREE.RGBAFormat, THREE.HalfFloatType);
+    t.minFilter = t.magFilter = THREE.LinearFilter;
+    t.needsUpdate = true;
+    return t;
+})();
+
+// The bark: for every heading and height, how far out the trunk's surface is (filled in from the Meshy trunk at load)
+const BARK = { headings: 360, zMin: 0.0, zMax: 8.0, rows: 400, reach: 1.7, inset: 0.004 };
+const barkTexture = new THREE.DataTexture(new Uint16Array(BARK.headings * BARK.rows), BARK.headings, BARK.rows, THREE.RedFormat, THREE.HalfFloatType);
+barkTexture.wrapS = THREE.RepeatWrapping; barkTexture.wrapT = THREE.ClampToEdgeWrapping;
+barkTexture.minFilter = barkTexture.magFilter = THREE.LinearFilter;
+
+RectAreaLightTexturesLib.init();
+const sharedUniforms = {
+    oakDFG: { value: specularTable },
+    oakLtc: { value: RectAreaLightTexturesLib.LTC_HALF_1 },
+    oakSunTowards: { value: [DAYLIGHT.sol, DAYLIGHT.sol, DAYLIGHT.skySun, DAYLIGHT.skySun].map(sun => new THREE.Vector3(...sun.towards).normalize()) },
+    oakBark: { value: barkTexture },
+    oakBarkGrid: { value: new THREE.Vector4(BARK.zMin, BARK.zMax, BARK.reach, BARK.inset) },
+    ...skyView.uniforms
+};
+
+const GLSL_BARK = `
+uniform sampler2D oakBark;
+uniform vec4 oakBarkGrid;
+bool oakInsideBark( vec3 p ) {
+    float r = length( p.xz );
+    if ( r > oakBarkGrid.z ) return false;
+    float zr = ( p.y - oakBarkGrid.x ) / ( oakBarkGrid.y - oakBarkGrid.x );
+    if ( zr <= 0.0 || zr >= 1.0 ) return false;
+    // heading as Blender measures it: atan2(y, x) with Blender y = -z here
+    float u = atan( -p.z, p.x ) * 0.15915494;          // the table starts at heading 0; the texture wraps
+    return r < texture2D( oakBark, vec2( u, zr ) ).r - oakBarkGrid.w;
+}`;
+
+// How much of the sky a point saw in the frame before (skyView): the four texels round its place there, each
+// counted by how close its depth is to the point's.
+const GLSL_SKY = `
+uniform sampler2D oakSkyView;
+uniform mat4 oakSkyViewMatrix;
+uniform vec2 oakSkyViewSize;
+float oakSkyVisibility( vec3 world ) {
+    vec4 clip = oakSkyViewMatrix * vec4( world, 1.0 );
+    if ( clip.w <= 0.0 ) return 1.0;
+    vec2 at = ( clip.xy / clip.w * 0.5 + 0.5 ) * oakSkyViewSize - 0.5, cell = floor( at ), f = at - cell;
+    float sum = 0.0, weight = 0.0;
+    for ( int k = 0; k < 4; k ++ ) {
+        vec2 o = vec2( float( k & 1 ), float( k >> 1 ) );
+        vec4 s = textureLod( oakSkyView, ( cell + o + 0.5 ) / oakSkyViewSize, 0.0 );
+        float w = mix( 1.0 - f.x, f.x, o.x ) * mix( 1.0 - f.y, f.y, o.y ) * max( 1e-3, 1.0 - abs( s.g - clip.w ) / ( 0.08 * clip.w ) );
+        sum += s.r * w; weight += w;
+    }
+    return sum / max( weight, 1e-6 );
+}`;
+
+// A shader chunk edit that fails loudly if three.js no longer has the line.
+function swap(text, from, to) {
+    if (!text.includes(from)) throw new Error('Shader chunk changed: ' + from.slice(0, 60));
+    return text.replaceAll(from, to);
+}
+
+const GLSL_DFG = `uniform sampler2D oakDFG;
+vec2 oakLobe( const in vec3 normal, const in vec3 viewDir, const in float roughness ) {
+    return texture2D( oakDFG, vec2( saturate( dot( normal, viewDir ) ), roughness ) * ( 31.0 / 32.0 ) + 0.5 / 32.0 ).rg;
+}
+// what the lobe reflects in all: its single scattering, scaled for the bounces between microfacets
+vec3 oakReflectance( const in vec3 f0, const in float f90, const in vec2 lobe ) {
+    vec3 average = f0 + ( f90 - f0 ) / 21.0;
+    return ( f0 * lobe.x + f90 * lobe.y ) / ( 1.0 - ( 1.0 - lobe.x - lobe.y ) * average );
+}
+vec2 DFGApprox( const in vec3 normal, const in vec3 viewDir, const in float roughness ) {
+    return oakLobe( normal, viewDir, roughness );
+}
+// the share of a lamp in direction L that the lobe returns: a clamped cosine pushed through the table's matrix
+uniform sampler2D oakLtc;
+float oakLampLobe( const in vec3 L, const in vec3 V, const in vec3 N, const in float roughness ) {
+    float dotNV = saturate( dot( N, V ) ), dotNL = dot( N, L );
+    if ( dotNL <= 0.0 ) return 0.0;
+    vec4 t = texture2D( oakLtc, vec2( roughness, sqrt( 1.0 - dotNV ) ) * ( 63.0 / 64.0 ) + 0.5 / 64.0 );
+    vec3 T1 = V - N * dot( V, N );
+    float side = length( T1 );
+    T1 = side > 1e-4 ? T1 / side : normalize( cross( N, abs( N.x ) < 0.9 ? vec3( 1.0, 0.0, 0.0 ) : vec3( 0.0, 1.0, 0.0 ) ) );
+    vec3 l = vec3( dot( L, T1 ), dot( L, - cross( N, T1 ) ), dotNL );
+    vec3 o = vec3( t.x * l.x + t.z * l.z, l.y, t.y * l.x + t.w * l.z );
+    float len2 = dot( o, o );
+    return max( o.z, 0.0 ) * abs( t.x * t.w - t.z * t.y ) / ( PI * len2 * len2 );
+}`;
+
+function worldPositionVarying(shader, withNormal = true) {
+    const block = `
+        {
+            vec4 w = vec4( transformed, 1.0 );
+            #ifdef USE_BATCHING
+                w = batchingMatrix * w;
+            #endif
+            #ifdef USE_INSTANCING
+                w = instanceMatrix * w;
+            #endif
+            vOakWorld = ( modelMatrix * w ).xyz;
+            vOakObject = transformed;
+            vOakObjectNormal = ${withNormal ? 'objectNormal' : 'vec3( 0.0, 1.0, 0.0 )'};
+        }`;
+    const decl = 'varying vec3 vOakWorld;\nvarying vec3 vOakObject;\nvarying vec3 vOakObjectNormal;\n';
+    let vs = decl + shader.vertexShader;
+    // the depth shader has no worldpos_vertex: its block goes in front of project_vertex instead
+    vs = vs.includes('#include <worldpos_vertex>') ? vs.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>' + block)
+        : vs.replace('#include <project_vertex>', block + '\n#include <project_vertex>');
+    shader.vertexShader = vs;
+    shader.fragmentShader = decl + shader.fragmentShader;
+}
+
+function patchLighting(material, opts = {}) {
+    const keyParts = ['oak', opts.translucency ? 't' + opts.translucency : '', opts.thin ? 'thin' : '', opts.skyShare ? 's' + opts.skyShare : '', opts.barkClip ? 'clip' : '', opts.box ? 'box' + opts.box : '', opts.ground ? 'ground' : '', opts.key || ''];
+    material.onBeforeCompile = shader => {
+        Object.assign(shader.uniforms, sharedUniforms, opts.uniforms || {});
+        worldPositionVarying(shader);
+        // a thin two-sided card asks the shadow maps from a point moved towards the sun: three.js moves it along the
+        // vertex normal, which on half the leaves points away from the sun and puts the card in its own shadow
+        if (opts.thin) shader.vertexShader = 'uniform vec3 oakSunTowards[ 4 ];\n' + swap(shader.vertexShader, '#include <shadowmap_vertex>',
+            swap(THREE.ShaderChunk.shadowmap_vertex, 'shadowWorldNormal * directionalLightShadows[ i ].shadowNormalBias', 'oakSunTowards[ i ] * directionalLightShadows[ i ].shadowNormalBias'));
+        let fs = shader.fragmentShader;
+        // alpha to coverage spread evenly round the cut: three.js starts the ramp at the cut, which eats every texel
+        // the mip chain has blurred to just above it
+        fs = fs.replace('#include <alphatest_fragment>', `#ifdef USE_ALPHATEST
+            #ifdef ALPHA_TO_COVERAGE
+                diffuseColor.a = saturate( ( diffuseColor.a - alphaTest ) / max( fwidth( diffuseColor.a ), 1e-4 ) + 0.5 );
+                if ( diffuseColor.a == 0.0 ) discard;
+            #else
+                if ( diffuseColor.a < alphaTest ) discard;
+            #endif
+        #endif`);
+        // GGX lobe from the tables: a lamp's share of the lobe times the lobe's reflectance; for the sky, every
+        // scattering order rides on the radiance
+        let pars = THREE.ShaderChunk.lights_physical_pars_fragment.replace(/vec2 DFGApprox\([\s\S]*?return fab;\s*\}/, '');
+        if (pars.includes('vec2 fab = vec2( - 1.04, 1.04 )')) throw new Error('Shader chunk changed: DFGApprox');
+        pars = swap(pars, 'reflectedLight.directSpecular += irradiance * BRDF_GGX( directLight.direction, geometryViewDir, geometryNormal, material );',
+            'reflectedLight.directSpecular += directLight.color * oakLampLobe( directLight.direction, geometryViewDir, geometryNormal, material.roughness ) * oakReflectance( material.specularColor, material.specularF90, oakLobe( geometryNormal, geometryViewDir, material.roughness ) );');
+        pars = swap(pars, 'reflectedLight.indirectSpecular += multiScattering * cosineWeightedIrradiance;', 'reflectedLight.indirectSpecular += multiScattering * radiance;');
+        fs = swap(fs, '#include <lights_physical_pars_fragment>', GLSL_DFG + '\n' + pars);
+        // the Principled BSDF's specular layer takes its own reflectance out of the diffuse layer under it
+        fs = GLSL_SKY + '\n' + swap(fs, '#include <lights_physical_fragment>', swap(THREE.ShaderChunk.lights_physical_fragment, 'material.roughness += geometryRoughness;', '') + `
+            float oakSky = oakSkyVisibility( vOakWorld ) * ${(opts.skyShare ?? 1).toFixed(3)};
+            vec3 oakTop = oakReflectance( material.specularColor, material.specularF90, oakLobe( normal, normalize( vViewPosition ), material.roughness ) );
+            float oakUnder = 1.0 - max( oakTop.r, max( oakTop.g, oakTop.b ) );
+            material.diffuseColor *= oakUnder;
+`);
+        // the sky's diffuse light comes from skyProbe alone, as far as skyView lets it through, and so do reflections
+        // (EEVEE traces the smooth ones across the screen, where they meet the same things); rough lobes read the sky's harmonics along their main direction, smooth ones the clipped sky
+        fs = fs.replace('#include <lights_fragment_maps>', THREE.ShaderChunk.lights_fragment_maps.replace('iblIrradiance += getIBLIrradiance( geometryNormal );', '')
+            .replace('radiance += getIBLRadiance( geometryViewDir, geometryNormal, material.roughness );', `{
+                float oakSmooth = 1.0 - material.roughness;
+                vec3 oakLobe = normalize( mix( geometryNormal, reflect( - geometryViewDir, geometryNormal ), oakSmooth * ( sqrt( oakSmooth ) + material.roughness ) ) );
+                radiance += oakSky * mix( getIBLRadiance( geometryViewDir, geometryNormal, material.roughness ), getLightProbeIrradiance( lightProbe, oakLobe ) * RECIPROCAL_PI,
+                    saturate( ( material.roughness - ${DAYLIGHT.traceMaxRoughness.toFixed(3)} ) * 5.0 ) );
+            }`));
+        let begin = swap(THREE.ShaderChunk.lights_fragment_begin, 'irradiance += getLightProbeIrradiance( lightProbe, geometryNormal );',
+            'irradiance += getLightProbeIrradiance( lightProbe, geometryNormal ) * oakSky;');
+        // a sun's light goes through both of its shadow maps (its own and the next lamp's); that lamp lights nothing
+        const shade = 'directLight.color *= ( directLight.visible && receiveShadow ) ? getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] ) : 1.0;';
+        begin = swap(begin, shade, shade + `
+            #if ( UNROLLED_LOOP_INDEX == 0 || UNROLLED_LOOP_INDEX == 2 )
+                directionalLightShadow = directionalLightShadows[ UNROLLED_LOOP_INDEX + 1 ];
+                if ( receiveShadow ) directLight.color *= getShadow( directionalShadowMap[ UNROLLED_LOOP_INDEX + 1 ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ UNROLLED_LOOP_INDEX + 1 ] );
+            #endif`);
+        const direct = 'RE_Direct( directLight, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );';
+        let lit = direct;
+        if (opts.translucency) {
+            const t = opts.translucency.toFixed(3), f = (1 - opts.translucency).toFixed(3);
+            // direct light: the Principled part weighted by (1 - t), light through the card from behind weighted by t
+            lit = `{ ReflectedLight before = reflectedLight;
+                   ${direct}
+                   reflectedLight.directDiffuse = before.directDiffuse + ( reflectedLight.directDiffuse - before.directDiffuse ) * ${f}
+                       + ${t} * saturate( - dot( geometryNormal, directLight.direction ) ) * directLight.color * BRDF_Lambert( material.diffuseColor / oakUnder );
+                   reflectedLight.directSpecular = before.directSpecular + ( reflectedLight.directSpecular - before.directSpecular ) * ${f}; }`;
+            fs = swap(fs, '#include <lights_fragment_end>', `
+                #if defined( USE_LIGHT_PROBES )
+                    irradiance = irradiance * ${f} + ${t} / oakUnder * getLightProbeIrradiance( lightProbe, - geometryNormal ) * oakSky;
+                #endif
+                radiance *= ${f};
+                #include <lights_fragment_end>`);
+        }
+        begin = swap(begin, direct, '#if ( UNROLLED_LOOP_INDEX == 0 || UNROLLED_LOOP_INDEX == 2 )\n' + lit + '\n#endif');
+        fs = swap(fs, '#include <lights_fragment_begin>', begin);
+        if (opts.barkClip) {
+            fs = fs.replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif ( oakInsideBark( vOakWorld ) ) discard;');
+            fs = GLSL_BARK + '\n' + fs;
+        }
+        if (opts.box) {
+            // Blender Box projection, blend 0: the object-space axis the normal leans on most picks the plane
+            fs = fs.replace('void main() {', `vec2 oakBoxUv() {
+                vec3 n = abs( vOakObjectNormal ), p = vOakObject * ${opts.box.toFixed(3)};
+                vec3 b = vec3( p.x, - p.z, p.y );   // back to Blender's object axes
+                if ( n.x >= n.y && n.x >= n.z ) return vec2( b.y, b.z );
+                if ( n.z >= n.y ) return vec2( b.x, b.z );
+                return vec2( b.x, b.y );
+            }
+            void main() {`);
+            fs = fs.replace('#include <map_fragment>', 'vec4 sampledDiffuseColor = texture2D( map, oakBoxUv() ); diffuseColor *= sampledDiffuseColor;');
+            fs = fs.replace('#include <normal_fragment_maps>', '');
+        }
+        if (opts.ground) fs = groundShader(fs);
+        if (opts.patch) fs = opts.patch(fs);
+        shader.fragmentShader = fs;
+    };
+    material.customProgramCacheKey = () => keyParts.join('-');
+    return material;
+}
+
+// The ground's own colour, roughness and normal, mixed as the .blend's node tree mixes them (Blender's Noise Texture
+// reproduced exactly: Perlin noise on a Jenkins hash, fBm, normalized).
+const GLSL_NOISE = `
+uint oakRot( uint x, uint k ) { return ( x << k ) | ( x >> ( 32u - k ) ); }
+uint oakHash( int ix, int iy, int iz ) {
+    uint a = 0xdeadbeefu + ( 3u << 2u ) + 13u, b = a, c = a;
+    c += uint( iz ); b += uint( iy ); a += uint( ix );
+    c ^= b; c -= oakRot( b, 14u ); a ^= c; a -= oakRot( c, 11u ); b ^= a; b -= oakRot( a, 25u );
+    c ^= b; c -= oakRot( b, 16u ); a ^= c; a -= oakRot( c, 4u ); b ^= a; b -= oakRot( a, 14u );
+    c ^= b; c -= oakRot( b, 24u );
+    return c;
+}
+float oakGrad( uint h, float x, float y, float z ) {
+    h &= 15u;
+    float u = h < 8u ? x : y, vt = ( h == 12u || h == 14u ) ? x : z, v = h < 4u ? y : vt;
+    return ( ( h & 1u ) != 0u ? - u : u ) + ( ( h & 2u ) != 0u ? - v : v );
+}
+float oakFade( float t ) { return t * t * t * ( t * ( t * 6.0 - 15.0 ) + 10.0 ); }
+float oakPerlin( vec3 p ) {
+    vec3 i = floor( p ), f = p - i;
+    int X = int( i.x ), Y = int( i.y ), Z = int( i.z );
+    float u = oakFade( f.x ), v = oakFade( f.y ), w = oakFade( f.z );
+    float g000 = oakGrad( oakHash( X, Y, Z ), f.x, f.y, f.z ), g100 = oakGrad( oakHash( X + 1, Y, Z ), f.x - 1.0, f.y, f.z );
+    float g010 = oakGrad( oakHash( X, Y + 1, Z ), f.x, f.y - 1.0, f.z ), g110 = oakGrad( oakHash( X + 1, Y + 1, Z ), f.x - 1.0, f.y - 1.0, f.z );
+    float g001 = oakGrad( oakHash( X, Y, Z + 1 ), f.x, f.y, f.z - 1.0 ), g101 = oakGrad( oakHash( X + 1, Y, Z + 1 ), f.x - 1.0, f.y, f.z - 1.0 );
+    float g011 = oakGrad( oakHash( X, Y + 1, Z + 1 ), f.x, f.y - 1.0, f.z - 1.0 ), g111 = oakGrad( oakHash( X + 1, Y + 1, Z + 1 ), f.x - 1.0, f.y - 1.0, f.z - 1.0 );
+    return mix( mix( mix( g000, g100, u ), mix( g010, g110, u ), v ), mix( mix( g001, g101, u ), mix( g011, g111, u ), v ), w );
+}
+float oakNoise( vec3 co, float scale, int detail, float roughness ) {
+    vec3 p = co * scale;
+    float fscale = 1.0, amp = 1.0, maxamp = 0.0, sum = 0.0;
+    for ( int i = 0; i <= 8; i ++ ) {
+        if ( i > detail ) break;
+        sum += 0.982 * oakPerlin( p * fscale ) * amp;
+        maxamp += amp; amp *= roughness; fscale *= 2.0;
+    }
+    return 0.5 * sum / maxamp + 0.5;
+}`;
+
+const groundUniforms = {
+    tGrassMap: { value: null }, tGrassRough: { value: null }, tGrassNormal: { value: null },
+    tLeafMap: { value: null }, tLeafRough: { value: null }, tLeafNormal: { value: null }
+};
+function groundShader(fs) {
+    const g = GROUND, v3 = c => 'vec3( ' + c.map(x => x.toFixed(4)).join(', ') + ' )';
+    const [[sx, sy, s0, s1], [lx, ly, l0, l1]] = g.patches;
+    fs = fs.replace('void main() {', `uniform sampler2D tGrassMap, tGrassRough, tGrassNormal, tLeafMap, tLeafRough, tLeafNormal;
+        ${GLSL_NOISE}
+        float oakRange( float x, float a, float b, float c, float d ) { return mix( c, d, clamp( ( x - a ) / ( b - a ), 0.0, 1.0 ) ); }
+        void main() {
+            vec3 bco = vec3( vOakObject.x, - vOakObject.z, vOakObject.y );       // the ground's object space, in Blender axes
+            float r = length( bco.xy );
+            float dm = 0.0;
+            if ( r < 7.5 ) {
+                float jit = oakNoise( bco, ${g.jitter.scale.toFixed(3)}, ${g.jitter.detail}, ${g.jitter.roughness.toFixed(3)} ) - 0.5;
+                float ring = oakRange( r + jit, ${g.ring[0].toFixed(3)}, ${g.ring[1].toFixed(3)}, 1.0, 0.0 );
+                float swing = oakRange( distance( bco.xy, vec2( ${sx.toFixed(4)}, ${sy.toFixed(4)} ) ) + jit * 0.5, ${s0.toFixed(3)}, ${s1.toFixed(3)}, 1.0, 0.0 );
+                float foot = oakRange( distance( bco.xy, vec2( ${lx.toFixed(4)}, ${ly.toFixed(4)} ) ) + jit * 0.5, ${l0.toFixed(3)}, ${l1.toFixed(3)}, 1.0, 0.0 );
+                dm = max( ring, max( swing, foot ) );
+            }
+            vec2 uvG = vec2( bco.x, - bco.y ) / ${g.grass.tile.toFixed(3)}, uvL = vec2( bco.x, - bco.y ) / ${g.leaves.tile.toFixed(3)};
+            float wash = oakRange( oakNoise( bco, ${g.wash.scale.toFixed(3)}, ${g.wash.detail}, ${g.wash.roughness.toFixed(3)} ), ${g.wash.from[0]}, ${g.wash.from[1]}, ${g.wash.to[0]}, ${g.wash.to[1]} );
+            vec3 oakAlbedo = mix( texture2D( tGrassMap, uvG ).rgb, texture2D( tLeafMap, uvL ).rgb, dm ) * wash;
+            oakAlbedo = mix( oakAlbedo, ${v3(g.tint.colour)}, ${g.tint.amount.toFixed(3)} );
+            oakAlbedo = mix( oakAlbedo, ${v3(g.haze.colour)}, oakRange( distance( vOakWorld, cameraPosition ), ${g.haze.from.toFixed(1)}, ${g.haze.to.toFixed(1)}, 0.0, ${g.haze.amount.toFixed(3)} ) );
+            oakAlbedo *= mix( vec3( 1.0 ), ${v3(g.finish.colour)}, ${g.finish.amount.toFixed(3)} );
+            float oakRough = mix( texture2D( tGrassRough, uvG ).g, texture2D( tLeafRough, uvL ).g, dm );
+            vec3 oakTangent = mix( texture2D( tGrassNormal, uvG ).xyz, texture2D( tLeafNormal, uvL ).xyz, dm ) * 2.0 - 1.0;`);
+    fs = fs.replace('#include <map_fragment>', 'diffuseColor.rgb = oakAlbedo;');
+    fs = fs.replace('#include <roughnessmap_fragment>', 'float roughnessFactor = oakRough;');
+    // normal map: tangent along Blender +x, bitangent along Blender +y (three -z), as the planar mapping lays them
+    fs = fs.replace('#include <normal_fragment_maps>', `{
+        vec3 wn = normalize( inverseTransformDirection( normal, viewMatrix ) );
+        vec3 t = normalize( vec3( 1.0, 0.0, 0.0 ) - wn * wn.x ), b = normalize( cross( wn, t ) );
+        vec3 nw = normalize( t * oakTangent.x + b * oakTangent.y + wn * oakTangent.z );
+        normal = normalize( ( viewMatrix * vec4( nw, 0.0 ) ).xyz );
+    }`);
+    return fs;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Textures and finishes by .blend material name.
+// ---------------------------------------------------------------------------------------------------------
+const pictureCache = new Map();
+const textures = new Map();
+function texture(rel, srgb) {
+    const key = rel + (srgb ? '|srgb' : '');
+    if (!textures.has(key)) {
+        const img = pictureCache.get(rel);
+        if (!img) throw new Error('Texture not loaded: ' + rel);
+        const t = new THREE.Texture(img);
+        t.flipY = false;
+        t.wrapS = t.wrapT = THREE.RepeatWrapping;
+        t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+        t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+        t.needsUpdate = true;
+        textures.set(key, t);
+    }
+    return textures.get(key);
+}
+// Alpha maps get their own mip chain, each level scaled so that, cut at 0.5, it covers what EEVEE's dithered alpha
+// covers there: the opacity of the level's filtered alpha. In the .blend the map cuts a leaf's or a blade's Principled
+// part twice (its Alpha input, then the mix with Transparent) and the Translucent part once, so with `twice` the share
+// of the Principled part, a texel of alpha a is a (1 - twice + twice a) opaque; `gain` makes up for what the thinned
+// blades lose of the full ones. The plain chain thins the grass blades away with distance.
+const coverageDone = new Set();
+function alphaTexture(rel, twice = 0, gain = 1) {
+    const t = texture(rel);
+    if (coverageDone.has(t)) return t;
+    coverageDone.add(t);
+    const n0 = t.image.width, canvas = document.createElement('canvas');
+    canvas.width = canvas.height = n0;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(t.image, 0, 0);
+    const src = ctx.getImageData(0, 0, n0, n0).data;
+    let a = new Float32Array(n0 * n0);
+    for (let i = 0; i < a.length; i++) a[i] = src[i * 4 + 1] / 255;
+    const mips = [], bins = 4096, hist = new Uint32Array(bins);
+    for (let n = n0; ; n >>= 1) {
+        let opaque = 0;
+        hist.fill(0);
+        for (const v of a) { hist[Math.min(bins - 1, Math.floor(v * bins))]++; opaque += v * (1 - twice + twice * v); }
+        let count = 0, cut = 1;
+        for (let b = bins - 1; b >= 0; b--) { count += hist[b]; if (count >= opaque * gain) { cut = (b + 0.5) / bins; break; } }
+        const scale = 0.5 / Math.max(cut, 1e-4), level = new ImageData(n, n);
+        for (let i = 0; i < n * n; i++) {
+            const v = Math.round(Math.min(1, a[i] * scale) * 255);
+            level.data[i * 4] = level.data[i * 4 + 1] = level.data[i * 4 + 2] = v; level.data[i * 4 + 3] = 255;
+        }
+        mips.push(level);
+        if (n === 1) break;
+        const m = n >> 1, next = new Float32Array(m * m);
+        for (let y = 0; y < m; y++) for (let x = 0; x < m; x++) {
+            const i = 2 * y * n + 2 * x;
+            next[y * m + x] = 0.25 * (a[i] + a[i + 1] + a[i + n] + a[i + n + 1]);
+        }
+        a = next;
+    }
+    t.mipmaps = mips;
+    t.generateMipmaps = false;
+    t.needsUpdate = true;
+    return t;
+}
+const iorForLevel = level => { const r = Math.sqrt(0.08 * level); return (1 + r) / (1 - r); };
+const finishes = new Map();
+function finish(name, variant = '') {
+    const key = name + '|' + variant;
+    if (finishes.has(key)) return finishes.get(key);
+    const f = FINISHES[name];
+    if (!f) throw new Error('No finish for material ' + name);
+    let m;
+    if (f.hero) {
+        m = new THREE.MeshPhysicalMaterial({ name, roughness: 1, metalness: 0, ior: 1.5 });
+        m.userData.hero = f.hero;              // maps come from the hero GLB itself (see adoptHero)
+        patchLighting(m);
+    } else if (f.ground) {
+        m = new THREE.MeshPhysicalMaterial({ name, roughness: 1, metalness: 0, ior: 1.5 });
+        groundUniforms.tGrassMap.value = texture(GROUND.grass.map, true);
+        groundUniforms.tGrassRough.value = texture(GROUND.grass.roughnessMap);
+        groundUniforms.tGrassNormal.value = texture(GROUND.grass.normalMap);
+        groundUniforms.tLeafMap.value = texture(GROUND.leaves.map, true);
+        groundUniforms.tLeafRough.value = texture(GROUND.leaves.roughnessMap);
+        groundUniforms.tLeafNormal.value = texture(GROUND.leaves.normalMap);
+        m.map = groundUniforms.tGrassMap.value;              // keeps USE_MAP / USE_UV on; the shader samples its own
+        m.roughnessMap = groundUniforms.tGrassRough.value;
+        m.normalMap = groundUniforms.tGrassNormal.value;
+        patchLighting(m, { ground: true, uniforms: groundUniforms });
+    } else {
+        m = new THREE.MeshPhysicalMaterial({ name, roughness: f.roughness ?? 1, metalness: 0, ior: iorForLevel((f.level ?? 0.5) / (f.edge ?? 1)), specularIntensity: f.edge ?? 1 });
+        if (f.map) m.map = texture(f.map, true);
+        if (f.roughnessMap) m.roughnessMap = texture(f.roughnessMap);
+        if (f.normalMap && !f.boxScale) { m.normalMap = texture(f.normalMap); m.normalScale.set(1, -1); }
+        if (f.alphaMap) { m.alphaMap = alphaTexture(f.alphaMap, f.translucency ? 1 - f.translucency : 0, f.coverGain); m.alphaTest = 0.5; m.alphaToCoverage = true; }
+        if (f.tint) m.color.setRGB(...f.tint, THREE.LinearSRGBColorSpace);
+        if (f.flag) m.color.setRGB(...f.flag.map(c => 0.15 + 0.85 * c), THREE.LinearSRGBColorSpace);
+        if (f.vertexColors) m.vertexColors = true;
+        if (f.decal) { m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -4; }
+        patchLighting(m, { translucency: f.translucency, thin: !!(f.leaf || f.translucency), skyShare: f.skyShare, barkClip: variant === 'frame', box: f.boxScale });
+    }
+    m.side = THREE.DoubleSide;               // Blender draws both sides of every face
+    if (variant === 'frame') {
+        // the shadow of a frame piece is cut at the bark too
+        const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, side: THREE.DoubleSide });
+        depth.onBeforeCompile = shader => {
+            Object.assign(shader.uniforms, sharedUniforms);
+            worldPositionVarying(shader, false);
+            shader.fragmentShader = GLSL_BARK + '\n' + shader.fragmentShader.replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif ( oakInsideBark( vOakWorld ) ) discard;');
+        };
+        depth.customProgramCacheKey = () => 'oak-depth-clip';
+        m.userData.depth = depth;
+    }
+    finishes.set(key, m);
+    return m;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// The treehouse frame: decks, railings, the bridge landings, the rope bridge and the two ladders, worked out from the
+// designer's layout (ots03_layout.py inside the .blend) for any deck heights. Plain maths, no three.js: every piece is
+// a spec in Blender axes (x east, y north, z up, metres), turned into geometry by buildFramePieces().
+// ---------------------------------------------------------------------------------------------------------
+const FRAME = (() => {
+    const deg = Math.PI / 180;
+    const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+    const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+    const mul = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
+    const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    const unit = a => { const n = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / n, a[1] / n, a[2] / n]; };
+    const dist2 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+    // mulberry32, the generator the layout draws its board jitter and grain offsets from
+    function stream(seed) {
+        let s = seed >>> 0;
+        return () => {
+            s = (s + 0x6D2B79F5) >>> 0;
+            let t = Math.imul(s ^ (s >>> 15), 1 | s);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+    const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    // the ground the layout stands the ladder on (the CHAO mesh is sampled from the same surface)
+    function groundAt(x, y) {
+        const r = Math.hypot(x, y), th = Math.atan2(y, x);
+        const g = 0.30 * Math.exp(-((r / 2.6) ** 2)) + 0.05 * Math.sin(0.37 * x + 0.5) * Math.cos(0.31 * y + 0.2);
+        const h = 2.4 + 1.5 * Math.sin(2 * th + 0.8) + 0.8 * Math.sin(5 * th + 2.0) + 0.4 * Math.sin(9 * th + 0.3);
+        return g + sstep(24, 75, r) * Math.max(h, 0.3) * 1.5 * (1 + 0.8 * sstep(75, 120, r));
+    }
+
+    // Decks: heading round the trunk (deg), design height, length out from the trunk, width, the side the bridge leaves
+    // from, and the plan radius the layout used for the inner edge (the primitive's trunk at the design height). The
+    // plan is fixed: dragging moves a deck up and down as one piece, like the .blend's RIG_P0/1/2 empties.
+    const DECKS = [
+        { name: 'P0', heading: 225, height: 2.20, length: 4.0, width: 1.9, side: 1, rH: 0.6591288972094312 },
+        { name: 'P1', heading: 340, height: 2.65, length: 4.0, width: 1.9, side: -1, rH: 0.6417396640627627 },
+        { name: 'P2', heading: 75, height: 5.90, length: 3.1, width: 2.2, side: 0, rH: 0.5360012702644206 }
+    ];
+    for (const d of DECKS) { d.u0 = d.rH - 0.30; d.u1 = d.u0 + d.length; }
+    const BOARD = { width: 0.155, gap: 0.016, thick: 0.045, jitter: 0.03 };
+    const RAIL = { postHeight: 0.95, postSize: 0.065, postBelow: 0.205, spacing: 0.72, capWidth: 0.075, capThick: 0.045, ropeAt: 0.50, ropeR: 0.013, outlineOut: 0.0285 };
+    const BRIDGE = { fraction: 0.76, landingHalf: 0.36, slatPitch: 0.165, slat: [0.64, 0.12, 0.035], ropeOffset: 0.30, deckRopeR: 0.016, handRopeR: 0.018, suspR: 0.009, handSag: 0.62 };
+    // ladders rest on the deck's rim at floor level and their rails go on `above` the floor as handholds
+    const LADDER = { width: 0.50, railR: 0.033, step: 0.30, rungR: 0.021, above: 0.45 };
+    // Where the ladders meet the decks, in each deck's own (u radial, v lateral) frame. The lower one stands on the
+    // ground `lowerOut` beyond P0's outer end, as the layout placed it. The upper one rises from P1 square to P2's side
+    // facing it (v -1.1) and arrives at P2 u `topU`, in the stretch the railing leaves open between the trunk and the
+    // cabin (u 0.24 to 0.86; the cabin starts at u 1.04); `width` keeps it 9 cm inside P1's railing, and its foot is
+    // fixed on P1 where a `lean`-degree ladder stands at the design heights. (The layout's own ladder met P2's side at
+    // 57 degrees, below the floor and against the first post.)
+    const LADDER_PLAN = { lowerOut: 0.80, lowerV: -0.40, upper: { topU: 0.47, width: 0.40, lean: 78 } };
+    // the lashings: three turns of rope round the bark under a deck, or above it when another deck sits less than 0.8 m
+    // below (P1 over P0), and the rope stands 2.3 cm proud of the bark's outer ridges
+    const LASH = { below: [-0.30, -0.37, -0.44], above: [0.10, 0.17, 0.24], r: 0.019, clearance: 0.023, turns: 128 };
+
+    const frameOf = d => { const a = d.heading * deg; return [[Math.cos(a), Math.sin(a)], [-Math.sin(a), Math.cos(a)]]; };
+    const at = (d, H, u, v, z = 0) => { const [D, Lt] = frameOf(d); return [D[0] * u + Lt[0] * v, D[1] * u + Lt[1] * v, H + z]; };
+
+    function outline(d) {
+        const W2 = d.width / 2, e = -RAIL.outlineOut, us = d.rH + 0.32;
+        return [[us, -W2 + e], [d.u1 - e, -W2 + e], [d.u1 - e, W2 - e], [us, W2 - e]];
+    }
+    function lengths(poly) { const s = [0]; for (let i = 1; i < poly.length; i++) s.push(s[i - 1] + Math.hypot(poly[i][0] - poly[i - 1][0], poly[i][1] - poly[i - 1][1])); return s; }
+    function pointOn(poly, S, x) {
+        for (let i = 1; i < poly.length; i++) if (x <= S[i] + 1e-9) {
+            const t = (x - S[i - 1]) / Math.max(1e-9, S[i] - S[i - 1]);
+            return [poly[i - 1][0] + (poly[i][0] - poly[i - 1][0]) * t, poly[i - 1][1] + (poly[i][1] - poly[i - 1][1]) * t];
+        }
+        return poly[poly.length - 1];
+    }
+    function arcOf(poly, S, q) {
+        let best = [1e9, 0];
+        for (let i = 1; i < poly.length; i++) {
+            const a = poly[i - 1], b = poly[i], ab = [b[0] - a[0], b[1] - a[1]], L2 = ab[0] ** 2 + ab[1] ** 2;
+            const t = Math.max(0, Math.min(1, ((q[0] - a[0]) * ab[0] + (q[1] - a[1]) * ab[1]) / L2));
+            const p = [a[0] + ab[0] * t, a[1] + ab[1] * t], dd = Math.hypot(p[0] - q[0], p[1] - q[1]);
+            if (dd < best[0]) best = [dd, S[i - 1] + t * Math.sqrt(L2)];
+        }
+        return best[1];
+    }
+    const toDeck = (d, q) => { const [D, Lt] = frameOf(d); return [q[0] * D[0] + q[1] * D[1], q[0] * Lt[0] + q[1] * Lt[1]]; };
+    const upperRimV = -(DECKS[2].width / 2 + LADDER.railR + 0.003);          // rails just touching P2's side rim
+    const upperFoot = (() => {
+        const { topU, lean } = LADDER_PLAN.upper, run = (DECKS[2].height - DECKS[1].height) / Math.tan(lean * deg);
+        return toDeck(DECKS[1], at(DECKS[2], 0, topU, upperRimV - run));
+    })();
+
+    // piece specs; 'grain' is the random draw that offsets the wood texture of that piece
+    const box = (name, c, size, X, Z, mat, deck, grain) => ({ kind: 'box', name, c, size, X, Z: Z || [0, 0, 1], mat, deck, grain: grain || 0 });
+    const rod = (name, p0, p1, r0, r1, sides, mat, deck, grain) => ({ kind: 'rod', name, p0, p1, r0, r1, sides, mat, deck, grain: grain || 0 });
+    const rope = (name, pts, r, deck, closed) => ({ kind: 'rope', name, pts, r, deck, closed: !!closed, mat: 'rope' });
+    const slab = (name, c, X, quad, z0, z1, mat, deck, grain) => ({ kind: 'slab', name, c, X, quad, z0, z1, mat, deck, grain: grain || 0 });
+
+    function railing(d, H, gaps) {
+        const out = [], poly = outline(d), S = lengths(poly), total = S[S.length - 1];
+        const marks = [...new Set([0, total, ...S, ...gaps.flat()])].sort((a, b) => a - b);
+        const inGap = m => gaps.some(([g0, g1]) => g0 - 1e-6 <= m && m <= g1 + 1e-6);
+        let stations = [];
+        for (let i = 0; i < marks.length - 1; i++) {
+            const a = marks[i], b = marks[i + 1], n = Math.max(1, Math.ceil((b - a) / RAIL.spacing - 1e-6)), gap = inGap((a + b) / 2);
+            for (let k = 0; k < n; k++) stations.push([a + (b - a) * k / n, gap && k > 0]);
+        }
+        stations.push([total, false]);
+        const posts = [...new Set(stations.filter(s => !s[1]).map(s => Math.round(s[0] * 1e5) / 1e5))].sort((a, b) => a - b);
+        const hh = RAIL.postHeight + RAIL.postBelow, [D] = frameOf(d);
+        posts.forEach((s, i) => {
+            const [u, v] = pointOn(poly, S, s);
+            out.push(box(d.name + '_post' + i, at(d, H, u, v, RAIL.postHeight - hh / 2), [RAIL.postSize, RAIL.postSize, hh], [D[0], D[1], 0], null, 'beam', d.name, (i * 0.137) % 1));
+        });
+        for (let i = 0; i < posts.length - 1; i++) {
+            const a = posts[i], b = posts[i + 1];
+            if (inGap((a + b) / 2)) continue;
+            const pa = pointOn(poly, S, a), pb = pointOn(poly, S, b), A = at(d, H, pa[0], pa[1]), B = at(d, H, pb[0], pb[1]);
+            const dv = sub(B, A), L = Math.hypot(dv[0], dv[1]), C = mul(add(A, B), 0.5);
+            out.push(box(d.name + '_rail' + i, [C[0], C[1], H + RAIL.postHeight + RAIL.capThick / 2], [L + 0.07, RAIL.capWidth, RAIL.capThick], dv, null, 'beam', d.name, (i * 0.311) % 1));
+            const dn = unit([dv[0], dv[1], 0]);
+            out.push(rod(d.name + '_rrope' + i, add([A[0], A[1], H + RAIL.ropeAt], mul(dn, -0.02)), add([B[0], B[1], H + RAIL.ropeAt], mul(dn, 0.02)), RAIL.ropeR, RAIL.ropeR, 6, 'rope', d.name));
+        }
+        return out;
+    }
+
+    function deckPieces(d, H, gaps, lashUp) {
+        const out = [], W2 = d.width / 2, [D, Lt] = frameOf(d), Dx = [D[0], D[1], 0], Lx = [Lt[0], Lt[1], 0];
+        const step = BOARD.width + BOARD.gap, n = Math.floor(d.length / step), draw = stream(Math.floor(d.heading * 10) + 7);
+        for (let i = 0; i < n; i++) {
+            const u = d.u0 + step * (i + 0.5);
+            const lo = -W2 + (draw() - 0.5) * BOARD.jitter, hi = W2 + (draw() - 0.5) * BOARD.jitter;
+            out.push(box(d.name + '_board' + i, at(d, H, u, (lo + hi) / 2, -BOARD.thick / 2), [hi - lo, BOARD.width, BOARD.thick], Lx, null, 'deck', d.name, draw()));
+        }
+        const jz = -BOARD.thick - 0.08;
+        out.push(box(d.name + '_ledger', at(d, H, d.rH + 0.02, 0, -BOARD.thick - 0.10), [d.width - 0.12, 0.10, 0.20], Lx, null, 'beam', d.name, 0.3));
+        [-W2 + 0.045, W2 - 0.045].forEach((v, k) => {
+            const a = d.u0 + 0.02, e = d.u1 - 0.05;
+            out.push(box(d.name + '_joist' + k, at(d, H, (a + e) / 2, v, jz), [e - a, 0.08, 0.16], Dx, null, 'beam', d.name, 0.5 + k * 0.2));
+        });
+        out.push(box(d.name + '_joistC', at(d, H, (d.rH - 0.10 + d.u1 - 0.05) / 2, 0, jz), [d.u1 - 0.05 - d.rH + 0.10, 0.08, 0.16], Dx, null, 'beam', d.name, 0.9));
+        out.push(box(d.name + '_rim', at(d, H, d.u1 - 0.025, 0, jz), [d.width, 0.05, 0.16], Lx, null, 'beam', d.name, 0.1));
+        // knee braces: from the bark 1.4 m down to under the deck. The layout anchored them 5 cm inside the primitive's
+        // trunk; the line is carried on into the bark here, so the bark-clip finds the joint at any deck height.
+        const rb = 0.72 - 0.032 * (d.height - 1.40) + 0.45 * Math.exp(-Math.max(d.height - 1.40, 0) / 0.45);
+        [-1, 1].forEach((sv, k) => {
+            const vi = 0.20 * sv, ui = Math.sqrt(rb * rb - vi * vi) - 0.05, uo = d.u0 + 0.60 * d.length, vo = sv * (W2 - 0.045);
+            const p0 = at(d, H, ui, vi, -1.40), p1 = at(d, H, uo, vo, jz - 0.08 + 0.03), into = mul(unit(sub(p0, p1)), 0.45);
+            out.push(rod(d.name + '_brace' + k, add(p0, into), p1, 0.055, 0.05, 10, 'beam', d.name, 0.4 + k * 0.3));
+        });
+        out.push(...railing(d, H, gaps));
+        out.lashHeights = (lashUp ? LASH.above : LASH.below).map(dz => H + dz);
+        return out;
+    }
+
+    // ---- bridge P0 <-> P1: landings squared to the bridge on both decks, then the span between their ends
+    function bridgeFrame(a, b, Ha, Hb) {
+        const anchor = d => [d.u0 + BRIDGE.fraction * d.length, d.side * d.width / 2];
+        const A = at(a, Ha, ...anchor(a)), B = at(b, Hb, ...anchor(b));
+        const dv = [B[0] - A[0], B[1] - A[1]], L = Math.hypot(dv[0], dv[1]);
+        return [[A[0], A[1]], [B[0], B[1]], [dv[0] / L, dv[1] / L]];
+    }
+    function landing(d, P, dir, H, name, gapPosts) {
+        const out = [], [, Lt] = frameOf(d), nrm = [Lt[0] * d.side, Lt[1] * d.side], lat = [-dir[1], dir[0]];
+        const dn = dir[0] * nrm[0] + dir[1] * nrm[1], ln = lat[0] * nrm[0] + lat[1] * nrm[1];
+        const sEdge = w => -w * ln / dn, half = BRIDGE.landingHalf, LL = Math.max(sEdge(-half), sEdge(half)) + 0.26;
+        const Pt = (s, w, z) => [P[0] + dir[0] * s + lat[0] * w, P[1] + dir[1] * s + lat[1] * w, H + z];
+        const nb = 5, gap = 0.012, bw = (2 * half - gap * (nb - 1)) / nb;
+        for (let k = 0; k < nb; k++) {
+            const w0 = -half + k * (bw + gap), w1 = w0 + bw;
+            out.push(slab(name + '_land' + k, [P[0], P[1], H], [dir[0], dir[1], 0], [[LL, w0], [LL, w1], [sEdge(w1), w1], [sEdge(w0), w0]], -0.045, 0, 'deck', d.name, (k * 0.37) % 1));
+        }
+        [-half + 0.035, half - 0.035].forEach((w, j) => {
+            const si = sEdge(w) - 0.10, so = LL - 0.05;
+            out.push(box(name + '_ljoist' + j, Pt((si + so) / 2, w, -0.045 - 0.07), [so - si, 0.07, 0.14], [dir[0], dir[1], 0], null, 'beam', d.name, 0.3 + j * 0.2));
+        });
+        out.push(box(name + '_lrim', Pt(LL - 0.025, 0, -0.045 - 0.07), [2 * half, 0.05, 0.14], [lat[0], lat[1], 0], null, 'beam', d.name, 0.6));
+        const posts = [], ph = RAIL.postHeight, hh = ph + 0.185;
+        [-half + 0.0425, half - 0.0425].forEach((w, j) => {
+            const q = Pt(LL + 0.0425 - 0.004, w, ph - hh / 2);
+            posts.push([q[0], q[1], H + ph]);
+            out.push(box(name + '_bpost' + j, q, [0.085, 0.085, hh], [dir[0], dir[1], 0], null, 'beam', d.name, 0.2 + j * 0.3));
+        });
+        if (gapPosts) {
+            const side = q => (q[0] - P[0]) * lat[0] + (q[1] - P[1]) * lat[1];
+            const A = [...gapPosts].sort((p, q) => side(p) - side(q)), B = [...posts].sort((p, q) => side(p) - side(q));
+            for (let j = 0; j < 2; j++) {
+                const a = [A[j][0], A[j][1], H + ph], b = B[j], dv = sub(b, a), Lr = Math.hypot(dv[0], dv[1]), C = mul(add(a, b), 0.5);
+                out.push(box(name + '_lrail' + j, [C[0], C[1], H + ph + 0.0225], [Lr + 0.07, 0.075, 0.045], [dv[0], dv[1], 0], null, 'beam', d.name, 0.4 + 0.1 * j));
+                const du = unit([dv[0], dv[1], 0]);
+                out.push(rod(name + '_lrope' + j, add([a[0], a[1], H + RAIL.ropeAt], mul(du, -0.02)), add([b[0], b[1], H + RAIL.ropeAt], mul(du, 0.02)), 0.013, 0.013, 6, 'rope', d.name));
+            }
+        }
+        const end = Pt(LL, 0, 0), gapPts = [Pt(sEdge(-half - 0.07), -half - 0.07, 0), Pt(sEdge(half + 0.07), half + 0.07, 0)];
+        return { pieces: out, end, posts, gapPts };
+    }
+    function bridgeSpan(Ha, Hb, endA, endB, postsA, postsB, dir) {
+        const out = [], A = [endA[0], endA[1], Ha], B = [endB[0], endB[1], Hb];
+        const dv = [B[0] - A[0], B[1] - A[1]], S = Math.hypot(dv[0], dv[1]), lat = [-dir[1], dir[0], 0], Dz = Hb - Ha;
+        const sag = Math.max(0.36, 0.12 * S, Math.abs(Dz) * 0.62 + 0.08);
+        const zc = t => Ha + Dz * t - 4 * sag * t * (1 - t), pc = t => [A[0] + dv[0] * t, A[1] + dv[1] * t, zc(t)];
+        const n = Math.floor((S - 0.10) / BRIDGE.slatPitch), draw = stream(99);
+        const tOf = i => (0.05 + (S - 0.10) * (i + 0.5) / n) / S;
+        for (let i = 0; i < n; i++) {
+            const t = tOf(i), P = pc(t), dz = Dz - 4 * sag * (1 - 2 * t), T = unit([dv[0], dv[1], dz]);
+            let Z = cross(T, lat); Z = unit(Z[2] > 0 ? Z : cross(lat, T));
+            out.push(box('BR_slat' + i, sub(P, mul(Z, BRIDGE.slat[2] / 2)), BRIDGE.slat, lat, Z, 'slat', 'BR', draw()));
+        }
+        [-1, 1].forEach((sv, k) => {
+            const pts = [];
+            for (let j = 0; j < 25; j++) { const P = pc(j / 24); pts.push([P[0] + lat[0] * BRIDGE.ropeOffset * sv, P[1] + lat[1] * BRIDGE.ropeOffset * sv, P[2] - 0.035 - 0.013]); }
+            pts[0][2] = Ha - 0.075; pts[24][2] = Hb - 0.075;
+            out.push(rope('BR_deckrope' + k, pts, BRIDGE.deckRopeR, 'BR'));
+        });
+        const side = (q, O) => (q[0] - O[0]) * lat[0] + (q[1] - O[1]) * lat[1];
+        const PA = [...postsA].sort((p, q) => side(p, A) - side(q, A)), PB = [...postsB].sort((p, q) => side(p, B) - side(q, B));
+        const hs = BRIDGE.handSag * sag;
+        for (let k = 0; k < 2; k++) {
+            const P0 = PA[k], P1 = PB[k], pts = [];
+            const handAt = u => [P0[0] + (P1[0] - P0[0]) * u, P0[1] + (P1[1] - P0[1]) * u, P0[2] + (P1[2] - P0[2]) * u - 4 * hs * u * (1 - u)];
+            for (let j = 0; j < 25; j++) pts.push(handAt(j / 24));
+            out.push(rope('BR_hand' + k, pts, BRIDGE.handRopeR, 'BR'));
+            const chord = [P1[0] - P0[0], P1[1] - P0[1]], chordL = Math.hypot(chord[0], chord[1]);
+            for (let i = 1; i < n - 1; i += 3) {
+                const P = pc(tOf(i)), sv = k === 0 ? -1 : 1;
+                const lo = [P[0] + lat[0] * BRIDGE.ropeOffset * sv, P[1] + lat[1] * BRIDGE.ropeOffset * sv, P[2] - 0.04];
+                const u = Math.min(1, Math.max(0, ((P[0] - P0[0]) * chord[0] + (P[1] - P0[1]) * chord[1]) / (chordL * chordL)));
+                const hi = handAt(u);
+                out.push(rod('BR_susp' + k + '_' + i, lo, [hi[0], hi[1], hi[2] + 0.01], BRIDGE.suspR, BRIDGE.suspR, 6, 'rope', 'BR'));
+            }
+        }
+        return { pieces: out, S, sag, low: zc(0.5) };
+    }
+
+    // A ladder from `base` up to `rim`, where its rails touch a deck's rim at floor level. The rails go on along the same
+    // line to LADDER.above over the floor; the rungs stop at least 12 cm below it.
+    function ladder(name, base, rim, group, width) {
+        const out = [], ax = sub(rim, base), L = Math.hypot(...ax), dir = mul(ax, 1 / L);
+        const lat = Math.abs(dir[2]) < 0.999 ? unit(cross(dir, [0, 0, 1])) : [1, 0, 0];
+        const sa = Math.sqrt(Math.max(0, 1 - dir[2] ** 2)), b = [base[0], base[1], base[2] + LADDER.railR * sa - 0.004];
+        const top = add(rim, mul(dir, LADDER.above / dir[2]));
+        [-1, 1].forEach((sv, k) => {
+            const o = mul(lat, sv * width / 2);
+            out.push(rod(name + '_rail' + k, add(b, o), add(top, o), LADDER.railR, LADDER.railR * 0.92, 10, 'beam', group, 0.2 + k * 0.5));
+        });
+        const n = Math.floor((L - 0.12 - 0.30) / LADDER.step) + 1;
+        for (let i = 0; i < n; i++) {
+            const c = add(b, mul(dir, 0.30 + i * LADDER.step));
+            out.push(rod(name + '_rung' + i, add(c, mul(lat, -(width / 2 + 0.02))), add(c, mul(lat, width / 2 + 0.02)), LADDER.rungR, LADDER.rungR, 8, 'beam', group, (i * 0.23) % 1));
+        }
+        return out;
+    }
+
+    // Everything at the given heights [P0, P1, P2]. Returns the pieces of each deck (in place at its height), of the
+    // bridge and of the two ladders, plus the lashing heights and a few measures.
+    function plan(heights) {
+        const [p0, p1, p2] = DECKS, [H0, H1, H2] = heights;
+        const [Pa, Pb, dir] = bridgeFrame(p0, p1, H0, H1), back = [-dir[0], -dir[1]];
+        const la = landing(p0, Pa, dir, H0, 'LA'), lb = landing(p1, Pb, back, H1, 'LB');
+        // railing gaps where the landings meet the decks, and where the ladders arrive
+        const gapOn = (d, pts) => { const poly = outline(d), S = lengths(poly), g = pts.map(q => arcOf(poly, S, toDeck(d, q))).sort((a, b) => a - b); return [g[0], g[g.length - 1]]; };
+        const ga = gapOn(p0, la.gapPts), gb = gapOn(p1, lb.gapPts);
+        const postsAt = (d, H, g) => { const poly = outline(d), S = lengths(poly); return g.map(x => at(d, H, ...pointOn(poly, S, x))); };
+        const poly0 = outline(p0), S0 = lengths(poly0), sl = arcOf(poly0, S0, [p0.u1 - 0.05, LADDER_PLAN.lowerV]);
+        const lashUp = d => DECKS.some(q => { const dh = d.height - q.height; return dh > 0 && dh < 0.8; });
+        const decks = [
+            deckPieces(p0, H0, [ga, [sl - 0.37, sl + 0.37]], lashUp(p0)),
+            deckPieces(p1, H1, [gb], lashUp(p1)),
+            deckPieces(p2, H2, [], lashUp(p2))
+        ];
+        const laFull = landing(p0, Pa, dir, H0, 'LA', postsAt(p0, H0, ga)), lbFull = landing(p1, Pb, back, H1, 'LB', postsAt(p1, H1, gb));
+        decks[0].push(...laFull.pieces); decks[1].push(...lbFull.pieces);
+        const span = bridgeSpan(H0, H1, laFull.end, lbFull.end, laFull.posts, lbFull.posts, dir);
+        // ladders: P1 up to P2's side, and the ground up to P0's outer end, each resting on the rim at floor level
+        const T = at(p2, H2, LADDER_PLAN.upper.topU, upperRimV), B = at(p1, H1, ...upperFoot);
+        const gB = at(p0, 0, p0.u1 + LADDER_PLAN.lowerOut, LADDER_PLAN.lowerV); gB[2] = groundAt(gB[0], gB[1]);
+        const gT = at(p0, H0, p0.u1 + LADDER.railR + 0.003, LADDER_PLAN.lowerV);
+        return {
+            decks, bridge: span.pieces, upper: ladder('LAD12', B, T, 'L12', LADDER_PLAN.upper.width), lower: ladder('LAD0', gB, gT, 'L0', LADDER.width),
+            lashHeights: decks.map(d => d.lashHeights),
+            measures: { span: span.S, sag: span.sag, bridgeLow: span.low, upperLadder: [B, T], lowerLadder: [gB, gT] }
+        };
+    }
+    return { DECKS, LASH, plan, groundAt, stream };
+})();
+
+// ---------------------------------------------------------------------------------------------------------
+// Frame geometry from the FRAME specs (Blender axes in, three.js axes out), merged per material per group.
+// Wood is mapped like the .blend's asset pass: planar by the face's axis in the piece's own frame, deck boards with
+// the grain along the board every 0.9 m, beams every 1.2 m, each piece at its own random offset; ropes take the
+// rope image round their circumference and 7 times per metre along them. Woody boxes keep the 6 mm rounded edges
+// the layout's boxes have.
+// ---------------------------------------------------------------------------------------------------------
+const WOOD_MAP = { deck: { tile: 0.9, grainAlong: true }, slat: { tile: 0.9, grainAlong: true }, beam: { tile: 1.2, grainAlong: false } };
+const MATERIAL_OF = { deck: 'A_deck_oak_veneer_01', slat: 'A_deck_oak_veneer_01', beam: 'A_beam_wood_table_worn', rope: 'A_rope_Rope001' };
+const toThree = (p, out = new THREE.Vector3()) => out.set(p[0], p[2], -p[1]);
+function nameSeed(name) { let h = 2166136261; for (let i = 0; i < name.length; i++) { h ^= name.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+
+// local frame of a box: the longest side along local x, as the layout's mesh builder orders it
+function boxFrame(p) {
+    const x = new THREE.Vector3(...p.X).normalize(), Zv = new THREE.Vector3(...p.Z);
+    const z = Zv.clone().addScaledVector(x, -Zv.dot(x)).normalize(), y = new THREE.Vector3().crossVectors(z, x);
+    const axes = [x, y, z], sizes = p.size;
+    const i = sizes.indexOf(Math.max(...sizes)), order = [i, (i + 1) % 3, (i + 2) % 3];
+    return { axes: order.map(k => axes[k]), sizes: order.map(k => sizes[k]) };
+}
+
+function woodUv(local, axis, map, ou, ov) {
+    let along, across;
+    if (axis === 0) { along = local.y; across = local.z; } else if (axis === 1) { along = local.x; across = local.z; } else { along = local.x; across = local.y; }
+    const u = map.grainAlong ? across : along, v = map.grainAlong ? along : across;
+    return [u / map.tile + ou, -(v / map.tile + ov)];        // glTF convention: v runs down the picture
+}
+
+const _v = new THREE.Vector3(), _n = new THREE.Vector3(), _w = new THREE.Vector3();
+// Bakes local positions/normals of a non-indexed geometry into Blender world space (basis + centre) then three axes.
+function placeGeometry(g, axes, centre) {
+    const pos = g.attributes.position, nor = g.attributes.normal;
+    for (let i = 0; i < pos.count; i++) {
+        _v.set(pos.getX(i), pos.getY(i), pos.getZ(i));
+        _w.set(centre[0], centre[1], centre[2]).addScaledVector(axes[0], _v.x).addScaledVector(axes[1], _v.y).addScaledVector(axes[2], _v.z);
+        pos.setXYZ(i, _w.x, _w.z, -_w.y);
+        _n.set(nor.getX(i), nor.getY(i), nor.getZ(i));
+        _w.set(0, 0, 0).addScaledVector(axes[0], _n.x).addScaledVector(axes[1], _n.y).addScaledVector(axes[2], _n.z).normalize();
+        nor.setXYZ(i, _w.x, _w.z, -_w.y);
+    }
+    return g;
+}
+
+function boxGeometry(p) {
+    const { axes, sizes } = boxFrame(p);
+    const woody = p.mat !== 'rope' && Math.min(...sizes) > 0.025;
+    const bevel = woody ? Math.min(0.006, Math.min(...sizes) * 0.2) : 0;
+    // one rounding segment: 108 triangles a box, as many as the layout's bevelled boxes have
+    let g = bevel ? new RoundedBoxGeometry(sizes[0], sizes[1], sizes[2], 1, bevel) : new THREE.BoxGeometry(sizes[0], sizes[1], sizes[2]);
+    // the face each corner belongs to (box groups: +x, -x, +y, -y, +z, -z), in drawing order
+    const indexAxis = new Int8Array(g.index ? g.index.count : g.attributes.position.count);
+    for (const grp of g.groups) indexAxis.fill(grp.materialIndex >> 1, grp.start, grp.start + grp.count);
+    if (g.index) g = g.toNonIndexed();
+    const map = WOOD_MAP[p.mat] || WOOD_MAP.beam, draw = FRAME.stream(nameSeed(p.name)), ou = draw(), ov = draw();
+    const pos = g.attributes.position, uv = new Float32Array(pos.count * 2);
+    for (let i = 0; i < pos.count; i++) {
+        const [u, v] = woodUv(_v.set(pos.getX(i), pos.getY(i), pos.getZ(i)), indexAxis[i], map, ou, ov);
+        uv[i * 2] = u; uv[i * 2 + 1] = v;
+    }
+    g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    g.clearGroups();
+    return placeGeometry(g, axes, p.c);
+}
+
+// a cylinder along local x from p0 to p1, k sides, smooth sides, flat caps (the layout's mk_cyl frame)
+function rodGeometry(p) {
+    const a = new THREE.Vector3(...p.p0), b = new THREE.Vector3(...p.p1), ax = b.clone().sub(a), L = ax.length();
+    ax.normalize();
+    const up = Math.abs(ax.z) < 0.95 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0);
+    const y = new THREE.Vector3().crossVectors(up, ax).normalize(), z = new THREE.Vector3().crossVectors(ax, y);
+    const k = p.sides, P = [], N = [], U = [];
+    const isRope = p.mat === 'rope', map = WOOD_MAP[p.mat] || WOOD_MAP.beam, draw = FRAME.stream(nameSeed(p.name)), ou = draw(), ov = draw();
+    const slope = (p.r0 - p.r1) / L;
+    const ring = (j, x, r) => { const t = 2 * Math.PI * j / k; return [x, Math.cos(t) * r, Math.sin(t) * r, t]; };
+    const sideUv = (x, t, r) => {
+        if (isRope) return [t / (2 * Math.PI), -(7 * x)];
+        const local = { x, y: 0, z: 0 };
+        const u = map.grainAlong ? t * Math.max(0.02, r) : x, v = map.grainAlong ? x : t * Math.max(0.02, r);
+        return [u / map.tile + ou, -(v / map.tile + ov)];
+    };
+    for (let j = 0; j < k; j++) {
+        const c = [ring(j, 0, p.r0), ring(j + 1, 0, p.r0), ring(j + 1, L, p.r1), ring(j, L, p.r1)];
+        const quad = [0, 1, 2, 0, 2, 3];
+        for (const q of quad) {
+            const [x, cy, cz, t] = c[q], r = q < 2 ? p.r0 : p.r1;
+            P.push(x, cy, cz);
+            const nr = new THREE.Vector3(slope, Math.cos(t), Math.sin(t)).normalize();
+            N.push(nr.x, nr.y, nr.z);
+            U.push(...sideUv(x, t, r));
+        }
+    }
+    for (const [x, r, s] of [[0, p.r0, -1], [L, p.r1, 1]]) {
+        for (let j = 0; j < k; j++) {
+            const tri = s > 0 ? [[0, 0], ring(j, x, r), ring(j + 1, x, r)] : [[0, 0], ring(j + 1, x, r), ring(j, x, r)];
+            for (const v of tri) {
+                const cy = v.length > 2 ? v[1] : 0, cz = v.length > 2 ? v[2] : 0;
+                P.push(x, cy, cz); N.push(s, 0, 0);
+                if (isRope) U.push(0.5 + cy / Math.max(r, 1e-3) * 0.1, -(7 * x));
+                else { const [u, vv] = woodUv({ x, y: cy, z: cz }, 0, map, ou, ov); U.push(u, vv); }
+            }
+        }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+    return placeGeometry(g, [ax, y, z], p.p0);
+}
+
+// a rope along a polyline (open: parallel-transported frames; closed: frames from the vertical, like the .blend's lashings)
+function ropeGeometry(pts, r, closed, sides = 8) {
+    const n = pts.length, V = pts.map(p => new THREE.Vector3(...p));
+    const P = [], N = [], U = [];
+    let s = 0;
+    const rings = [];
+    let Nf = null;
+    for (let i = 0; i < n; i++) {
+        if (i) s += V[i].distanceTo(V[i - 1]);
+        const a = closed ? V[(i + 1) % n] : V[Math.min(i + 1, n - 1)], b = closed ? V[(i - 1 + n) % n] : V[Math.max(i - 1, 0)];
+        const T = a.clone().sub(b).normalize();
+        let Nn;
+        if (closed) {
+            const ref = Math.abs(T.z) < 0.9 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0);
+            Nn = ref.addScaledVector(T, -T.dot(ref)).normalize();
+        } else {
+            if (!Nf) { const T0 = V[1].clone().sub(V[0]).normalize(); const up = Math.abs(T0.z) < 0.95 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0); Nf = new THREE.Vector3().crossVectors(up, T0).normalize(); }
+            Nf.addScaledVector(T, -Nf.dot(T)).normalize(); Nn = Nf.clone();
+        }
+        const B = new THREE.Vector3().crossVectors(T, Nn);
+        const ring = [];
+        for (let j = 0; j <= sides; j++) {
+            const t = 2 * Math.PI * j / sides, d = Nn.clone().multiplyScalar(Math.cos(t)).addScaledVector(B, Math.sin(t));
+            ring.push([V[i].clone().addScaledVector(d, r), d, j / sides, s]);
+        }
+        rings.push(ring);
+    }
+    const segs = closed ? n : n - 1;
+    if (closed) { const last = rings[0].map(([p, d, a]) => [p, d, a, s + V[0].distanceTo(V[n - 1])]); rings.push(last); }
+    for (let i = 0; i < segs; i++) for (let j = 0; j < sides; j++) {
+        const q = [rings[i][j], rings[i][j + 1], rings[i + 1][j + 1], rings[i + 1][j]];
+        for (const idx of [0, 1, 2, 0, 2, 3]) {
+            const [p, d, a, ss] = q[idx];
+            P.push(p.x, p.z, -p.y); N.push(d.x, d.z, -d.y); U.push(a, -(7 * ss));
+        }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+    return g;
+}
+
+// a prism on a quad (the landing planks): faces planar-mapped in the landing's frame
+function slabGeometry(p) {
+    const X = new THREE.Vector3(...p.X).normalize(), Z = new THREE.Vector3(0, 0, 1), Y = new THREE.Vector3().crossVectors(Z, X);
+    let q = p.quad;
+    let area = 0; for (let i = 0; i < 4; i++) area += q[i][0] * q[(i + 1) % 4][1] - q[(i + 1) % 4][0] * q[i][1];
+    if (area < 0) q = [...q].reverse();
+    const v = [...q.map(([x, y]) => [x, y, p.z0]), ...q.map(([x, y]) => [x, y, p.z1])];
+    const faces = [[3, 2, 1, 0], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]];
+    const map = WOOD_MAP[p.mat] || WOOD_MAP.deck, draw = FRAME.stream(nameSeed(p.name)), ou = draw(), ov = draw();
+    const P = [], N = [], U = [];
+    for (const f of faces) {
+        const a = new THREE.Vector3(...v[f[0]]), b = new THREE.Vector3(...v[f[1]]), c = new THREE.Vector3(...v[f[2]]);
+        const nrm = new THREE.Vector3().crossVectors(b.clone().sub(a), c.clone().sub(a)).normalize();
+        const axis = [Math.abs(nrm.x), Math.abs(nrm.y), Math.abs(nrm.z)].indexOf(Math.max(Math.abs(nrm.x), Math.abs(nrm.y), Math.abs(nrm.z)));
+        for (const idx of [0, 1, 2, 0, 2, 3]) {
+            const pt = v[f[idx]];
+            P.push(pt[0], pt[1], pt[2]); N.push(nrm.x, nrm.y, nrm.z);
+            U.push(...woodUv({ x: pt[0], y: pt[1], z: pt[2] }, axis, map, ou, ov));
+        }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+    return placeGeometry(g, [X, Y, Z], p.c);
+}
+
+function pieceGeometry(p) {
+    if (p.kind === 'box') return boxGeometry(p);
+    if (p.kind === 'rod') return rodGeometry(p);
+    if (p.kind === 'rope') return ropeGeometry(p.pts, p.r, p.closed);
+    if (p.kind === 'slab') return slabGeometry(p);
+    throw new Error('Unknown piece ' + p.kind);
+}
+
+// One mesh per material for a list of pieces; frame materials cut themselves at the bark.
+function frameMeshes(pieces, label) {
+    const byMat = new Map();
+    for (const p of pieces) {
+        const m = MATERIAL_OF[p.mat];
+        if (!byMat.has(m)) byMat.set(m, []);
+        byMat.get(m).push(pieceGeometry(p));
+    }
+    const group = new THREE.Group();
+    group.name = label;
+    for (const [m, list] of byMat) {
+        const mat = finish(m, 'frame');
+        const mesh = new THREE.Mesh(mergeGeometries(list, false), mat);
+        mesh.name = label + ':' + m;
+        casts(mesh, 'moving');
+        mesh.customDepthMaterial = mat.userData.depth;
+        list.forEach(g => g.dispose());
+        group.add(mesh);
+    }
+    return group;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// The bark table: for each of BARK.headings directions and BARK.rows heights, the radius of the trunk's outermost
+// surface, rasterized from the Meshy trunk's triangles in its (heading, height) plane.
+// ---------------------------------------------------------------------------------------------------------
+const barkRadius = new Float32Array(BARK.headings * BARK.rows);
+function measureBark(trunkMesh) {
+    const g = trunkMesh.geometry, pos = g.attributes.position, idx = g.index;
+    trunkMesh.updateWorldMatrix(true, false);
+    const M = trunkMesh.matrixWorld, H = BARK.headings, R = BARK.rows, dz = (BARK.zMax - BARK.zMin) / R, two = 2 * Math.PI;
+    const n = pos.count, polar = new Float32Array(n * 3);       // heading (bins), height (rows), radius
+    for (let i = 0; i < n; i++) {
+        _v.fromBufferAttribute(pos, i).applyMatrix4(M);
+        const bx = _v.x, by = -_v.z, bz = _v.y;
+        polar[i * 3] = ((Math.atan2(by, bx) / two + 1) % 1) * H;
+        polar[i * 3 + 1] = (bz - BARK.zMin) / dz;
+        polar[i * 3 + 2] = Math.hypot(bx, by);
+    }
+    barkRadius.fill(0);
+    const put = (hb, row, r) => {
+        if (row < 0 || row >= R) return;
+        const k = row * H + ((hb % H) + H) % H;
+        if (r > barkRadius[k]) barkRadius[k] = r;
+    };
+    const tri = idx ? idx.count / 3 : n / 3;
+    for (let t = 0; t < tri; t++) {
+        const a = idx ? idx.getX(t * 3) : t * 3, b = idx ? idx.getX(t * 3 + 1) : t * 3 + 1, c = idx ? idx.getX(t * 3 + 2) : t * 3 + 2;
+        let h0 = polar[a * 3], h1 = polar[b * 3], h2 = polar[c * 3];
+        const z0 = polar[a * 3 + 1], z1 = polar[b * 3 + 1], z2 = polar[c * 3 + 1];
+        const r0 = polar[a * 3 + 2], r1 = polar[b * 3 + 2], r2 = polar[c * 3 + 2];
+        if (Math.max(r0, r1, r2) < 0.05) continue;
+        // unwrap across the heading seam
+        const hm = Math.max(h0, h1, h2);
+        if (hm - Math.min(h0, h1, h2) > H / 2) { if (h0 < H / 2) h0 += H; if (h1 < H / 2) h1 += H; if (h2 < H / 2) h2 += H; }
+        if (Math.max(h0, h1, h2) - Math.min(h0, h1, h2) > H / 4) continue;          // a sliver round the axis
+        const hmin = Math.floor(Math.min(h0, h1, h2)), hmax = Math.ceil(Math.max(h0, h1, h2));
+        const zmin = Math.floor(Math.min(z0, z1, z2)), zmax = Math.ceil(Math.max(z0, z1, z2));
+        const det = (h1 - h0) * (z2 - z0) - (h2 - h0) * (z1 - z0);
+        put(Math.floor(h0), Math.floor(z0), r0); put(Math.floor(h1), Math.floor(z1), r1); put(Math.floor(h2), Math.floor(z2), r2);
+        if (Math.abs(det) < 1e-9) continue;
+        for (let row = zmin; row <= zmax; row++) for (let hb = hmin; hb <= hmax; hb++) {
+            const ph = hb + 0.5, pz = row + 0.5;
+            const w1 = ((ph - h0) * (z2 - z0) - (h2 - h0) * (pz - z0)) / det, w2 = ((h1 - h0) * (pz - z0) - (ph - h0) * (z1 - z0)) / det, w0 = 1 - w1 - w2;
+            if (w0 < -0.02 || w1 < -0.02 || w2 < -0.02) continue;
+            put(hb, row, w0 * r0 + w1 * r1 + w2 * r2);
+        }
+    }
+    // close pinholes: a bin no triangle reached takes the largest of its neighbours
+    const filled = barkRadius.slice();
+    for (let row = 0; row < R; row++) for (let hb = 0; hb < H; hb++) {
+        const k = row * H + hb;
+        if (filled[k] > 0) continue;
+        let m = 0;
+        for (let dr = -2; dr <= 2; dr++) for (let dh = -2; dh <= 2; dh++) {
+            const rr = row + dr; if (rr < 0 || rr >= R) continue;
+            m = Math.max(m, barkRadius[rr * H + (((hb + dh) % H) + H) % H]);
+        }
+        filled[k] = m;
+    }
+    barkRadius.set(filled);
+    const half = barkTexture.image.data;
+    for (let i = 0; i < barkRadius.length; i++) half[i] = THREE.DataUtils.toHalfFloat(barkRadius[i]);
+    barkTexture.needsUpdate = true;
+}
+function barkAt(headingRad, z) {
+    const H = BARK.headings, R = BARK.rows;
+    const fh = ((headingRad / (2 * Math.PI)) % 1 + 1) % 1 * H - 0.5, fz = (z - BARK.zMin) / (BARK.zMax - BARK.zMin) * R - 0.5;
+    const h0 = Math.floor(fh), z0 = Math.max(0, Math.min(R - 2, Math.floor(fz))), th = fh - h0, tz = Math.min(1, Math.max(0, fz - z0));
+    const at = (h, r) => barkRadius[r * H + ((h % H) + H) % H];
+    return (at(h0, z0) * (1 - th) + at(h0 + 1, z0) * th) * (1 - tz) + (at(h0, z0 + 1) * (1 - th) + at(h0 + 1, z0 + 1) * th) * tz;
+}
+
+// Lashings: a closed rope round the bark at height z, 2.3 cm proud of the outer ridges within +-8.4 degrees.
+function lashingPoints(z) {
+    const n = FRAME.LASH.turns, raw = [], pts = [];
+    for (let k = 0; k < n; k++) raw.push(barkAt(2 * Math.PI * k / n, z));
+    for (let k = 0; k < n; k++) {
+        let m = 0; for (let j = -3; j <= 3; j++) m = Math.max(m, raw[(k + j + n) % n]);
+        const a = 2 * Math.PI * k / n, r = m + FRAME.LASH.clearance;
+        pts.push([Math.cos(a) * r, Math.sin(a) * r, z]);
+    }
+    return pts;
+}
+function lashingMesh(heights, label) {
+    const g = mergeGeometries(heights.map(z => ropeGeometry(lashingPoints(z), FRAME.LASH.r, true)), false);
+    const mesh = new THREE.Mesh(g, finish('A_rope_Rope001', 'frame'));
+    mesh.name = label;
+    casts(mesh, 'moving');
+    mesh.customDepthMaterial = mesh.material.userData.depth;
+    return mesh;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Building the scene from the package.
+// ---------------------------------------------------------------------------------------------------------
+const decks = FRAME.DECKS.map(d => ({ name: d.name, design: d.height, height: d.height, group: new THREE.Group(), pick: [] }));
+decks.forEach(d => { d.group.name = 'deck:' + d.name; scene.add(d.group); });
+const frameParts = { bridge: null, upper: null, lower: null, lashings: [null, null, null] };
+let meadow = null;
+
+// GLB ropes carry the .blend's tube UVs (metres along, 0..1 round); the rope map runs round the rope and 7 times a metre
+function ropeUvs(geometry) {
+    const uv = geometry.attributes.uv;
+    for (let i = 0; i < uv.count; i++) { const along = uv.getX(i), round = 1 - uv.getY(i); uv.setXY(i, round, -7 * along); }
+    uv.needsUpdate = true;
+}
+
+function adoptHero(gltf, label) {
+    let hero = null;
+    gltf.scene.traverse(o => { if (o.isMesh && !hero) hero = o; });
+    const src = hero.material, m = finish(src.name).clone();
+    m.onBeforeCompile = finish(src.name).onBeforeCompile;
+    m.customProgramCacheKey = finish(src.name).customProgramCacheKey;
+    m.map = src.map; m.roughnessMap = src.roughnessMap; m.normalMap = src.normalMap;
+    m.normalScale.copy(src.normalScale);
+    for (const t of [m.map, m.roughnessMap, m.normalMap]) if (t) t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    hero.material = m;
+    hero.updateWorldMatrix(true, false);
+    hero.geometry.applyMatrix4(hero.matrixWorld);
+    hero.position.set(0, 0, 0); hero.quaternion.identity(); hero.scale.set(1, 1, 1);
+    hero.updateMatrixWorld(true);
+    hero.name = label;
+    return hero;
+}
+
+function buildScene(sceneGltf, trunkGltf, cabinGltf) {
+    const trunk = casts(adoptHero(trunkGltf, 'MESHY_TRONCO'), 'still');
+    scene.add(trunk);
+    measureBark(trunk);
+    const cabin = casts(adoptHero(cabinGltf, 'MESHY_CABANA'), 'moving');
+    decks[2].group.add(cabin);
+    decks[2].pick.push(cabin);
+
+    const root = sceneGltf.scene;
+    root.updateMatrixWorld(true);
+    const statics = new Map();               // still pieces merged per material
+    const variants = {}, points = {};
+    const deckOfRig = { RIG_P0: 0, RIG_P1: 1, RIG_P2: 2 };
+    const meshes = [];
+    root.traverse(o => { if (o.isMesh || o.isPoints) meshes.push(o); });
+    for (const o of meshes) {
+        const name = o.name;
+        if (name === 'GRASS_POINTS' || name === 'FLOWER_POINTS') { points[name] = o.geometry; continue; }
+        if (/^WEB_(GRASS|FLOWER)_/.test(name)) { variants[name] = { geometry: o.geometry, material: o.material.name }; continue; }
+        const mat = o.material.name;
+        if (mat === 'A_rope_Rope001') ropeUvs(o.geometry);
+        // deck props ride with their deck (the .blend parents them to RIG_P0/1/2)
+        let rig = o.parent; while (rig && !(rig.name in deckOfRig)) rig = rig.parent;
+        if (rig) {
+            const g = o.geometry.clone().applyMatrix4(o.matrixWorld);
+            const mesh = new THREE.Mesh(g, finish(mat));
+            mesh.name = name; casts(mesh, 'moving');
+            decks[deckOfRig[rig.name]].group.add(mesh);
+            decks[deckOfRig[rig.name]].pick.push(mesh);
+            continue;
+        }
+        const g = o.geometry.clone().applyMatrix4(o.matrixWorld);
+        if (g.attributes._lum) { g.setAttribute('color', g.attributes._lum); g.deleteAttribute('_lum'); }
+        if (g.attributes._col) { g.setAttribute('color', g.attributes._col); g.deleteAttribute('_col'); }
+        for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv', 'color'].includes(k)) g.deleteAttribute(k);
+        if (!statics.has(mat)) statics.set(mat, []);
+        statics.get(mat).push(g);
+    }
+    const world = new THREE.Group();
+    world.name = 'oak-world';
+    for (const [mat, list] of statics) {
+        const keys = list.map(g => Object.keys(g.attributes).sort().join(','));
+        const mesh = new THREE.Mesh(list.length > 1 && keys.every(k => k === keys[0]) ? mergeGeometries(list, false) : list[0], finish(mat));
+        if (list.length > 1 && !keys.every(k => k === keys[0])) list.slice(1).forEach(g => world.add(casts(new THREE.Mesh(g, finish(mat)), 'still')));
+        mesh.name = 'static:' + mat;
+        const ground = mat === 'A_ground_sparse_grass_forest_leaves' || mat === 'A_litter_Leaf001_autumn';
+        if (ground) mesh.receiveShadow = true; else casts(mesh, 'still');
+        world.add(mesh);
+    }
+    scene.add(world);
+    meadow = buildMeadow(variants, points);
+    rebuildFrame(true);
+    const outline = [{ mesh: trunk, above: -Infinity }, { mesh: cabin, above: -Infinity }];
+    world.traverse(o => { if (o.isMesh && /^A_leaf/.test(o.material.name)) outline.push({ mesh: o, above: 3 }); });
+    decks.forEach(d => d.group.traverse(o => { if (o.isMesh && o !== cabin) outline.push({ mesh: o, above: -Infinity }); }));
+    for (const part of [frameParts.bridge, frameParts.upper, frameParts.lower]) part.traverse(o => { if (o.isMesh) outline.push({ mesh: o, above: -Infinity }); });
+    measureTree(outline);
+    frameOpeningView();
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Meadow: the scatter's instances, grass in two blade levels by distance from the eye.
+// ---------------------------------------------------------------------------------------------------------
+function buildMeadow(variants, points) {
+    const sets = [];
+    const q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), m = new THREE.Matrix4(), Y = new THREE.Vector3(0, 1, 0);
+    for (const [label, kind] of [['GRASS_POINTS', 'GRASS'], ['FLOWER_POINTS', 'FLOWER']]) {
+        const g = points[label], pos = g.attributes.position, rot = g.attributes._rot, scl = g.attributes._scl, vr = g.attributes._var;
+        const byVar = new Map();
+        for (let i = 0; i < pos.count; i++) {
+            const k = Math.round(vr.getX(i));
+            if (!byVar.has(k)) byVar.set(k, []);
+            p.fromBufferAttribute(pos, i); q.setFromAxisAngle(Y, rot.getX(i)); s.setScalar(scl.getX(i));
+            byVar.get(k).push(m.compose(p, q, s).clone());
+        }
+        for (const [k, mats] of byVar) {
+            const id = String(k).padStart(2, '0');
+            const near = variants['WEB_' + kind + '_near_' + id] || variants['WEB_' + kind + '_' + id], far = variants['WEB_' + kind + '_far_' + id] || near;
+            if (!near) throw new Error('Missing scatter variant ' + kind + ' ' + id);
+            const mk = v => {
+                const im = new THREE.InstancedMesh(v.geometry, finish(v.material), mats.length);
+                casts(im, 'still'); im.frustumCulled = false;
+                im.count = 0; scene.add(im); return im;
+            };
+            const set = { matrices: mats, centres: mats.map(x => new THREE.Vector3().setFromMatrixPosition(x)), near: mk(near), far: far === near ? null : mk(far) };
+            if (!set.far) { set.matrices.forEach((x, i) => set.near.setMatrixAt(i, x)); set.near.count = mats.length; set.near.instanceMatrix.needsUpdate = true; }
+            sets.push(set);
+        }
+    }
+    return { sets, eye: new THREE.Vector3(1e9, 0, 0) };
+}
+function sortMeadow(force = false) {
+    if (!meadow || (!force && meadow.eye.distanceToSquared(camera.position) < 0.09)) return;
+    meadow.eye.copy(camera.position);
+    const lim = MEADOW.nearUntil * MEADOW.nearUntil;
+    for (const set of meadow.sets) {
+        if (!set.far) continue;
+        let n = 0, f = 0;
+        set.centres.forEach((c, i) => {
+            if (c.distanceToSquared(camera.position) < lim) set.near.setMatrixAt(n++, set.matrices[i]);
+            else set.far.setMatrixAt(f++, set.matrices[i]);
+        });
+        set.near.count = n; set.far.count = f;
+        set.near.instanceMatrix.needsUpdate = set.far.instanceMatrix.needsUpdate = true;
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// The frame at the current deck heights. Each deck's own pieces are built once at its design height and the deck
+// group is moved; the bridge, the two ladders and the lashings are rebuilt whenever a height changes.
+// ---------------------------------------------------------------------------------------------------------
+function disposeTree(o) { if (!o) return; o.traverse(x => { if (x.geometry) x.geometry.dispose(); }); o.removeFromParent(); }
+function rebuildFrame(first = false) {
+    const heights = decks.map(d => d.height);
+    const plan = FRAME.plan(heights);
+    if (first) {
+        const designPlan = FRAME.plan(decks.map(d => d.design));
+        designPlan.decks.forEach((pieces, i) => {
+            const g = frameMeshes(pieces, 'frame:' + decks[i].name);
+            decks[i].group.add(g);
+            g.traverse(x => { if (x.isMesh) decks[i].pick.push(x); });
+        });
+    }
+    decks.forEach(d => { d.group.position.y = d.height - d.design; d.group.updateMatrixWorld(true); });
+    disposeTree(frameParts.bridge); disposeTree(frameParts.upper); disposeTree(frameParts.lower);
+    frameParts.bridge = frameMeshes(plan.bridge, 'bridge');
+    frameParts.upper = frameMeshes(plan.upper, 'ladder:P1-P2');
+    frameParts.lower = frameMeshes(plan.lower, 'ladder:ground-P0');
+    scene.add(frameParts.bridge, frameParts.upper, frameParts.lower);
+    plan.lashHeights.forEach((zs, i) => {
+        disposeTree(frameParts.lashings[i]);
+        frameParts.lashings[i] = lashingMesh(zs, 'lashings:' + decks[i].name);
+        scene.add(frameParts.lashings[i]);
+    });
+    frameParts.plan = plan;
+    redrawShadows('moving');
+    owe();
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Camera: the designer's opening view, backed off on narrower windows until the whole treehouse fits; left drag or
+// one finger orbits, the wheel or a pinch zooms. The right button does nothing and pan is off.
+// ---------------------------------------------------------------------------------------------------------
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.copy(viewTarget);
+controls.enablePan = false;
+controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: null };
+controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_ROTATE };
+controls.enableDamping = true;
+controls.dampingFactor = VIEW.damping;
+controls.rotateSpeed = VIEW.rotateSpeed;
+controls.zoomSpeed = VIEW.zoomSpeed;
+controls.minPolarAngle = VIEW.minPolarAngle;
+controls.maxPolarAngle = VIEW.maxPolarAngle;
+controls.minDistance = VIEW.minDistance;
+controls.maxDistance = VIEW.maxDistance;
+renderer.domElement.addEventListener('contextmenu', event => event.preventDefault());
+
+// What has to stay in view and clear of the panels: the tree from its roots to the crown with the decks, the bridge,
+// the ladders and the cabin. Until the meshes are in, a few points of the layout stand for it (Blender coordinates
+// there); then its own outline does (measureTree).
+let framingPoints = (() => {
+    const pts = [[0, 0, -0.2], [0, 0, 13.1]];
+    const ring = (cx, cy, z, r, n = 8) => { for (let k = 0; k < n; k++) { const a = 2 * Math.PI * k / n; pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r, z]); } };
+    ring(0, 0, 10.6, 5.6, 16);                         // the crown's widest girth
+    ring(0, 0, 0.1, 2.4, 8);                          // the roots
+    for (const d of FRAME.DECKS) {
+        const a = d.heading * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a), W2 = d.width / 2;
+        for (const [u, v] of [[d.u1, -W2], [d.u1, W2], [d.u0 + 0.6, -W2], [d.u0 + 0.6, W2]]) for (const z of [-1.5, 1.0])
+            pts.push([ca * u - sa * v, sa * u + ca * v, d.height + z]);
+    }
+    return pts.map(p => new THREE.Vector3(p[0], p[2], -p[1]));
+})();
+// The outline: in every 10 degrees round the trunk and every metre of height, the vertex farthest from the axis.
+// Leaves count from 3 m up, so the bushes on the meadow (the same leaf material) stay out of it.
+function measureTree(meshes) {
+    const best = new Map(), v = new THREE.Vector3();
+    for (const { mesh, above } of meshes) {
+        const pos = mesh.geometry.attributes.position, step = Math.max(1, Math.floor(pos.count / 30000));
+        mesh.updateWorldMatrix(true, false);
+        for (let i = 0; i < pos.count; i += step) {
+            v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld);
+            if (v.y < above) continue;
+            const key = Math.floor((Math.atan2(v.z, v.x) + Math.PI) / (Math.PI / 18)) * 100 + Math.floor(v.y + 2);
+            const r = Math.hypot(v.x, v.z), had = best.get(key);
+            if (!had || r > had.r) best.set(key, { r, p: v.clone() });
+        }
+    }
+    if (best.size) framingPoints = [...best.values()].map(e => e.p);
+}
+const FRAME_MARGIN = { x: 0.04, y: 0.05, panel: 10 };
+const cardEl = document.getElementById('hud'), howtoEl = document.getElementById('hint');
+// The outline's box on the window, in pixels, seen from the opening direction at a distance.
+function outlineBox(distance) {
+    const W = window.innerWidth, H = window.innerHeight, tanV = Math.tan(VIEW.fov * Math.PI / 360), tanH = tanV * W / H;
+    const fwd = viewDirection.clone().negate(), right = new THREE.Vector3().crossVectors(fwd, camera.up).normalize(), up = new THREE.Vector3().crossVectors(right, fwd);
+    const box = { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity }, rel = new THREE.Vector3();
+    for (const p of framingPoints) {
+        rel.copy(p).sub(viewTarget);
+        const depth = distance + rel.dot(fwd), x = (0.5 + 0.5 * rel.dot(right) / (depth * tanH)) * W, y = (0.5 - 0.5 * rel.dot(up) / (depth * tanV)) * H;
+        box.left = Math.min(box.left, x); box.right = Math.max(box.right, x); box.top = Math.min(box.top, y); box.bottom = Math.max(box.bottom, y);
+    }
+    return box;
+}
+// The opening view: the designer's distance if the tree then stands clear of the card and of the hint; otherwise the
+// tree goes beside the card or below it, whichever lets it be larger, backed off until it fits and moved on the window
+// by the least that brings it there. Returns the distance and the move in pixels.
+function openingFrame() {
+    const W = window.innerWidth, H = window.innerHeight, gap = FRAME_MARGIN.panel;
+    const card = cardEl.getBoundingClientRect(), hint = howtoEl.getBoundingClientRect();
+    const edge = { left: W * FRAME_MARGIN.x, right: W * (1 - FRAME_MARGIN.x), top: H * FRAME_MARGIN.y, bottom: Math.min(H * (1 - FRAME_MARGIN.y), hint.top - gap) };
+    const slide = (lo, hi, min, max) => lo < min ? min - lo : hi > max ? max - hi : 0;
+    let best = null;
+    for (const room of [{ ...edge, left: Math.max(edge.left, card.right + gap) }, { ...edge, top: Math.max(edge.top, card.bottom + gap) }]) {
+        let distance = designDistance, box = outlineBox(distance);
+        for (let k = 0; k < 8; k++) {
+            const over = Math.max((box.right - box.left) / Math.max(room.right - room.left, 1), (box.bottom - box.top) / Math.max(room.bottom - room.top, 1));
+            if (over <= 1 || distance >= VIEW.maxDistance) break;
+            distance = Math.min(VIEW.maxDistance, distance * over * 1.004);
+            box = outlineBox(distance);
+        }
+        const move = { x: slide(box.left, box.right, room.left, room.right), y: slide(box.top, box.bottom, room.top, room.bottom) };
+        const less = best && (distance > best.distance + 1e-3 || (distance > best.distance - 1e-3 && Math.hypot(move.x, move.y) >= Math.hypot(best.move.x, best.move.y)));
+        if (!less) best = { distance, move };
+    }
+    return best;
+}
+let openingDistance = designDistance;
+function placeView(opening) {
+    openingDistance = opening.distance;
+    controls.minDistance = Math.min(VIEW.minDistance, openingDistance);
+    controls.maxDistance = Math.max(VIEW.maxDistance, openingDistance);
+    const W = window.innerWidth, H = window.innerHeight;
+    camera.aspect = W / H;
+    if (Math.abs(opening.move.x) < 0.5 && Math.abs(opening.move.y) < 0.5) camera.clearViewOffset();
+    else camera.setViewOffset(W, H, -opening.move.x, -opening.move.y, W, H);
+    camera.updateProjectionMatrix();
+}
+function frameOpeningView() {
+    placeView(openingFrame());
+    camera.position.copy(viewTarget).addScaledVector(viewDirection, openingDistance);
+    camera.lookAt(viewTarget);
+}
+frameOpeningView();
+
+// ---------------------------------------------------------------------------------------------------------
+// Dragging a deck: a press on a deck (or what stands on it) starts as an orbit; once the pointer has moved
+// DRAG.threshold pixels, mostly up or down means the deck follows the pointer vertically, sideways stays an orbit.
+// ---------------------------------------------------------------------------------------------------------
+const raycaster = new THREE.Raycaster();
+const pointerNdc = new THREE.Vector2();
+const drag = { candidate: -1, active: -1, x0: 0, y0: 0, h0: 0, pxPerMetre: 1, savedEye: new THREE.Vector3(), anchor: new THREE.Vector3() };
+function deckUnder(event) {
+    const r = renderer.domElement.getBoundingClientRect();
+    pointerNdc.set(((event.clientX - r.left) / r.width) * 2 - 1, -((event.clientY - r.top) / r.height) * 2 + 1);
+    raycaster.setFromCamera(pointerNdc, camera);
+    const pickables = decks.flatMap(d => d.pick);
+    const hit = raycaster.intersectObjects(pickables, false)[0];
+    if (!hit) return null;
+    const i = decks.findIndex(d => d.pick.includes(hit.object));
+    // a hit on the trunk or canopy in front of the deck wins
+    const blockers = scene.children.filter(o => o.name === 'MESHY_TRONCO');
+    const front = raycaster.intersectObjects(blockers, false)[0];
+    if (front && front.distance < hit.distance - 0.05) return null;
+    return i < 0 ? null : { index: i, point: hit.point };
+}
+function clampHeight(i, h) {
+    const others = decks.map(d => d.height);
+    h = Math.min(DRAG.max[i], Math.max(DRAG.min[i], h));
+    // keep the order of the levels and the ladder between P1 and P2 long enough to climb
+    if (i === 0) h = Math.min(h, others[1] - DRAG.minGap);
+    if (i === 1) h = Math.min(Math.max(h, others[0] + DRAG.minGap), others[2] - DRAG.ladderMin);
+    if (i === 2) h = Math.max(h, others[1] + DRAG.ladderMin);
+    return h;
+}
+function setDeckHeight(i, h) {
+    const next = clampHeight(i, h);
+    if (Math.abs(next - decks[i].height) < 1e-4) return;
+    decks[i].height = next;
+    rebuildFrame();
+    resetButton.disabled = decks.every(d => Math.abs(d.height - d.design) < 1e-3);
+}
+// a second finger makes the gesture a pinch: whatever deck the first finger had taken is let go
+const fingers = new Set();
+renderer.domElement.addEventListener('pointerdown', event => {
+    if (event.pointerType === 'touch') fingers.add(event.pointerId);
+    if (fingers.size > 1) { endDrag(); return; }
+    if (event.button !== 0 || !ready) return;
+    const under = deckUnder(event);
+    if (!under) return;
+    drag.candidate = under.index; drag.x0 = event.clientX; drag.y0 = event.clientY; drag.h0 = decks[under.index].height;
+    drag.anchor.copy(under.point); drag.savedEye.copy(camera.position);
+    // pixels per metre of vertical travel at the grabbed point
+    const a = under.point.clone().project(camera), b = under.point.clone().add(new THREE.Vector3(0, 1, 0)).project(camera);
+    drag.pxPerMetre = Math.max(1, Math.abs(a.y - b.y) * renderer.domElement.clientHeight / 2);
+});
+window.addEventListener('pointermove', event => {
+    if (drag.active >= 0) {
+        setDeckHeight(drag.active, drag.h0 + (drag.y0 - event.clientY) / drag.pxPerMetre);
+        return;
+    }
+    if (drag.candidate >= 0) {
+        const dx = event.clientX - drag.x0, dy = event.clientY - drag.y0;
+        if (Math.hypot(dx, dy) < DRAG.threshold) return;
+        if (Math.abs(dy) > Math.abs(dx)) {
+            // the deck takes the gesture: undo the bit of orbit already applied and hold the camera still
+            drag.active = drag.candidate;
+            controls.enableDamping = false; controls.update(); controls.enableDamping = true;
+            camera.position.copy(drag.savedEye); camera.lookAt(controls.target);
+            controls.enabled = false;
+            renderer.domElement.style.cursor = 'ns-resize';
+            setDeckHeight(drag.active, drag.h0 + (drag.y0 - event.clientY) / drag.pxPerMetre);
+        }
+        drag.candidate = -1;
+        return;
+    }
+    if (event.pointerType === 'mouse' && ready && event.buttons === 0) renderer.domElement.style.cursor = deckUnder(event) ? 'ns-resize' : 'grab';
+});
+function endDrag() {
+    if (drag.active >= 0) { controls.enabled = true; renderer.domElement.style.cursor = 'grab'; saveHeights(); }
+    drag.active = -1; drag.candidate = -1;
+}
+for (const type of ['pointerup', 'pointercancel']) window.addEventListener(type, event => { fingers.delete(event.pointerId); endDrag(); });
+
+// The layout stays, as in the primitive: the heights are kept in the browser when a drag ends and read back at
+// load, held to the same rules a drag follows.
+const STORE_KEY = 'oldOak.heights';
+function saveHeights() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(decks.map(d => Math.round(d.height * 100) / 100))); } catch {}
+}
+function restoreHeights() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(STORE_KEY)); } catch { saved = null; }
+    if (Array.isArray(saved) && saved.length === 3 && saved.every(Number.isFinite)) {
+        saved.forEach((h, i) => { decks[i].height = h; });
+        if (decks.some((d, i) => Math.abs(clampHeight(i, d.height) - d.height) > 1e-3)) decks.forEach(d => { d.height = d.design; });
+        rebuildFrame();
+    }
+    resetButton.disabled = decks.every(d => Math.abs(d.height - d.design) < 1e-3);
+}
+
+// Reset: the decks slide back to the designer's heights and the saved layout is forgotten
+const resetButton = document.getElementById('resetBtn');
+let resetAnim = null;
+resetButton.addEventListener('click', () => {
+    try { localStorage.removeItem(STORE_KEY); } catch {}
+    resetAnim = { from: decks.map(d => d.height), t: 0 };
+});
+function stepReset(dt) {
+    if (!resetAnim) return false;
+    resetAnim.t = Math.min(1, resetAnim.t + dt / 0.6);
+    const e = resetAnim.t * resetAnim.t * (3 - 2 * resetAnim.t);
+    decks.forEach((d, i) => { d.height = resetAnim.from[i] + (d.design - resetAnim.from[i]) * e; });
+    rebuildFrame();
+    if (resetAnim.t >= 1) { resetAnim = null; resetButton.disabled = true; }
+    return true;
+}
+
+// The frame's size: the canvas's pixels, within the budget, times the pace's current scale.
+let frameScale = 1;
+function sizeFrame() {
+    const pr = renderer.getPixelRatio(), w = window.innerWidth * pr, h = window.innerHeight * pr;
+    const k = Math.min(1, Math.sqrt(PACE.pixels / (w * h))) * frameScale;
+    linearFrame.setSize(Math.max(2, Math.round(w * k)), Math.max(2, Math.round(h * k)));
+    skyView.setSize(linearFrame.width, linearFrame.height);
+    owe();
+}
+function resize() {
+    const w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w, h);
+    sizeFrame();
+    // keep the visitor's own angle and zoom; the opening distance and the tree's place follow the new shape
+    const before = openingDistance, d = camera.position.distanceTo(controls.target);
+    placeView(openingFrame());
+    camera.position.sub(controls.target).setLength(THREE.MathUtils.clamp(d * openingDistance / before, controls.minDistance, controls.maxDistance)).add(controls.target);
+}
+window.addEventListener('resize', resize);
+
+// ---------------------------------------------------------------------------------------------------------
+// Start-up and the frame loop.
+// ---------------------------------------------------------------------------------------------------------
+let ready = false;
+async function start() {
+    const maps = new Set();
+    for (const f of Object.values(FINISHES)) for (const rel of [f.map, f.roughnessMap, f.normalMap, f.alphaMap]) if (rel) maps.add(rel);
+    for (const part of [GROUND.grass, GROUND.leaves]) for (const rel of [part.map, part.roughnessMap, part.normalMap]) maps.add(rel);
+    const total = maps.size + 4;
+    let done = 0;
+    const tick = () => progress(++done, total);
+    const picturesReady = Promise.all([...maps].map(rel => readPicture(rel).then(bmp => { pictureCache.set(rel, bmp); tick(); })));
+    const skyReady = loadSky().then(tick);
+    const draco = new DRACOLoader().setDecoderPath(PACKAGE.dracoPath);
+    const loader = new GLTFLoader().setDRACOLoader(draco);
+    const parse = async rel => { const g = await loader.parseAsync(dataUrlBytes(await readPackageFile(rel)).buffer, ''); tick(); return g; };
+    const [sceneGltf, trunkGltf, cabinGltf] = await Promise.all([parse(PACKAGE.scene), parse(PACKAGE.trunk), parse(PACKAGE.cabin)]);
+    await Promise.all([picturesReady, skyReady]);
+    buildScene(sceneGltf, trunkGltf, cabinGltf);
+    restoreHeights();
+    draco.dispose();
+    resize();
+    sortMeadow(true);
+    // shaders are compiled before the first frame; in the background where the browser can (three.js warns where not)
+    renderer.setRenderTarget(linearFrame);
+    if (renderer.extensions.has('KHR_parallel_shader_compile')) await renderer.compileAsync(scene, camera, scene);
+    else renderer.compile(scene, camera, scene);
+    renderer.setRenderTarget(null);
+    redrawShadows('still'); redrawShadows('moving');
+    owe();
+    ready = true;
+    document.documentElement.dataset.ready = 'true';
+    loadingEl.classList.add('done');
+    setTimeout(() => loadingEl.remove(), 900);
+}
+
+// A frame is drawn only when the picture can have changed: while the camera moves or eases to rest, while a deck is
+// dragged or slides back, when the window changes, and for the first frames once the scene is in. Nothing else moves.
+const clock = new THREE.Clock();
+let owed = 0, lastDraw = 0, paceSum = 0, paceCount = 0, still = '';
+function owe(frames = 3) { owed = Math.max(owed, frames); }
+function frame(now) {
+    requestAnimationFrame(frame);
+    const dt = Math.min(clock.getDelta(), 0.05);
+    if (controls.update()) owe();
+    if (!ready) return;
+    if (stepReset(dt)) owe();
+    if (still !== String(owed <= 0)) document.documentElement.dataset.still = still = String(owed <= 0);
+    if (owed <= 0) return;
+    owed--;
+    // pace: frames drawn back to back that take too long make the frame smaller until the picture rests
+    if (lastDraw && now - lastDraw < 400) { paceSum += now - lastDraw; paceCount++; } else { paceSum = paceCount = 0; }
+    lastDraw = now;
+    if (paceCount >= PACE.window) {
+        if (paceSum / paceCount > PACE.slow && frameScale > PACE.least) { frameScale = Math.max(PACE.least, frameScale * PACE.step); sizeFrame(); }
+        paceSum = paceCount = 0;
+    }
+    if (owed === 0 && frameScale < 1) { frameScale = 1; sizeFrame(); lastDraw = 0; }
+    drawFrame();
+}
+function drawFrame() {
+    sortMeadow();
+    if (skyView.blank) {
+        skyView.open();
+        renderer.setRenderTarget(linearFrame);
+        renderer.render(scene, camera);
+        skyView.scan(linearFrame, camera);
+    }
+    renderer.setRenderTarget(linearFrame);
+    renderer.render(scene, camera);
+    skyView.scan(linearFrame, camera);
+    finishPass.render(linearFrame.texture);
+}
+
+start().then(() => requestAnimationFrame(frame)).catch(error => {
+    console.error(error);
+    loadingEl.querySelector('p').textContent = 'The treehouse could not load.';
+    toast('Sorry, the 3D scene could not be loaded: ' + error.message, 10000);
+});
+
+</script>
+</body>
+</html>

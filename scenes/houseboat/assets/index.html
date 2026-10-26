@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>The Willow · Houseboat Holiday Let</title>
+<style>
+    :root {
+        --panel-bg: rgba(255, 248, 236, 0.86);
+        --panel-edge: rgba(150, 104, 58, 0.30);
+        --panel-shadow: 0 10px 30px rgba(52, 30, 8, 0.28);
+        --ink: #3d2914;
+        --ink-soft: #6a4c2c;
+        --accent: #a5582a;
+        --bar-track: rgba(150, 104, 58, 0.22);
+        --toast-bg: rgba(122, 44, 20, 0.94);
+        --toast-ink: #fff4e6;
+        --page: #8fa6b4;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --panel-bg: rgba(38, 27, 18, 0.84);
+            --panel-edge: rgba(255, 214, 160, 0.22);
+            --panel-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+            --ink: #fbeedb;
+            --ink-soft: #e2c9a6;
+            --accent: #f2b071;
+            --bar-track: rgba(255, 214, 160, 0.20);
+            --toast-bg: rgba(150, 58, 28, 0.95);
+            --toast-ink: #fff6ea;
+            --page: #2c3a44;
+        }
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: var(--page); }
+    body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; color: var(--ink); }
+    #app { position: fixed; inset: 0; touch-action: none; }
+    #app canvas { display: block; width: 100%; height: 100%; outline: none; }
+    .card {
+        background: var(--panel-bg); color: var(--ink);
+        border: 1px solid var(--panel-edge); box-shadow: var(--panel-shadow);
+        -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    }
+    #welcome {
+        position: fixed; z-index: 10;
+        top: max(14px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left));
+        width: min(280px, calc(100vw - 28px)); padding: 13px 16px 12px; border-radius: 14px;
+    }
+    #welcome h1 { font-size: 17px; font-weight: 650; letter-spacing: 0.3px; color: var(--accent); margin-bottom: 2px; }
+    #welcome .sub { font-size: 11.5px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 7px; }
+    #welcome p { font-size: 12.5px; line-height: 1.5; color: var(--ink); }
+    #howto {
+        position: fixed; z-index: 10; left: 50%; transform: translateX(-50%);
+        bottom: max(14px, env(safe-area-inset-bottom));
+        padding: 7px 15px; border-radius: 999px; font-size: 12px; letter-spacing: 0.3px;
+        white-space: nowrap; color: var(--ink-soft);
+    }
+    #howto .touch { display: none; }
+    @media (pointer: coarse) { #howto .mouse { display: none; } #howto .touch { display: inline; } }
+    #loading {
+        position: fixed; z-index: 20; left: 50%; top: 50%; transform: translate(-50%, -50%);
+        width: min(300px, calc(100vw - 40px)); padding: 16px 18px; border-radius: 14px; text-align: center;
+        transition: opacity 0.6s ease;
+    }
+    #loading p { font-size: 13px; margin-bottom: 10px; }
+    #loading .track { height: 6px; border-radius: 3px; background: var(--bar-track); overflow: hidden; }
+    #loading .fill { height: 100%; width: 0%; border-radius: 3px; background: var(--accent); transition: width 0.25s ease; }
+    #loading.done { opacity: 0; pointer-events: none; }
+    #toast {
+        position: fixed; z-index: 30; left: 50%; bottom: 64px; transform: translate(-50%, 12px);
+        max-width: min(420px, calc(100vw - 32px)); padding: 10px 16px; border-radius: 12px;
+        background: var(--toast-bg); color: var(--toast-ink); font-size: 13px; line-height: 1.45;
+        box-shadow: var(--panel-shadow); opacity: 0; pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    #toast.show { opacity: 1; transform: translate(-50%, 0); }
+    @media (max-width: 600px) {
+        #welcome { width: min(232px, calc(100vw - 28px)); padding: 10px 13px 9px; }
+        #welcome h1 { font-size: 15px; }
+        #welcome .sub { font-size: 10.5px; margin-bottom: 5px; }
+        #welcome p { font-size: 11.5px; line-height: 1.42; }
+        #howto { font-size: 11px; padding: 6px 12px; }
+    }
+    @media (max-height: 460px) {
+        #welcome p { display: none; }
+        #welcome .sub { margin-bottom: 0; }
+    }
+</style>
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+}
+</script>
+</head>
+<body>
+<div id="app"></div>
+<section id="welcome" class="card" aria-label="About The Willow">
+    <h1>The Willow</h1>
+    <div class="sub">Houseboat holiday let · sleeps 4</div>
+    <p>Take a look around before you book: turn the boat to see the roof terrace, the bow deck and the view from every window.</p>
+</section>
+<div id="howto" class="card"><span class="mouse">Drag to look around · Scroll to zoom</span><span class="touch">Drag to look around · Pinch to zoom</span></div>
+<div id="loading" class="card" role="status" aria-live="polite"><p>Getting The Willow ready…</p><div class="track"><div class="fill"></div></div></div>
+<div id="toast" role="alert"></div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+// ---------------------------------------------------------------------------------------------------------
+// Settings. Everything below is read from the designer's TheWillow_houseboat_asset.blend (Blender 5.1, EEVEE)
+// and converted to three.js axes (x forward to the bow, y up, z to starboard).
+// ---------------------------------------------------------------------------------------------------------
+const PACKAGE = {
+    model: 'TheWillow_houseboat_asset.glb',                    // the .blend's meshes, exported to glTF with Draco
+    sky: 'hdri/industrial_sunset_02_puresky_2k_rot.hdr',        // the .blend's world texture, as linear radiance
+    textureDir: 'textures/',
+    dracoPath: 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'
+};
+
+// The scene camera "Cam": 15.5, 6.6, 14 looking at its orbit rig at 0.2, 1.9, -0.3, 40 degree vertical lens.
+const VIEW = {
+    eye: [15.5, 6.6, 14.0],
+    target: [0.2, 1.9, -0.3],
+    fov: 40,
+    near: 0.3,
+    far: 4000,
+    designAspect: 16 / 9,       // windows narrower than 16:9 back the camera off so the same width stays in frame
+    minDistance: 9.5,           // the whole boat stays outside the lens: its farthest part is 6.6 m from the target
+    maxDistance: 48,
+    minPolarAngle: 0.20,
+    maxPolarAngle: 1.47,        // never below 1.9 + 9.5 * cos(1.47) = 2.85 m, above every rail, pile and lantern
+    rotateSpeed: 0.55,
+    zoomSpeed: 0.8,
+    damping: 0.08
+};
+
+// World: the HDRI at strength 0.9. EEVEE turns every texel above 10 into a sun lamp, so the sky that lights the
+// materials is the clamped one and the clipped part becomes skySun. sun is the .blend's own "Sun" lamp.
+const DAYLIGHT = {
+    skyStrength: 0.9,
+    sunThreshold: 10,
+    sun: { color: [1.0, 0.86, 0.68], strength: 3.6, towards: [-0.8216, 0.2852, 0.4936], angle: 0.0209 },
+    skySun: { color: [0.4501, 0.0457, 0.00005], strength: 1.0, towards: [0.8563, 0.0379, -0.5151], angle: 0.0092 },
+    // Diffuse sky light comes from first-order spherical harmonics, as EEVEE lights from its world probe. Below the
+    // horizon EEVEE's ambient occlusion finds the deck and the water in the way, so the diffuse light from there is
+    // only the dark water (waterGlow) and not the HDRI's bright lower half. Reflections see half HDRI, half the lake
+    // (the sky mirrored by the water with its Fresnel term).
+    shDiffuse: true,
+    groundOccluded: true,
+    waterGlow: [0.002, 0.010, 0.012],
+    reflectLake: 0.5,
+    shadowCentre: [0.0, 1.0, -10.0],
+    shadowHalfSize: 26,
+    shadowMapSize: 4096,
+    shadowSoftness: 2
+};
+
+// Point lamps of the .blend (power in W converted to intensity: W / 4 pi). The interior lamp only gives diffuse
+// light (its specular factor is 0) and only inside the cabin; the lanterns only outside it. Each lantern's light
+// sits at the centre of its own glass chimney (the lantern's origin + 0.0955 m), where the flame would be; the .blend
+// had the three lamps 18 cm to the side of their lanterns and 10 to 35 cm above the glass.
+// floor: the lamp only reaches surfaces above that height: the deck, the jetty or the roof slab a lantern stands on
+// shades everything under it.
+const LAMPS = [
+    { name: 'Interior_Light', at: [-1.90, 2.66, 0.00], color: [1.0, 0.72, 0.45], watts: 90, inside: true, floor: -100 },
+    { name: 'Bow_Lantern_glow', at: [5.25, 1.006, 0.90], color: [1.0, 0.72, 0.40], watts: 25, inside: false, floor: 0.9 },
+    { name: 'Terrace_Lantern_glow', at: [0.95, 3.396, 0.00], color: [1.0, 0.72, 0.40], watts: 25, inside: false, floor: 3.2 },
+    { name: 'Jetty_Lantern_glow', at: [-0.95, 0.646, -4.30], color: [1.0, 0.72, 0.40], watts: 25, inside: false, floor: 0.54 }
+];
+// Inside of the cabin: the inner faces of its walls (x -4.92 and 1.52, z +-1.82) and ceiling (3.07) with 3 cm to
+// spare; the outer faces (x -5.0 and 1.6, z +-1.9, roof 3.11) stay outside. bounce is the light the room sends back
+// to itself (W/m2 per channel): the lamp's 90 W spread over ~90 m2 of walls, ceiling and floor, bounced once off the
+// room's mean albedo (0.55, 0.38, 0.17: cream plaster on five sides, dark planks underfoot), in lamp colour, and kept
+// at the quarter of it that EEVEE's screen-space light finds through the windows of the designer's render.
+// sky is the share of daylight that gets in: ~7 m2 of window and door glass against ~90 m2 of room.
+const CABIN_ROOM = { min: [-4.95, 0.88, -1.85], max: [1.55, 3.09, 1.85], bounce: [0.14, 0.07, 0.02], sky: 0.08 };
+
+// Water "hb_water": the plane slides 9 m along x over the 24 s clip (its height and the 6 m texture repeat are read
+// from the plane itself). thickness is how far behind what the eye sees a reflected surface still counts as seen
+// (EEVEE's screen trace thickness), smoothing the width (in pixels of the frame) of the blur standing in for
+// EEVEE's denoiser. The sun glint's lobe (roughness 0.05) and strength (0.25 of a lamp's GGX highlight) are fitted to the
+// streak in the designer's render at frame 151. Only the HDRI's own sun glints, low over the hills where the sky shows it;
+// the .blend's sun lamp has no disc in the sky, so its streak lay in the middle of the lake with nothing above it.
+const WATER = { drift: 9 / 24, tile: 6, normalStrength: 0.35, roughness: 0.03, thickness: 0.2, smoothing: 2.6, rippleDetail: 1, glintRoughness: 0.05, glintScale: 0.25 };
+
+// Materials of the .blend: Image Texture -> Principled BSDF, nothing else. level is the Specular IOR Level: Blender
+// scales the reflectance at normal incidence (F0 = 0.04 x 2 x level) and keeps it at 1 at grazing angles, which is
+// an IOR change, so the material gets the IOR with that F0 (0.35 -> 1.402).
+const T = name => name + '.jpg';
+const FINISHES = {
+    hb_cabin: { map: T('painted_plaster_wall_tint_1k'), roughnessMap: T('painted_plaster_wall_rough_2k_1k'), normalMap: T('painted_plaster_wall_nor_2k_1k'), normal: 0.6 },
+    hb_trim: { map: T('dark_wood_diff_2k_1k'), roughnessMap: T('dark_wood_rough_2k_1k'), normalMap: T('dark_wood_nor_2k_1k') },
+    hb_deck: { map: T('worn_planks_tint_1k'), roughnessMap: T('worn_planks_rough_2k_1k'), normalMap: T('worn_planks_nor_2k_1k') },
+    hb_hull: { map: T('weathered_brown_planks_diff_2k_1k'), roughnessMap: T('weathered_brown_planks_rough_2k_1k'), normalMap: T('weathered_brown_planks_nor_2k_1k') },
+    hb_pile: { map: T('bark_willow_02_diff_2k_1k'), roughnessMap: T('bark_willow_02_rough_2k_1k'), normalMap: T('bark_willow_02_nor_2k_1k') },
+    hb_rail: { map: T('hb_rail_diff_1k'), metalness: 1, roughness: 0.22, normalMap: T('metal_plate_02_nor_2k_1k'), normal: 0.15 },
+    hb_darkmetal: { map: T('hb_dark_diff_1k'), metalness: 0.85, roughnessMap: T('metal_plate_02_rough_2k_1k'), normalMap: T('metal_plate_02_nor_2k_1k') },
+    hb_glass: { map: T('hb_glass_tint_1k'), roughness: 0.02, opacity: 0.16, level: 0.6, glass: true },
+    hb_rope: { map: T('Rope001_2K-JPG_Color_1k'), roughness: 0.9 },
+    hb_rug: { map: T('denim_fabric_diff_2k_1k'), roughnessMap: T('denim_fabric_rough_2k_1k'), normalMap: T('denim_fabric_nor_2k_1k') },
+    hb_ground: { map: T('aerial_grass_rock_diff_2k_1k'), roughnessMap: T('aerial_grass_rock_rough_2k_1k'), normalMap: T('aerial_grass_rock_nor_2k_1k') },
+    hb_sand: { map: T('coast_sand_01_diff_2k_1k'), roughnessMap: T('coast_sand_01_rough_2k_1k'), normalMap: T('coast_sand_01_nor_2k_1k') },
+    hb_water: { map: T('hb_water_col_1k'), roughness: WATER.roughness, normalMap: T('hb_water_nor_1k'), normal: WATER.normalStrength, level: 0.5 },
+    Lantern_01_brass: polyHaven('Lantern_01_brass', 'roughness', 'metallic', 'nor_gl'),
+    Lantern_01_glass: { ...polyHaven('Lantern_01_brass', 'roughness', 'metallic', 'nor_gl'), alphaMap: T('Lantern_01_brass_opacity_2k_1k'), glow: 1.6 },
+    outdoor_table_chair_set_01_chair: polyHaven('outdoor_table_chair_set_01_chair', 'rough', 'metal', 'nor_gl'),
+    outdoor_table_chair_set_01_table: polyHaven('outdoor_table_chair_set_01_table', 'rough', 'metal', 'nor_gl'),
+    painted_wooden_bench: polyHaven('painted_wooden_bench', 'rough', null, 'nor_gl'),
+    potted_plant_01_pot: polyHaven('potted_plant_01_pot', 'rough', null, 'nor_gl'),
+    potted_plant_01_leaves: { ...polyHaven('potted_plant_01_leaves', 'rough', null, 'nor_gl'), alphaMap: T('potted_plant_01_leaves_alpha_2k_1k'), foliage: true },
+    potted_plant_02_pot: polyHaven('potted_plant_02_pot', 'rough', null, 'nor_gl'),
+    potted_plant_02_leaves: { ...polyHaven('potted_plant_02_leaves', 'rough', null, 'nor_gl'), alphaMap: T('potted_plant_02_leaves_alpha_2k_1k'), foliage: true },
+    potted_plant_04: polyHaven('potted_plant_04', 'rough', null, 'nor_gl'),
+    Armchair_01: polyHaven('Armchair_01', 'roughness', 'metallic', 'nor_gl'),
+    GreenChair_01: polyHaven('GreenChair_01', 'roughness', 'metallic', 'nor_gl'),
+    sofa_03: polyHaven('sofa_03', 'rough', null, 'nor_gl'),
+    sofa_03_fringe: { ...polyHaven('sofa_03', 'rough', null, 'nor_gl'), alphaMap: T('sofa_03_opacity_2k_1k') },
+    side_table_01: polyHaven('side_table_01', 'rough', 'metal', 'nor_gl'),
+    wooden_table_02: polyHaven('wooden_table_02', 'rough', 'metal', 'nor_gl'),
+    rock_moss_set_01: polyHaven('rock_moss_set_01', 'rough', null, 'nor_gl'),
+    shrub_04: { ...polyHaven('shrub_04', 'rough', null, 'nor_gl'), alphaMap: T('shrub_04_alpha_2k_1k'), foliage: true },
+    tree_small_02_trunk: polyHaven('tree_small_02', 'rough', null, 'nor_gl'),
+    tree_small_02_branches: polyHaven('tree_small_02_branch', 'rough', null, 'nor_gl'),
+    tree_small_02_leaves: { ...polyHaven('tree_small_02_leaves', 'rough', null, 'nor_gl'), alphaMap: T('tree_small_02_leaves_alpha_2k_1k'), foliage: true }
+};
+// The Poly Haven props (furniture, plants, lanterns, trees, shrubs, rocks) are small on screen: their maps are
+// decoded at 512 px, which keeps the page near 270 MB of texture memory instead of 570 MB.
+function polyHaven(set, rough, metal, normal) {
+    const f = { map: T(set + '_diff_2k_1k'), roughnessMap: T(set + '_' + rough + '_2k_1k'), normalMap: T(set + '_' + normal + '_2k_1k'), propSize: 512 };
+    if (metal) f.metalnessMap = T(set + '_' + metal + '_2k_1k');
+    return f;
+}
+
+// Far scenery that repeats one mesh: drawn as instances, and the trees switch to the lighter copy far away.
+// leafOpacity scales the leaves' alpha so a canopy covers the hill behind it as densely as in the designer's render
+// (fitted on the opening view: canopy minus the hill beside it, red and green within 3 levels at 2; above 2 nothing changes).
+// The shore meshes of the .blend are wound facing down (Blender shades both sides alike); they are turned up here.
+const SCENERY = { treeNear: 'ShoreTree_', treeFarSource: 'ShoreTree_far', farTreeFrom: 60, leafOpacity: 2, instanced: ['ShoreShrub_', 'ShoreRock_'],
+    faceDown: ['ShoreGround', 'HorizonHills', 'ShoreBeach'] };
+
+// The .blend's two mooring lines are 34 cm stubs that stop in mid-air beside the hull. Each becomes a whole rope: a
+// turn round its cleat, a slack span to the jetty pile the stub leans towards and a round turn on that pile, made like
+// the designer's rope pieces (8 sides, 1.8 cm radius, the hb_rope image repeating every 0.12 m). The span sags by
+// sag x its length; the turn on the pile sits pileDrop below the pile's top.
+const MOORING = { lines: [['MooringLine_0', 'MooringCleat_0_neck', 'Pile_00'], ['MooringLine_1', 'MooringCleat_1_neck', 'Pile_04']],
+    radius: 0.018, sides: 8, repeatsPerMetre: 8.33, sag: 0.04, pileDrop: 0.12 };
+
+// Where two runs of railing meet, the .blend has one post per run in exactly the same place (the same vertices and
+// UVs, two coincident surfaces); each of these corner posts is drawn once.
+const SHARED_POSTS = ['TRail_A_post0', 'TRail_A_post5', 'TRail_F_post0', 'TRail_F_post5', 'BRail_F_post0', 'BRail_F_post5'];
+
+// Where a top rail ends at a post (the corners of both railings, both sides of the ladder's opening and of the bow
+// gate, and the bow rails' ends by the cabin), the .blend butts the rail's cut end against the post's flat top, level
+// with the rail's centre, and the ladder's stiles end at that same point: each of these joints showed a small notch.
+// Each gets a ball fitting on top of the post, as on a stanchion railing. The ball is centred on the post top, so the
+// post (2.5 cm radius), the rails (2.2 cm) and the stiles (3 cm) all leave it as clean circles, and 3.6 cm takes in
+// every cut end (the farthest rail edge over the post is 3.3 cm from the centre).
+const RAIL_FITTINGS = { radius: 0.036, posts: ['TRail_S_post0', 'TRail_P_post0', 'TRail_S_post8', 'TRail_P_post8', 'TRail_A_post6',
+    'TRail_A_post7', 'BRail_S_post4', 'BRail_P_post4', 'BRail_F_post6', 'BRail_F_post7', 'BRail_S_post0', 'BRail_P_post0'] };
+
+// The cabin's two doors (BowDoor on the forward wall, SternDoor on the aft wall) had nothing to open them by. Each gets a
+// round knob on its outer face, 8 cm in from its starboard edge and 0.91 m above the deck, turned in the aged brass of
+// the package's lanterns. profile is the knob's section (radius, depth out of the door, in metres): a rose let 2 mm
+// into the door so no face lies on the door's own, a neck, then the knob, 7.5 cm deep in all. Its texture coordinates
+// are all squeezed into one even, fully metallic patch of the lantern's brass atlas (uv: corner u, corner v, size).
+const DOOR_KNOBS = { doors: ['BowDoor', 'SternDoor'], fromEdge: 0.08, height: 0.91, uv: [0.908, 0.041, 0.043],
+    profile: [[0, -0.002], [0.028, -0.002], [0.028, 0.004], [0.026, 0.008], [0.011, 0.010], [0.009, 0.016], [0.009, 0.030],
+        [0.016, 0.036], [0.024, 0.046], [0.026, 0.056], [0.023, 0.066], [0.014, 0.073], [0, 0.075]] };
+
+// The doors are slabs on the outer face of solid end walls, so from inside the cabin there was no door to see, only
+// plaster where each one should be. Each door's leaf, its glazed panel and its knob are copied onto the inside face of
+// its wall, mirrored through the middle of the wall (0.08 m thick). Inside, the bow door is right behind the dining
+// table's far chair (Interior_Chair_B, its back 3 cm off the wall), so that chair moves 10 cm towards the table, clear
+// of the knob and of the panel's frame; its seat slides a little further under the table top.
+const DOORS_INSIDE = { parts: ['BowDoor', 'SternDoor'], wall: 0.08, moved: { Interior_Chair_B: [-0.10, 0, 0] } };
+
+// The two bow cleats are a bar lying on a block, and the bar overhangs the block by 5 cm at each end; seen from low
+// down the ends look loose, so each block is drawn as long as its bar.
+const BOW_CLEATS = { Cleat_0_base: 'Cleat_0_horn', Cleat_1_base: 'Cleat_1_horn' };
+
+// Blender's display transform: AgX with the "AgX - Medium High Contrast" look, baked from Blender 5.1's OCIO
+// config into a 25^3 table (linear Rec.709 in, sRGB display out) over log2 exposures -12.5 to +4.5.
+const DISPLAY_LUT = { size: 25, log2Min: -12.5, log2Max: 4.5, data: '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muaFmuaFmuaFmuaFm+aFm+aFm+aFm+aFm+aFnOaGnOaGneaGn+aGouaHpuWIrOWKtuSMw+SQ1OOV5+Gf9t2q/926/+DI/+bX/+3ktvGmtvGmtvGmtvGmtvGmtvGmtvGmtvGmtvGmtvGmtvGmt/GmuPGmufGmu/GnvvGow/Gpy/Cr1e+u4u+y8u25/erC/+rO/+za//Hly/u/y/u/y/u/y/u/y/u/y/u/y/u/y/u/y/u/y/u/y/u/y/u/zPq/zfq/zvq/z/rA0vrA1frB2/nD4/nF7vjJ+/fO//TV//Te//bn3P/S3P/S3P/S3P/S3P/S3P/S3P/S3P/S3P/S3P/S3P/S3P/S3P/S3P/S3f/S3v/T3//T4f/T5P/U6f/V7//X+P7a//7e//3k//zr6f/h6f/h6f/h6f/h6f/h6f/h6f/h6f/h6f/h6f/h6f/h6f/i6f/i6f/i6f/i6v/i6//i7P/i7f/i7//j8//k+P/l/v/o///r///v8//u8//u8//u8//u8//u8//u8//u8//u8//u8//u8//u8//u9P/u9P/u9P/u9P/u9P/u9f/u9v/u9//u+f/v/P/w/v/x///y///1AAABAAABAAABAAABAAABAAABAQABAgABBgACDAACFQACIAADMAADRAAEXwADgwACqwIB0xIA70Av/m1f/5KH/6+n/8a//9jT/+biAAABAAABAAABAAABAAABAAABAQABAwABBgACDAACFQACIAADMAADRAAEYAADgwABqwIB0xIA70Av/m5f/5KH/6+n/8a//9jT/+biAAABAAABAAABAAABAAABAAABAQABAwACBgACDAACFQACIQADMAADRAADYAACgwABqwIA0xIA70Av/m5f/5KH/6+n/8a//9jT/+biAAABAAABAAABAAABAAABAQABAQABAwACBgACDQACFQACIQACMAADRQACYAACgwABqwMA0xMA70Av/m5f/5KH/6+n/8a//9jT/+biAAABAAABAAABAAABAAABAQACAQACAwACBwACDQACFgACIgACMQACRQABYAABgwAAqwMA0xQA70Ev/m5f/5KH/6+n/8a//9jT/+biAAEBAAEBAAEBAAEBAAECAQECAgECAwECBwECDgABFwABIgABMgAARgAAYQAAhAAArAQA0xYA70Ev/m5f/5OH/6+n/8a//9jT/+bi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9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9f/u9v/u9//v+f/v/P/w/v/x///z///1ABFHABFHABFHABFHABBHABBIAA9IAQ5KAwxLCwtMGAtNJQpONgdPSwFQZgBRiABRsABS1RlT7Uxi/XN4/5OR/66p/8XA/9fT/+biABFHABFHABFHABFHABBHABBIAA9IAQ5KAwxLCgtMGAtNJQpONghPSwFQZgBRiABRsABS1RlT7Uxi/XN4/5OR/66p/8XA/9fT/+biABFHABFHABFHABFHABFHABBIAA9IAQ5KAw1LCgtNGAtNJQpONghPSwFQZgBRiQBRsABS1RpT7Uxi/XN4/5OR/66p/8XA/9fT/+biABJHABJHABFHABFHABFHABBIABBJAQ9KAw1LCgxNGAtNJQtONghPSwFQZwBRiQBRsABS1RpU7Uxi/XN4/5OR/66p/8XA/9fT/+biABJHABJHABJHABJHABFIABFIABBJAQ9KAw1MCgxNGAxNJQtONghPSwJQZwBRiQBRsABS1RtU7Uxi/XN4/5OR/66p/8XA/9fT/+biABNHABNHABNHABNIABJIABJIABFJARBKAg5MCg1NFw1OJQxONglPSwNQZwFRiQBRsABS1RxU7U1j/XN4/5OR/66p/8XA/9fT/+biABRIABRIABRIABRIABRIABNJABJKABFLARBMCg5OFw5OJQ1PNgtQTAVQZwFRigBSsQBS1R1U7U5j/XR4/5SR/66p/8XA/9fT/+biABZIABZIABZJABZJABVJABVJABRKABNLARFNBxBOFxBPJQ9PNg5QTAtQaANRiwBRsQBS1SBU7U9j/XR4/5SR/66p/8XA/9fT/+biABlJABlJABlKABhKABhKABhKABdLABZMABVOBBROFxRPJRNQNxJQTBBRaQpRiwFRsgJS1SRU7VFj/XV4/5SR/6+p/8XA/9fT/+biAB5KAB5KAB5KAB5KAB1KAB1LABxMABtNARtOBhpPFhlQJhlQNxlQTRhRaRNRjQlSswtR1CtV7VRj/HZ5/5WR/6+p/8XA/9jT/+biACRLACRLACRLACRMACRMACRMACRNACNNASNOByJQFiJQJiJQOCJRTiFRah9SjhtStBxR1DVV7Fdk/Hh5/5WR/6+p/8XA/9jT/+bi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3f/V3f/V3f/V3f/V3f/V3f/V3f/V3f/V3f/V3f/V3f/V3f/V3f/V3f/W3v/W3//W4P/W4v/W5f/X6f/Y7/7a+P7c//7g//3l//zs6f/j6f/j6f/j6f/j6f/j6f/j6f/j6f/j6f/j6f/j6f/j6f/j6v/j6v/j6v/j6v/j6//j7P/k7f/k8P/k9P/l+f/n/v/p///s///w9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9P/u9f/u9f/v9v/v9//v+f/v/P/w/v/x///z///1ACiFACiFACiFACiFACiFACiGACeGASeHAiaIBiSKECGMICCONR+PTB6QaByRixaRsg6Q0zKM61iN+36X/5ym/7O1/8fF/9fU/+XiACiFACiFACiFACiFACiFACiGACeGASeHAiaIBiSKECGMICCONR+PTB6QaByRixaRsg+Q0zKM61iN+36X/5ym/7O1/8fF/9fU/+XiACiFACiFACiFACiFACiFACiGACeGASeHAiaIBiSKECKMICCONR+PTB+QaByRixaRsg+Q0zKM61iN+36X/5ym/7O1/8fF/9fU/+XiACmFACmFACmFACiFACiFACiGACiGASeHAiaIBiSKECKNICCONSCPTB+QaByRixeRshCQ0zKM61iN+36X/5ym/7S1/8fF/9fU/+XiACmFACmFACmFACmFACmFACiGACiGASeHAiaIBiWKDyKNHyCONSCPTB+QaByRixeRshGQ0zOM61mN+36X/5ym/7S1/8fF/9fU/+XiACmFACmFACmFACmFACmGACmGACiGASiHAieIBSWKDyKNHyGPNSCPTCCQaB2RjBiRshOQ0zOM61mN+36X/5ym/7S1/8fF/9fU/+XiACqFACqFACqFACqGACqGACqGACmGACiHAieIBSaKDiONHyGPNSGPTCCQaB6RjBmRshaQ0zWM61qN+36X/52m/7S1/8fF/9fU/+XiACuGACuGACuGACuGACuGACuGACqHACqIASmJBCeKDCSNHyOPNSOQTCKQaSCRjBuRshuQ0zeM61uO+3+X/52m/7S1/8fF/9fU/+XiAC6GAC2GAC2GAC2GAC2HAC2HAC2HACyIACuKAimLByeOHyWQNCWQTCSRaSKRjB+SsiKQ0zqM6l2O+oCX/52m/7S1/8fF/9fU/+XiADGHADGHADGHADCHADCHADCIADCIAC+JAC6LACyNAyqPGimRNCiRTCiRaSeSjCaSsimQ0z6M6l+O+oGY/56n/7S1/8fF/9fU/+XiADWIADWIADWIADWJADWJADWJADSKADSLADOMADGOAC+REy+RNC+STS+Sai6SjS6SsjKQ0kWN6WOO+oOY/5+n/7S1/8fF/9fU/+XiAD6JAD6JAD6JAD6JAD6JAD6KAD2KAD2LADyMADqOBDqQGjmRNDmSTjmSazmSjTqSsj6Q0U6N6WmP+YaZ/6Cn/7W2/8jF/9jU/+XiAEmLAEmLAEmLAEmLAEmLAEmLAEmMAEmMAEmNAUiOCEeQHUeSNkeST0eSbEiSjkmSsU2Q0FuO53GQ+Iua/6Kn/7a2/8jF/9jU/+biAFuNAFuNAFuNAFuNAFuNAFuNAFuNAFqOAFqOAlqPClqRH1qSN1qSUVuSbVuSjl2RsGGQzmyP5X2S95Gc/6Wo/7i2/8nG/9jU/+biAHKQAHKQAHKQAHKQAHKQAHKQAXKQAXKQAXKQAnKRCXKRHnKSOHOSVHOScHSRj3aRr3mQy4CR4ouV9Zmd/6mp/7q3/8rG/9nV/+biAZCRAZCRAZCRAZCRAZCRAZCRApCRA5CRBJCRCpCRFpCRKZCRQ5CRWZCRdJCRkZGRrZKRyJWT35uX86Sf/rCq/764/8zH/9rV/+biMqyPMqyPMqyPMqyPM6yPM6yPNKyQNqyQOayQPqyQRKyQTayQW6uQa6uRfquRlKqSraqTxqqV3Kya8LCi/bis/8O5/8/H/9zW/+fiacOTacOTacOTacOTacOTacOTasOTasOUa8OUbcOUb8OUc8OUeMKUgcKVjcKWm8GXrsGYxMGa2b+e7MCm+8Ow/8q7/9PJ/97X/+nji9adi9adi9adi9adjNadjNadjNadjNadjdadjdadjtadkNadk9Wel9WendWeptWfs9Sgw9Si19Om6dCs+NG1/9S//9nL/+LY/+vkpuWqpuWqpuWqpuWqpuWqpuWqpuWqp+Wqp+Wqp+WqqOWqqOWqquWqrOSqr+SrteSrvOSsx+Ou1eOx5uG09N+8/9/E/+HO/+bZ/+3lvPG5vPG5vPG5vPG5vPG5vPG5vPG5vPG5vPG5vfG5vfG5vfG5vvG5v/C6wfC6w/C6yPC7zvC81+++4+7A8e3E/evL/+vT/+3c//HnzvrJzvrJzvrJzvrJzvrJzvrJzvrJzvrJzvrJz/rJz/rJz/rJz/rJ0PrJ0frJ0vrJ1PrK2PnK3fnL5fnN7vjQ+/fT//XZ//Th//bo3f/X3f/X3f/X3f/X3f/X3f/X3f/X3f/X3f/X3f/X3f/X3v/X3v/X3v/X3//X3//Y4P/Y4v/Y5f/Z6f/a8P7b+P7d//7h//3m//zs6v/k6v/k6v/k6v/k6v/k6v/k6v/k6v/k6v/k6v/k6v/k6v/k6v/k6v/k6v/k6//k6//k7P/k7v/l8P/l9P/m+f/n/v/p///s///w9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9f/v9f/v9v/v9//v+f/w/P/x/v/y///z///2ATioATioATioATipATepATepATepAjeqBDaqCDWrEjStIjOvNDKwTDGxZjKxhzKxrTWx0EOt6WKn+YKp/6Cy/7e+/8nL/9jX/+XjATioATioATioATipATepATepATepAjeqAzaqCDWrEjStIjOvNDKwTDGxZjKxhzKxrTWx0EOt6WKn+YKp/6Cy/7e+/8nL/9jX/+XjATioATioATipATipATipATepATepAjeqAzaqCDWrEjStIjOvNDKwTDKxZjKxhzKxrTax0EOt6WOn+YKp/6Cy/7e+/8nL/9jX/+XjATioATioATipATipATipATipATepAjeqAzaqBzWrEjStIjOvNDKwTDKxZjKxhzKxrTax0ESt6WOn+YKp/6Cy/7e+/8nL/9jX/+XjADipADipADipATipATipATipATepAjeqAzaqBzarETWtITOvNDKxTDKxZjKxhzKxrTax0ESt6WOn+YKp/6Cy/7e+/8nL/9jX/+XjADipADipADipADipADipATipATipATeqAzeqBjasEDWtITOvNDKxTDKxZjOxhzOxrTex0ESt6WOn+YOp/6Cy/7e//8nL/9jX/+XjADmpADmpADmpADmpADmpADipATipATiqAjerBjasDzWtHzSvMzOxTDOxZjOyiDSxrTex0EWt6WSn+YOp/6Cy/7e//8nL/9jX/+XjADmpADmpADmpADmpADmpADmpADmqATiqATirBTesDjatHjSwMzSxTDSxZjSyiDWyrTix0Eet6GSn+YOq/6Cy/7i//8nL/9nX/+Xj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r+TFr+TFr+TFr+TFr+TFr+TFr+TFr+TFr+TFsOTFsOTFseTGsuTGtOTGt+TGvOTHwuPHy+PI1uPJ5eLK8uHN/uHS/+TY/+jf/+7nw/DMw/DMw/DMw/DMw/DMw/DMw/DMw/DMw/DMw/DMw/DMxPDMxPDMxfDMx/DNyfDNze/N0u/N2u/O5O7Q8e7S/OzW/+zb/+7i//Lp0/rU0/rU0/rU0/rU0/rU0/rU0/rU0/rU0/rU0/rU0/rU0/rU0/nU1PnV1fnV1vnV2PnV2/nV4PnW5vjX7/jZ+vfb//Xf//Xl//fr4P/e4P/e4P/e4P/e4P/e4P/e4P/e4P/e4P/e4P/e4P/e4P/e4P/e4f/e4f/e4v/e4//e5P/f5//f6//g8P7h+P7i//7l//3p//3u6//o6//o6//o6//o6//o6//o6//o6//o6//o6//o6//o6//o6//o6//o7P/o7P/o7f/o7f/o7//o8f/p9P/p+f/q/v/s///u///y9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9f/x9v/x9//x+P/x+v/y/P/y///z///1///3N2TiN2TiN2TiN2TiN2TiOGTiOGTiOWXiOmXiPWXiQmXiSWbiU2fiYmnhc2vhiGzhoXLfvXne2oTb85TW/qnR/73T/87Z/93h/+jpN2TiN2TiN2TiN2TiN2TiOGTiOGTiOWXiOmXiPWXiQmXiSWbiU2fiYmnhc2vhiGzhoXLfvXne2oTb85TW/qnR/73T/87Z/93h/+jpN2TiN2TiN2TiN2TiN2TiOGTiOGTiOWXiOmXiPWXiQmXiSWbiU2fiYmnhc2vhiGzhoXLfvXne2oTb85TW/qnR/73T/87Z/93h/+jpN2TiN2TiN2TiN2TiN2TiN2TiOGTiOWXiOmXiPWXiQmXiSWbiU2fiYmnhc2vhiG3hoXLfvXne2oXb85TW/qnR/73T/87Z/93h/+jpN2TiN2TiN2TiN2TiN2TiN2TiOGTiOWXiOmXiPWXiQWXiSWbiU2fiYmnhc2vhiG3hoXLfvXne2oXb85TW/qnR/73T/87Z/93h/+jpNmTiNmTiNmTiN2TiN2TiN2TiOGXiOGXiOmXiPWXiQWbiSGbiU2fiYmnhc2vhiG3hoXLfvXre2oXb85TW/qnR/73T/87Z/93h/+jpNmTiNmTiNmTiNmTiNmTiN2XiN2XiOGXiOmXiPGXiQWbiSGbiU2fiYWrhc2vhiG3hoXLfvXre2oXb85XW/qnR/73T/87Z/93h/+jpNWTiNWTiNWXiNmXiNmXiNmXiN2XiOGXiOWXiPGXiQGbiSGbiUmfiYWric2vhiG7hoXPfvXre2oXb85XW/qnR/73T/87Z/93h/+jpNGXiNGXiNGXiNWXiNWXiNWXiNmXiNmXiOGXiO2XiQGbiR2biUWjiYGric2vhiW7hoXTfvXve2obb85XW/qrR/73T/8/Z/93h/+jpM2XjM2XjM2XjM2XjM2XjM2XjNGXjNWXjN2XjOmbjPmbjRWfjT2jjX2ric23hiXDhoXXfvXze2ofb8pbW/qrR/73T/8/Z/93h/+jpL2bjL2bjL2bjMGbjMGbjMGbjMWbjM2bjNWbjOGbjPWfjRWjjT2rjX2zidG/hiXLhonbfvX7e2ojb8pfW/qvR/77T/8/Z/93h/+jpKmnjKmnjK2njK2njK2njLGnjLWnjL2njMmrjN2rjPmrjRWvjUG3jYHDidHPhinXhonnfvYHd2orb8pnW/qzS/77T/8/Z/93h/+jpJm7jJm7jJm7jJm/jJ2/jJ2/jKW/jKm/jLW/jMm/jOm/kRXHjUXLjYXXidXjhi3vgo3/fvoXd2Y/b8Z3W/q7S/8DU/9Da/97h/+jpJnfkJnfkJnfkJnfkJ3fkJ3fkKXfkKnfkLXfkMXjkN3jjQXrjUHvjZX7idoDhjYTgpIjevo3c2ZXa8KHW/bHS/8HU/9Ha/97h/+jpMoXiMoXiMoXiM4XiM4XiNIXiNYXiN4XiOYXiPYbiQ4biTYfiXInhaovhfI7fkZHep5Tdvpjb2J7Z7qjV/LXS/8TV/9La/9/i/+npSpjgSpjgSpjgSpjgS5jgS5jgTZjgTpjgUZjgVpjgWpngYJngZ5rfc5vfhJ7elqDcqaPbv6ba16rY7LHV+7zT/8jV/9Tb/9/i/+npZazdZazdZazdZqzdZqzdZqzdZqzdZ6zdaKzdaq3dbK3dca3deK7cga/cjK/bnLHarrTZwbXY1rjX6bzV+cPU/83X/9fc/+Hi/+rpf8Laf8Laf8Laf8Laf8LagMLagMLagMLagcLagsLag8LahsLaisLZkMPZmcPZpMTYs8XXw8bW1cfW58nV9s3V/9TY/9vd/+Pj/+vpl9bXl9bXl9bXl9bXmNbXmNbXmNbXmNbXmNbXmdbXmtbXm9bXntbXotbXp9bWr9bWutXWx9XW1dXV5dbW89jX/tvZ/+De/+bj/+3qseXUseXUseXUseXUseXUseXUseXUseXUseXUseXUsuXUs+XVtOXVtuTVueTVvuTVxOTVzePW1+PW5OPX8ePY/ePb/+bf/+rk/+/rxvDXxvDXxvDXxvDXxvDXxvDXxvDXxvDXxvDXxvDXxvDXx/DXx/DXyPDXyvDYzO/Y0O/Y1e/Z2+/Z5e7a8O7b++3d/+3h/+/m//Ps1vnd1vnd1vnd1vnd1vnd1vnd1vnd1vnd1vnd1vnd1vnd1vnd1vnd1/nd1/nd2fnd2vnd3fnd4fne5/je7/jf+vfh//bk//bo//ju4v/j4v/j4v/j4v/j4v/j4v/j4v/j4v/j4v/j4v/j4v/j4v/j4v/j4v/j4//j4//j5P/j5v/k6P/k7P/k8f7l+P7m///o//7s//3w7P/r7P/r7P/r7P/r7P/r7P/r7P/r7P/r7P/r7P/r7P/r7P/r7P/r7f/r7f/r7f/r7v/r7//r8P/r8v/s9f/s+v/t/v/u///w///09f/y9f/y9f/y9f/y9f/y9f/y9f/y9f/y9f/y9f/z9f/z9f/z9f/z9f/z9f/z9v/z9v/z9v/z9//z+P/z+v/z/f/0///1///2///4ZITyZITyZITyZITyZITyZITyZITyZYXyZYXxZoXxaYXxbIbxcofxe4jxh4vwlIzwpY7vupPu0Zrs6aTp/LHl/8Hg/9Hi/97n/+rtZITyZITyZITyZITyZITyZITyZITyZYXyZYXyZoXxaYXxbIbxcofxe4jxh4vwlIzwpY7vupPu0Zrs6aTp/LHl/8Hg/9Hi/97n/+rtZITyZITyZITyZITyZITyZITyZITyZYXyZYXyZoXxaYXxbIbxcofxe4jxh4vwlIzwpY7vupPu0Zvs6aTp/LHl/8Hg/9Hi/97n/+rtZITyZITyZITyZITyZITyZITyZITyZYXyZYXyZoXxaYXxbIbxcofxe4jxh4vwlIzwpY7vupTu0Zvs6aTp/LHl/8Hg/9Hi/97n/+rtY4TyY4TyZITyZITyZITyZITyZITyZIXyZYXyZoXxaYXxbIbxcofxe4jxh4vwlIzwpY7vupTu0Zvs6aTp/LHl/8Hg/9Hi/97n/+rtY4TyY4TyY4TyY4TyZITyZITyZITyZIXyZYXyZoXyaIXxbIbxcofxe4jxhovwlIzwpY7vupTu0Zvs6aTp/LHl/8Hh/9Hi/97n/+rtY4TyY4TyY4TyY4TyY4TyZITyZIXyZIXyZYXyZoXyaIXxbIbxcofxe4jxhovwlIzwpY/vupTu0Zvs6aTp/LHl/8Hh/9Hi/97n/+rtY4TyY4TyY4TyY4TyY4TyY4TyZIXyZIXyZYXyZoXyaIXybIbxcYfxeojxhovwlIzwpY/vupTt0Zvs6aTp/LHl/8Hh/9Hi/97n/+rtYoTyYoTyYoTyY4XyY4XyY4XyY4XyY4XyZIXyZoXyaIXya4bycYfxeonxhovwlI3wpY/vupTt0Zvs6aXp/LHl/8Hh/9Hi/9/n/+rtYoXyYoXyYoXyYoXyYoXyYoXyYoXyY4XyY4XyZYXyZ4bya4bycIfyeYnxhYvxlI3wppDvupXt0Zzs6aXp/LLl/8Lh/9Hi/9/n/+rtYIXyYIXyYYXyYYXyYYXyYYXyYYXyYoXyYoXyZIXyZobyaobycIfyeInyhIvxlY7wppHvupbt0Zzs6Kbp/LLl/8Lh/9Hi/9/n/+rtXYXzXYXzXYXzXYXzXoXzXoXzX4XzYIbzYYbzYobzZYbzaYfyb4jyeIryhY3xlZDwppPvupjt0Z7r6Kfp/LPl/8Ph/9Hi/9/n/+rtXYjzXYjzXYjzXYjzXYjzXonzXonzX4nzYInzYonzZYrzaorycIzyeI3yhZDxlpPwp5bvuprt0aDr6Knp+7Xl/8Ph/9Li/9/n/+rtXI3zXI3zXI3zXI3zXI3zXY3zXY3zXo3zX47zYY7zZI7zaY/ycZDyepLxh5XxlpjwqJvuu57t0aTr6Kzp+7fk/8Xh/9Pi/+Dn/+vtYJXzYJXzYJXzYJXzYJXzYZXyYZXyYpXyY5XyZZbyaJbybJfycpjxfJrxipzwmJ/vqqLtvKbs0arq57Ho+rvk/8fh/9Tj/+Dn/+vua6Hxa6Hxa6Hxa6Hxa6Hxa6HxbKHxbKHxbaLxb6LxcaLwdaPwe6TwhKbvj6funartra3sv7Dr0rPp5rjn+cDk/8vh/9bj/+Ho/+vufLLufLLufLLufLLufLLufLLufbLufbLufrLuf7LugbLuhLLuiLPtjrTtl7Xso7frsbnqwbzp0r7o5cLm98fj/9Di/9nk/+Po/+zujsLrjsLrjsLrjsLrjsLrjsLrj8Prj8Prj8PrkMPrkcPrk8PrlsPrm8TqosXqqsXpt8foxMnn08rm5Mzl9NDj/9bj/93l/+Xp/+3uotTootTootTootTootTootTootTootTootToo9TopNTopdTop9ToqdXnrtXntdXnvdbmyNbl1tfl5Njk8trj/t7k/+Pm/+jq/+/utOXltOXltOXltOXltOXltOXltOXltOXltOXlteXlteXltuXlt+XlueXlvOTlwOTlxuTlzuTk2OTk5OTk8OTk++bl/+jn/+zq//Hvx/Djx/Djx/Djx/Djx/Djx/Djx/Djx/DjyPDjyPDjyPDjyPDjyfDjyvDjy/DjzvDj0fDk1u/k3e/k5u/l8O/l+u7m/+/o//Hs//Tw2Pnl2Pnl2Pnl2Pnl2Pnl2Pnl2Pnl2Pnl2Pnl2Pnl2Pnl2Pnl2fnl2fnl2vnl2/nm3fnm4Pnm4/jm6fjn8Pjn+fjo//fq//ft//nx5P/q5P/q5P/q5P/q5P/q5P/q5P/q5P/q5P/q5P/q5P/q5P/q5P/q5f/q5f/q5v/q5v/q6P/q6v7q7f7q8v7r+f7s///t//7w//7z7v/v7v/v7v/v7v/v7v/v7v/v7v/v7v/v7v/v7v/v7v/v7v/v7v/v7v/v7v/v7//v7//v8P/v8f/v8//w9v/w+v/x/v/y///z///29v/19v/19v/19v/19v/19v/19v/19v/19v/19v/19v/19v/19v/19v/19v/19//19//19//1+P/1+f/1+//2/f/2///3///4///5iqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8i6L8i6L8jKP8jqP8kaP8laT8nKb7paj7sKn6vav5zq/44LX29L30/8fw/9Tt/+Du/+vyiqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8i6L8i6L8jKP8jqP8kaP8laT8nKb7paj7sKn6vav5zq/44LX29L30/8fw/9Tt/+Du/+vyiqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8i6L8i6L8jKP8jqP8kaP8laT8nKb7paj7sKn6vav5zq/44LX29L30/8fw/9Tt/+Du/+vyiqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8i6L8i6L8jKP8jqP8kaP8laT8nKb7paj7sKn6vav5zq/44LX29L30/8fw/9Tt/+Du/+vyiqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8i6L8i6L8jKP8jqP8kaP8laT8nKb7paj7sKn6vav5zq/44LX29L30/8fw/9Tt/+Du/+vyiqL8iqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8i6L8jKP8jqP8kaP8laT8nKb7paj7sKn6vav5zq/44LX29L30/8fw/9Tt/+Du/+vyiqL8iqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8i6L8jKP8jqP8kaP8laT8nKb7paj7sKn6vav5zrD44LX29L30/8fw/9Tt/+Du/+vyiqL8iqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8i6L8jKP8jqP8kaT8laT8nKb7paj7sKn6vav5zrD44Lb29L30/8fw/9Tt/+Du/+vyiqL8iqL8iqL8iqL8iqL8iqL8iqL8iqL8iqL8i6L8jKP8jqP8kKT8laT8nKb7paj7sKn6vaz5zrD44Lb29L30/8fw/9Tt/+Du/+vyiaL9iaL9iaL9iaL9iaL9iaL9iqL9iqL9iqL8i6L8jKP8jaP8kKT8lKT8m6b7paj7sKr6vaz5zrD44Lb29L70/8jw/9Tt/+Du/+vyiaL9iaL9iaL9iaL9iaL9iaL9iaL9iaL9iaL9iqP9i6P8jaP8kKT8lKX8m6b7pKj7sKr6vqz5zrH44Lb29L70/8jw/9Tt/+Du/+vyiKL9iKL9iKL9iKL9iKL9iKL9iKL9iKL9iaP9iaP9iqP9jKP9j6T8k6X8mqb8o6j7sKv6vq35zrH44Lf29L70/8jw/9Xt/+Du/+vyhqP9hqP9hqP9hqP9hqP9hqP9hqP9h6P9h6P9iKP9iaP9i6T9jqT8k6b8mqf8pKr7sK36vq/5zrP44Lj29L/0/8nw/9Xt/+Hu/+vyhqX9hqX9hqX9hqX9hqX9hqX9hqX9h6X9h6X9iKb9iab9jKb9j6f8lKj8m6r7pKz7sa/6vrH5zrX44Lr288H0/8rw/9bt/+Hu/+zyhqn9hqn9hqn9hqn9hqn9hqn9hqn9h6n9h6n9iKr9iar9jKr8j6v8laz8nK77pbD7srP6v7X5z7j34L3288Pz/8zw/9ft/+Lu/+zyia/9ia/9ibD9ibD9ibD8ibD8ibD8irD8irD8i7D8jLD8jrH8krH8l7L7nrT7qLb6s7j5wbv40L724ML18sfz/s/w/9nt/+Pu/+3ykrr7krr7krr7krr7krr7krr7krr7krr7k7r7k7r7lLr7lrr7mbv6nbz6pL35rb/5t8H4xMP20sb14cn08s3y/tPw/9vt/+Xv/+3zn8f4n8f4n8f4n8f4n8f4n8f4n8f4n8f4oMf4oMf4ocf4o8f4pcj4qMj4rMn3s8r3vMz2x8711M/04dHz8dTx/tnv/9/u/+fv/+/zrdX2rdX2rdX2rdX2rdX2rdX2rdX2rdX2rdX2rtX2rtX2r9X2sNX1s9X1ttb1vNb0wtf0y9jz1try4tvx8N3w/eDv/+Tu/+rw//HzvOPzvOPzvOPzvOPzvOPzvOPzvOPzvOPzvOPzvOPzvePzvePzvuPzv+PzwuPyxePyyuTy0eTx2uXx5OXw7+bw++jv/+rv/+7x//P0yvDxyvDxyvDxyvDxyvDxyvDxyvDxyvDxyvDxyvDxy/Dxy/Dxy/DxzPDwzvDw0PDw0/Dw2PDw3vDw5u/w7+/v+fDw//Hw//Py//b12fnv2fnv2fnv2fnv2fnv2fnv2fnv2fnv2fnv2fnv2fnv2fnv2vnv2vnv2/nv3Pnv3vnv4fnv5fnv6vjw8fjw+fjw//jx//jz//r25v/x5v/x5v/x5v/x5v/x5v/x5v/x5v/x5v/x5v/x5v/x5v/x5v/x5//x5//x5//x6P/x6v/x7P7x7/7y8/7y+f/y///z//71//738P/08P/08P/08P/08P/08P/08P/08P/08P/08P/08P/08P/08P/08P/08P/08P/08f/08v/08//09P/19//1+//1///2///3///59//49//49//49//49//49//49//49//49//49//49//49//4+P/4+P/4+P/4+P/4+P/4+P/4+f/5+v/5/P/5/v/5///6///6///8qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qLv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qbv/qrv/qrv/rLv/rrz/sb3/tr7/vsD/xsH/0cL/3sb+7Mv+/NH9/9n5/+P3/+34qLv/qLv/qLv/qLv/qLv/qLv/qLv/qbv/qbv/qbv/qbv/qrv/q7z/rrz/sb3/tr7/vsD/xsH/0cP/3sb+7Mv+/NH9/9n5/+P3/+34qLv/qLv/qLv/qLv/qLv/qLv/qLv/qLv/qLv/qbv/qbv/qrv/q7z/rbz/sb3/tr7/vcD/xsH/0cP/3sb+7Mv+/NH9/9n5/+P3/+34qLv/qLv/qLv/qLv/qLv/qLv/qLv/qLv/qLv/qLv/qbv/qrv/q7z/rbz/sL3/tb7/vcD/xsH/0cP/3sf+7Mv+/NH9/9n5/+P3/+34p7v/p7v/p7v/p7v/p7v/p7v/p7v/p7v/p7v/qLv/qLv/qbv/qrz/rLz/sL3/tb7/vMD/xsL/0cT/3sf+7Mz+/NL9/9r5/+P3/+34prv/prv/prv/prv/prv/prv/prv/prv/prv/p7v/p7z/qLz/qrz/rL3/sL7/tb//vcH/x8P/0cX/3sj+7M3++9L8/9r5/+T3/+34pr3/pr3/pr3/pr3/pr3/pr3/pr3/pr3/pr3/p73/p77/qL7/qr7/rb//sMD/tsH/vcP/x8X/0sf/3sr+7M7++9T8/9v5/+T3/+34psD/psD/psD/psD/psD/psD/psD/psD/p8D/p8H/qMH/qcH/qsH/rcL/scP/t8T/vsb/yMj/0sr/383+7dD++9b8/935/+X3/+74qMX/qMX/qMX/qMX/qMX/qcX/qcX/qcX/qcb/qcb/qsb/q8b/rMb/r8f/s8j/uMn/wMv/yc3/1M/+39H+7dT9+9n8/9/5/+f3/+/4r87/r87/r87/sM7/sM7/sM7/sM7/sM7/sM7/sM7/sc7/sc7/s87/tc//uND/vdH/xNL+zNT+1tb94dj97dr8+t37/+L5/+n3//D4udj+udj+udj+udj+utj+utj+utj+utj+utj+utj+u9j+u9n+vNn+vtn+wNn+xNr9ydv90Nz92d7949/87eH7+uP6/+f5/+z3//L5xOP9xOP9xOP9xOP9xOP9xOP9xeP9xeP9xeP9xeP9xeP9xeP9xuP9x+T9yeT9zOT90OX91eX83Ob85ef77uj6+er6/+z4//D4//T50O/80O/80O/80O/80O/80O/80O/80O/80O/80O/80e/80e/80e/80u/70+/71e/71+/72+/74O/65/D68PH5+fH5//L4//X5//j62/n62/n62/n62/n62/n62/n62/n62/n62/n62/n62/n62/n63Pn63Pn63fn63vn64Pn64vn55vn56/n58fn5+fn5//n5//r6//z75//45//45//45//45//45//45//45//45//45//45//45//45//45//46P/46P/46f/46//47f/58P/59P/5+v/5///6///6///88f/68f/68f/68f/68f/68f/68f/68f/68f/68f/68f/68f/68f/68f/68v/68v/68v/68//69P/69v/6+f/6/P/7///7///8///9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+f/9+v/9+v/9+v/9+//9/f/9/v/9///9///9///+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tv//+D//+f//+/+wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//wc//ws//w8//xdD/x9D/y9H/0dP/2NT/4NX/6tj/9tz//+D//+f//+/+wM//wM//wM//wM//wM//wM//wM//wM//wc//wc//wc//wc//ws//w8//xND/x9D/y9H/0dP/2NT/4NX/6tj/9tz//+H//+f//+/+wM//wM//wM//wM//wM//wM//wM//wM//wM//wM//wc//wc//ws//w8//xND/x9D/y9H/0dP/2NT/4Nb/6tj/9tz//+H//+f//+/+v8//v8//v8//wM//wM//wM//wM//wM//wM//wM//wM//wM//wc//ws//xND/xtD/ytH/0NP/2NX/4Nb/69n/9tz//+H//+f//+/+vs//vs//vs//vs//vs//vs//v8//v8//v8//v8//v8//wM//wM//wtD/w9D/xtH/ytL/0dT/2Nb/4df/69r/9t3//+L//+j//+/+v9H/v9H/v9H/v9H/v9H/v9H/v9H/v9H/v9H/v9H/v9H/wNH/wdH/wtH/xNL/x9P/y9T/0dX/2df/4dn/69v/9t7//+P//+n///D+v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/v9P/wNP/wNP/wdP/wtT/xNT/x9X/zNb/0tj/2dn/4dv/693/9uD//+T//+r///H+wdf/wdf/wdf/wdf/wdf/wdf/wdf/wdf/wdf/wdf/wdf/wtf/w9f/xNj/xtj/ydn/zdr/09v/2t3/49//7OH/9uP//+f//+z///L+xt7/xt7/xt7/xt7/xt7/xt7/xt7/xt7/xt7/x97/x97/x97/yN7/yd7/y9//zd//0eD/1uH/3eP/5OT/7eb/9+f//+r//+7///P+zub/zub/zub/zub/zub/zub/zub/zub/zub/zub/z+b/z+b/0Ob/0Ob/0ef/0+f/1uf/2uj/4On/5+v/7uz/9+3//u////L///b/1+//1+//1+//1+//1+//1+//1+//1+//1+//1+//1+//1+//2O//2O//2e//2u//3PD/3/D/5PH/6fH/8PL/+PP//vT///b///n/4Pj/4Pj/4Pj/4Pj/4Pj/4Pj/4Pj/4Pj/4Pj/4Pj/4Pj/4Pj/4Pj/4fj/4fj/4vj/4/j/5fj/6fn/7fn/8vn/+fr//vr///v///3/6P//6P//6P//6P//6f//6f//6f//6f//6f//6f//6f//6f//6f//6f//6f//6v//6///7P//7v//8f//9f//+v//////////////8v/+8v/+8v/+8v/+8v/+8v/+8v/+8v/+8v/+8v/+8v/+8v/+8v/+8v/+8v/+8//+8//+9P//9f//9///+f///P//////////////+v//+v//+v//+v//+v//+v//+v//+v//+v//+v//+v//+v//+v//+v//+v//+///+///+////P///f///v//////////////////1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1N//1d//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N7/1N7/1N7/1N//1N//1N//1N//1N//1N//1N//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N7/1N7/1N7/1N//1N//1N//1N//1N//1N//1N//1N//1N//1N//1d//1t//19//2eD/3OH/4eL/5uL/7OP/9eb//un//+3///L/1N//1N//1N//1N//1N//1N//1N//1N//1N//1N//1N//1N//1N//1d//1t//19//2eD/3OH/4OL/5uP/7OT/9eb//un//+3///L/09//09//1N//1N//1N//1N//1N//1N//1N//1N//1N//1N//1N//1d//1d//19//2eD/3OH/4OL/5uP/7OT/9eb//un//+3///L/09//09//09//09//09//09//09//09//09//09//09//1N//1N//1N//1d//1t//2OD/2+H/4OL/5uP/7eT/9eb//un//+3///L/09//09//09//09//09//09//09//09//09//09//09//09//09//1N//1d//1t//2OD/2+H/4OL/5uP/7eX/9ef//en//+3///L/0t//0t//0t//0t//0t//0t//0t//0t//0t//0t//0t//09//09//09//1N//1uD/2OD/2+H/4OP/5uT/7eX/9ef//er//+7///P/0uD/0uD/0uD/0uD/0uD/0uD/0uD/0uD/0uD/0uD/0uD/0+D/0+D/1OD/1eH/1uH/2OL/2+L/4OT/5uX/7eb/9ej//uv//+7///P/0uL/0uL/0uL/0uL/0uL/0uL/0uL/0uL/0uL/0+L/0+L/0+L/0+L/1OL/1eL/1uP/2eP/3OT/4eb/5+f/7ej/9er//uz///D///T/1OX/1OX/1OX/1OX/1OX/1OX/1OX/1OX/1OX/1OX/1OX/1OX/1eX/1eb/1ub/2Ob/2uf/3uj/4un/6Or/7uv/9u3//u////L///b/2Or/2Or/2Or/2Or/2Or/2Or/2Or/2Or/2Or/2Or/2Or/2Or/2er/2ev/2uv/3Ov/3ez/4ez/5O3/6u//8PD/9/H//vL///X///j/3vH/3vH/3vH/3vH/3vH/3vH/3vH/3vH/3vH/3vH/3/H/3/H/3/H/3/H/4PH/4fL/4vL/5PL/6PP/7PT/8vX/+Pb//vf///j///v/5fj/5fj/5fj/5fj/5fj/5fj/5fj/5fj/5fj/5fj/5fj/5fj/5fj/5vj/5vj/5/n/6Pn/6fn/7Pn/7/r/9Pr/+fv//vz///3///7/7P//7P//7P//7P//7P//7P//7P//7P//7P//7P//7P//7P//7f//7f//7f//7f//7v//7///8f//8///9///+////v//////////8///8///8///8///8///8///8///8///8///8///8///8///8///8///9P//9P//9P//9f//9v//+P//+v///f//////////////+///+///+///+///+///+///+///+///+///+///+///+///+///+///+///+///+////P///P///f///v//////////////////4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///b/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///f/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///f/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Ov/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///f/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/4+v/5Oz/5ez/5+z/6e3/7e7/8e7/9u///fH///P///f/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4+v/4+v/4+v/5Oz/5ez/5uz/6e3/7O7/8e//9vD//fH///T///f/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4uv/4+v/4+z/5Oz/5uz/6O3/7O7/8e//9/D//fL///T///f/4ev/4ev/4ev/4ev/4ev/4ev/4ev/4ev/4ev/4ev/4ev/4uv/4uv/4uz/4uz/4+z/5Oz/5u3/6O3/7O7/8fD/9/H//fL///T///f/4ez/4ez/4ez/4ez/4ez/4ez/4ez/4ez/4ez/4ez/4uz/4uz/4uz/4u3/4+3/4+3/5e3/5u7/6e7/7e//8fH/9/H//fP///X///j/4u7/4u7/4u7/4u7/4u7/4u7/4u7/4u7/4u7/4u7/4u7/4u7/4u7/4u7/4+7/4+7/5e//5+//6fD/7fH/8vL/9/P//fT///b///n/4/D/4/D/4/D/4/D/4/D/4/D/4/D/4/D/4/D/4/D/4/H/4/H/4/H/4/H/5PH/5fH/5vH/5/L/6vL/7vP/8vT/+PX//ff///j///v/5vX/5vX/5vX/5vX/5vX/5vX/5vX/5vX/5vX/5vX/5vX/5vX/5vX/5/X/5/X/6PX/6fX/6vb/7fb/8Pf/9Pj/+fn//vr///v///3/6/r/6/r/6/r/6/r/6/r/6/r/6/r/6/r/6/r/6/r/6/r/6/r/6/r/7Pr/7Pr/7Pr/7fr/7vv/8Pv/8vv/9vz/+/3//v7///7/////8P//8P//8P//8P//8P//8P//8P//8P//8P//8P//8P//8P//8f//8f//8f//8f//8v//8///9P//9v//+f///P//////////////9v//9v//9v//9v//9v//9v//9v//9v//9v//9v//9v//9v//9v//9v//9///9///9///+P//+P//+v///P///v///////////////P///P///P///P///P///P///P///P///P///P///P///P///P///P///P///P///P///P///f///f///v//////////////////' };
+
+// ---------------------------------------------------------------------------------------------------------
+// Page furniture: loading bar and toast.
+// ---------------------------------------------------------------------------------------------------------
+const loadingEl = document.getElementById('loading');
+const loadingFill = loadingEl.querySelector('.fill');
+const toastEl = document.getElementById('toast');
+let toastTimer = 0;
+function toast(message, ms = 6000) {
+    toastEl.textContent = message;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms);
+}
+function progress(done, total) { loadingFill.style.width = Math.round(100 * done / Math.max(total, 1)) + '%'; }
+
+// ---------------------------------------------------------------------------------------------------------
+// Package files. Each file in assets/ has a data-only .js twin that stores the same bytes as a data URL in
+// window.WILLOW_FILES, read with a classic script tag so the page also works when opened straight from disk.
+// ---------------------------------------------------------------------------------------------------------
+const fileShelf = () => (window.WILLOW_FILES = window.WILLOW_FILES || {});
+function readPackageFile(rel) {
+    return new Promise((resolve, reject) => {
+        if (fileShelf()[rel]) { resolve(fileShelf()[rel]); return; }
+        const tag = document.createElement('script');
+        tag.src = 'assets/' + rel + '.js';
+        tag.onload = () => { tag.remove(); fileShelf()[rel] ? resolve(fileShelf()[rel]) : reject(new Error('Empty package file: ' + rel)); };
+        tag.onerror = () => { tag.remove(); reject(new Error('Missing package file: assets/' + rel + '.js')); };
+        document.head.appendChild(tag);
+    });
+}
+function dataUrlBytes(url) {
+    const raw = atob(url.slice(url.indexOf(',') + 1));
+    const bytes = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    return bytes;
+}
+async function readPicture(rel, size) {
+    const bytes = dataUrlBytes(await readPackageFile(PACKAGE.textureDir + rel));
+    // colorSpaceConversion none: normal, roughness and alpha maps must arrive untouched
+    const options = { colorSpaceConversion: 'none', premultiplyAlpha: 'none' };
+    if (size) Object.assign(options, { resizeWidth: size, resizeHeight: size, resizeQuality: 'high' });
+    return createImageBitmap(new Blob([bytes], { type: 'image/jpeg' }), options);
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Renderer, frame buffers and the display transform.
+// ---------------------------------------------------------------------------------------------------------
+const holder = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.NoToneMapping;            // the display transform runs in finishPass below
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.shadowMap.autoUpdate = false;                  // nothing that casts a shadow ever moves
+holder.appendChild(renderer.domElement);
+
+// The scene without the water (multisampled, with the depth the water pass needs), then the frame with the water (with
+// the depth the blend with the last frame needs), both in linear light.
+const sceneFrame = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4, colorSpace: THREE.LinearSRGBColorSpace,
+    depthTexture: new THREE.DepthTexture(1, 1, THREE.FloatType) });
+const linearFrame = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4, colorSpace: THREE.LinearSRGBColorSpace,
+    depthTexture: new THREE.DepthTexture(1, 1, THREE.FloatType) });
+
+const finishPass = (() => {
+    const bytes = Uint8Array.from(atob(DISPLAY_LUT.data), c => c.charCodeAt(0));
+    const n = DISPLAY_LUT.size;
+    const rgba = new Uint8Array(n * n * n * 4);
+    for (let i = 0; i < n * n * n; i++) { rgba[i * 4] = bytes[i * 3]; rgba[i * 4 + 1] = bytes[i * 3 + 1]; rgba[i * 4 + 2] = bytes[i * 3 + 2]; rgba[i * 4 + 3] = 255; }
+    const lut = new THREE.Data3DTexture(rgba, n, n, n);
+    lut.minFilter = lut.magFilter = THREE.LinearFilter;
+    lut.wrapS = lut.wrapT = lut.wrapR = THREE.ClampToEdgeWrapping;
+    lut.unpackAlignment = 1;
+    lut.needsUpdate = true;
+    const material = new THREE.ShaderMaterial({
+        uniforms: { tScene: { value: null }, tLut: { value: lut }, uLog: { value: new THREE.Vector2(DISPLAY_LUT.log2Min, DISPLAY_LUT.log2Max) }, uSize: { value: n } },
+        vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+        fragmentShader: `
+            precision highp sampler3D;
+            uniform sampler2D tScene; uniform sampler3D tLut; uniform vec2 uLog; uniform float uSize;
+            varying vec2 vUv;
+            void main() {
+                vec3 c = max(texture2D(tScene, vUv).rgb, vec3(0.0));
+                vec3 s = clamp((log2(max(c, vec3(1e-7))) - uLog.x) / (uLog.y - uLog.x), 0.0, 1.0);
+                vec3 display = texture(tLut, s * ((uSize - 1.0) / uSize) + 0.5 / uSize).rgb;
+                float grain = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
+                gl_FragColor = vec4(display + grain / 255.0, 1.0);
+            }`,
+        depthTest: false, depthWrite: false
+    });
+    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+    quad.frustumCulled = false;
+    const stage = new THREE.Scene(); stage.add(quad);
+    const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    return { render(source) { material.uniforms.tScene.value = source; renderer.setRenderTarget(null); renderer.render(stage, cam); } };
+})();
+
+// The blend with the last frame. A leaf a pixel or two across, and its reflection in the water, covers a pixel or
+// misses it as the view moves by a fraction of a pixel, so while the camera turned the trees, the shrubs and their
+// reflections flickered, and so did the edge of a thin rail against the water. Each new frame is blended with the last
+// one, looked up where each pixel's surface was a frame ago (by the depth; on the water, where what the water shows
+// was: a tree's or the boat's mirror image, or the ripples), and held within the range of colours around the pixel in
+// the new frame, so nothing trails behind an edge. Leaves and water take a fifth of the new frame; the rest (the boat, the jetty, the ground) takes more of it, which
+// steadies its edges without blurring its wood and plaster while the view moves. While the view rests, the picture
+// settles on the new frame within a few frames; after a resize or a jump of the view it starts afresh.
+const temporal = (() => {
+    const frames = [0, 1].map(() => new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: false, colorSpace: THREE.LinearSRGBColorSpace }));
+    const viewProj = new THREE.Matrix4(), toWorld = new THREE.Matrix4(), pastViewProj = new THREE.Matrix4();
+    const lastEye = new THREE.Vector3(), lastLook = new THREE.Vector3(), look = new THREE.Vector3();
+    let latest = 0, fresh = true;
+    const material = new THREE.ShaderMaterial({
+        uniforms: { tNow: { value: null }, tDepth: { value: null }, tSolidDepth: { value: null }, tPast: { value: null }, tMirrorDepth: { value: null },
+            uToWorld: { value: toWorld }, uMirror: { value: null }, uMirrorProjInv: { value: null }, uMirrorWorld: { value: null },
+            uPastViewProj: { value: pastViewProj }, uEye: { value: new THREE.Vector3() }, uTexel: { value: new THREE.Vector2() },
+            uHeight: { value: 0 }, uBlend: { value: 0.2 }, uSolidBlend: { value: 0.35 }, uParallax: { value: 0 }, uFresh: { value: 1 } },
+        vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+        fragmentShader: `
+            uniform sampler2D tNow, tDepth, tSolidDepth, tPast, tMirrorDepth;
+            uniform mat4 uToWorld, uPastViewProj, uMirror, uMirrorProjInv, uMirrorWorld;
+            uniform vec3 uEye;
+            uniform vec2 uTexel;
+            uniform float uHeight, uBlend, uSolidBlend, uParallax, uFresh;
+            const vec2 RING[8] = vec2[8](vec2(-4.0, -4.0), vec2(0.0, -4.0), vec2(4.0, -4.0), vec2(-4.0, 0.0), vec2(4.0, 0.0),
+                vec2(-4.0, 4.0), vec2(0.0, 4.0), vec2(4.0, 4.0));
+            varying vec2 vUv;
+            // colours are compared and blended squashed (c / (1 + luminance)), so a bright glint doesn't swamp the rest
+            const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+            vec3 squash(vec3 c) { return c / (1.0 + dot(c, LUMA)); }
+            vec3 unsquash(vec3 c) { return c / max(1.0 - dot(c, LUMA), 1e-4); }
+            // the last frame between its pixels, by a Catmull-Rom spline in five lookups (a bilinear lookup would soften
+            // the picture a little more with every frame while the view moves)
+            vec3 past(vec2 uv) {
+                vec2 pos = uv / uTexel, c = floor(pos - 0.5) + 0.5, f = pos - c;
+                vec2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f)), w1 = 1.0 + f * f * (-2.5 + 1.5 * f);
+                vec2 w2 = f * (0.5 + f * (2.0 - 1.5 * f)), w3 = f * f * (-0.5 + 0.5 * f);
+                vec2 w12 = w1 + w2, t12 = (c + w2 / w12) * uTexel, t0 = (c - 1.0) * uTexel, t3 = (c + 2.0) * uTexel;
+                vec3 sum = texture2D(tPast, vec2(t12.x, t0.y)).rgb * (w12.x * w0.y) + texture2D(tPast, vec2(t0.x, t12.y)).rgb * (w0.x * w12.y)
+                         + texture2D(tPast, t12).rgb * (w12.x * w12.y) + texture2D(tPast, vec2(t3.x, t12.y)).rgb * (w3.x * w12.y)
+                         + texture2D(tPast, vec2(t12.x, t3.y)).rgb * (w12.x * w3.y);
+                return max(sum / (w12.x * w0.y + w0.x * w12.y + w12.x * w12.y + w3.x * w12.y + w12.x * w3.y), vec3(0.0));
+            }
+            // where a point (or, with w = 0, a direction) was in the last frame's picture; off it when behind the eye
+            vec2 lastFrame(vec4 p) { vec4 c = uPastViewProj * p; return c.w > 0.0 ? c.xy / c.w * 0.5 + 0.5 : vec2(-10.0); }
+            void main() {
+                vec3 now = squash(texture2D(tNow, vUv).rgb);
+                // the range of colours around the pixel, the nearest surface around it (an edge moves with what is in
+                // front), and whether a leaf is among them (only the leaves' depth lies in front of the solid scene's)
+                vec3 lo = now, hi = now;
+                float z = 1.0, leaf = 0.0;
+                vec2 at = vUv;
+                for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+                    vec2 uv = vUv + vec2(float(x), float(y)) * uTexel;
+                    vec3 s = squash(texture2D(tNow, uv).rgb);
+                    lo = min(lo, s); hi = max(hi, s);
+                    float d = texture2D(tDepth, uv).x;
+                    if (d < texture2D(tSolidDepth, uv).x) leaf = 1.0;
+                    if (d < z) { z = d; at = uv; }
+                }
+                // that surface, at infinity for the sky
+                vec4 f = uToWorld * vec4(at * 2.0 - 1.0, 1.0, 1.0);
+                vec3 dir = normalize(f.xyz / f.w - uEye);
+                vec4 p = vec4(dir, 0.0);
+                float dist = 1e20, water = 0.0, far = 1e4;
+                if (z < 1.0) { vec4 w = uToWorld * vec4(at * 2.0 - 1.0, z * 2.0 - 1.0, 1.0); p = vec4(w.xyz / w.w, 1.0); dist = far = distance(p.xyz, uEye); }
+                // Where the water lies in front, the pixel moves like what the water shows there. Where its mirror sees
+                // something (a tree, the boat, the shore), that is the thing's mirror image below the water plane. Where it
+                // mirrors the sky, near the eye it moves with the water and its ripples, and further off, where the
+                // ripples are too fine to see and the sky lies between a far tree's leaves, with the sky at infinity.
+                // Taken on the water plane itself, a far tree's reflection was looked up a frame ago in the wrong place
+                // while the view turned, thrown away, and flickered.
+                vec2 then = vec2(-1.0);
+                if (dir.y < -1e-5 && uEye.y > uHeight) {
+                    float t = (uHeight - uEye.y) / dir.y;
+                    if (t < dist) {
+                        water = 1.0;
+                        vec4 cm = uMirror * vec4(uEye + dir * t, 1.0);
+                        vec2 m = cm.xy / cm.w;
+                        float zm = texture2D(tMirrorDepth, m).x;
+                        if (zm < 0.99999 && all(greaterThan(m, vec2(0.0))) && all(lessThan(m, vec2(1.0)))) {
+                            vec4 v = uMirrorProjInv * vec4(m * 2.0 - 1.0, zm * 2.0 - 1.0, 1.0);
+                            vec3 s = (uMirrorWorld * vec4(v.xyz / v.w, 1.0)).xyz;
+                            then = lastFrame(vec4(s.x, 2.0 * uHeight - s.y, s.z, 1.0));
+                            far = t + distance(s, uEye + dir * t);
+                        } else {
+                            float w = smoothstep(15.0, 40.0, t);
+                            then = mix(lastFrame(vec4(uEye + dir * t, 1.0)), lastFrame(vec4(dir, 0.0)), w);
+                            far = mix(t, 1e4, w);
+                        }
+                        // the reflection is blurred, so the colours right round a pixel span little: the range is taken
+                        // over a wider patch, as far as the blur reaches, from the pixels in it that are water too (a
+                        // rail standing over the water would otherwise let its own colour trail across the water)
+                        for (int k = 0; k < 8; k++) {
+                            vec2 uv = vUv + RING[k] * uTexel;
+                            float d = texture2D(tDepth, uv).x;
+                            vec4 fk = uToWorld * vec4(uv * 2.0 - 1.0, 1.0, 1.0);
+                            vec3 dk = normalize(fk.xyz / fk.w - uEye);
+                            if (dk.y > -1e-5) continue;
+                            vec4 wk = uToWorld * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0);
+                            if (d < 1.0 && distance(wk.xyz / wk.w, uEye) < (uHeight - uEye.y) / dk.y) continue;
+                            vec3 s = squash(texture2D(tNow, uv).rgb);
+                            lo = min(lo, s); hi = max(hi, s);
+                        }
+                    }
+                }
+                if (water < 0.5) then = lastFrame(p);
+                float a = mix(uSolidBlend, uBlend, max(leaf, water));
+                // where it was in the last frame (the nearest surface's shift, applied to this pixel)
+                then += vUv - at;
+                if (uFresh > 0.5 || any(lessThan(then, vec2(0.0))) || any(greaterThan(then, vec2(1.0)))) { gl_FragColor = vec4(unsquash(now), far); return; }
+                // The last frame keeps, in its alpha, how far off each pixel's surface was. If the water's pixel finds
+                // there something at another distance, which slid across the picture more than two pixels apart from it
+                // (a rail post standing over the water), that was not the water: its colour would trail behind the post.
+                if (water > 0.5 && uParallax * abs(1.0 / max(texture2D(tPast, then).a, 0.1) - 1.0 / far) > 2.0) a = 1.0;
+                gl_FragColor = vec4(unsquash(mix(clamp(squash(past(then)), lo, hi), now, a)), far);
+            }`,
+        depthTest: false, depthWrite: false
+    });
+    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+    quad.frustumCulled = false;
+    const stage = new THREE.Scene(); stage.add(quad);
+    const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    return {
+        // source: the new frame in linear light, with its depth (leaves included); solidDepth: the depth without the
+        // leaves; mirror: the water's uniforms (its height, its mirror and the mirror's depth). Returns the blended frame.
+        render(source, solidDepth, mirror) {
+            for (const f of frames) if (f.width !== source.width || f.height !== source.height) { f.setSize(source.width, source.height); fresh = true; }
+            camera.getWorldDirection(look);
+            // the eye's shift times the focal length in pixels: a surface at distance d slides about this / d pixels
+            material.uniforms.uParallax.value = camera.position.distanceTo(lastEye) * camera.projectionMatrix.elements[5] * source.height / 2;
+            if (camera.position.distanceTo(lastEye) > 0.15 * camera.position.distanceTo(controls.target) || look.angleTo(lastLook) > 0.2) fresh = true;
+            lastEye.copy(camera.position); lastLook.copy(look);
+            viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+            toWorld.copy(viewProj).invert();
+            const u = material.uniforms;
+            u.tNow.value = source.texture; u.tDepth.value = source.depthTexture; u.tSolidDepth.value = solidDepth; u.tPast.value = frames[latest].texture;
+            u.uEye.value.copy(camera.position); u.uTexel.value.set(1 / source.width, 1 / source.height);
+            u.uHeight.value = mirror.uHeight.value; u.uFresh.value = fresh ? 1 : 0;
+            for (const k of ['tMirrorDepth', 'uMirror', 'uMirrorProjInv', 'uMirrorWorld']) u[k].value = mirror[k].value;
+            latest = 1 - latest;
+            renderer.setRenderTarget(frames[latest]);
+            renderer.render(stage, cam);
+            pastViewProj.copy(viewProj);
+            fresh = false;
+            return frames[latest].texture;
+        },
+        uniforms: material.uniforms
+    };
+})();
+
+// ---------------------------------------------------------------------------------------------------------
+// Scene, camera and orbit.
+// ---------------------------------------------------------------------------------------------------------
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(VIEW.fov, window.innerWidth / window.innerHeight, VIEW.near, VIEW.far);
+const viewTarget = new THREE.Vector3(...VIEW.target);
+const viewDirection = new THREE.Vector3(...VIEW.eye).sub(viewTarget);
+const designDistance = viewDirection.length();
+viewDirection.normalize();
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.copy(viewTarget);
+controls.enablePan = false;                                    // the right button and two-finger pan do nothing
+controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: null };
+controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_ROTATE };
+controls.enableDamping = true;
+controls.dampingFactor = VIEW.damping;
+controls.rotateSpeed = VIEW.rotateSpeed;
+controls.zoomSpeed = VIEW.zoomSpeed;
+controls.minPolarAngle = VIEW.minPolarAngle;
+controls.maxPolarAngle = VIEW.maxPolarAngle;
+renderer.domElement.addEventListener('contextmenu', event => event.preventDefault());
+
+// Distance that keeps the 16:9 width of the designer's shot inside a narrower window.
+function framingDistance(aspect) {
+    if (aspect >= VIEW.designAspect) return designDistance;
+    return Math.min(designDistance * VIEW.designAspect / aspect, VIEW.maxDistance);
+}
+function frameOpeningView() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    const d = framingDistance(camera.aspect);
+    controls.minDistance = Math.min(VIEW.minDistance, d);
+    controls.maxDistance = Math.max(VIEW.maxDistance, d);
+    camera.position.copy(viewTarget).addScaledVector(viewDirection, d);
+    camera.lookAt(viewTarget);
+    camera.updateProjectionMatrix();
+}
+frameOpeningView();
+
+// ---------------------------------------------------------------------------------------------------------
+// Light. The lamps of the cabin and the lanterns are added to every material through one shader patch, so
+// the interior lamp stays inside the cabin walls and the lanterns never shine into it.
+// ---------------------------------------------------------------------------------------------------------
+const sun = new THREE.DirectionalLight(new THREE.Color(...DAYLIGHT.sun.color), DAYLIGHT.sun.strength);
+sun.target.position.set(...DAYLIGHT.shadowCentre);
+sun.position.copy(sun.target.position).addScaledVector(new THREE.Vector3(...DAYLIGHT.sun.towards).normalize(), 80);
+sun.castShadow = true;
+sun.shadow.mapSize.set(DAYLIGHT.shadowMapSize, DAYLIGHT.shadowMapSize);
+Object.assign(sun.shadow.camera, { left: -DAYLIGHT.shadowHalfSize, right: DAYLIGHT.shadowHalfSize, top: DAYLIGHT.shadowHalfSize, bottom: -DAYLIGHT.shadowHalfSize, near: 40, far: 125 });
+sun.shadow.bias = -0.00006;          // x 85 m of depth range = 5 mm
+sun.shadow.normalBias = 0.03;        // less than this leaves acne rings on the walls the sun meets at 60 degrees
+sun.shadow.radius = DAYLIGHT.shadowSoftness;   // EEVEE's half-resolution, filtered sun shadow has a few cm of soft edge
+sun.layers.enableAll();               // the lights reach every layer: the mirror's, the eye's and the see-through pass
+scene.add(sun, sun.target);
+
+const skySun = new THREE.DirectionalLight(new THREE.Color(...DAYLIGHT.skySun.color), DAYLIGHT.skySun.strength);
+skySun.position.set(...DAYLIGHT.skySun.towards).multiplyScalar(80);
+skySun.layers.enableAll();
+scene.add(skySun);
+
+// Split-sum table of the GGX lobe (scale and bias of F0) by view angle and roughness, integrated once at start-up,
+// in place of three.js's analytic fit, which gives rough ground seen at a grazing angle about half its sky sheen.
+// The lamps' specular uses the same table for its Fresnel term, as EEVEE does: the lobe's average reflectance for
+// that view angle, not the value at the half vector, which makes rough ground glare white when it faces the sun.
+const specularTable = (() => {
+    const N = 32, S = 256, data = new Uint16Array(N * N * 4);
+    const radical = i => { let b = i, r = 0, f = 0.5; while (b) { if (b & 1) r += f; b >>= 1; f *= 0.5; } return r; };
+    for (let j = 0; j < N; j++) {
+        const a = ((j + 0.5) / N) ** 2, a2 = a * a;
+        for (let i = 0; i < N; i++) {
+            const nv = (i + 0.5) / N, vx = Math.sqrt(1 - nv * nv);
+            let scale = 0, bias = 0;
+            for (let k = 0; k < S; k++) {
+                const phi = 2 * Math.PI * (k + 0.5) / S, u = radical(k);
+                const ct = Math.sqrt((1 - u) / (1 + (a2 - 1) * u)), st = Math.sqrt(1 - ct * ct);
+                const hx = st * Math.cos(phi), vh = vx * hx + nv * ct, nl = 2 * vh * ct - nv;
+                if (nl <= 0 || vh <= 0) continue;
+                const vis = 0.5 / (nl * Math.sqrt(nv * nv * (1 - a2) + a2) + nv * Math.sqrt(nl * nl * (1 - a2) + a2));
+                const g = vis * 4 * nl * vh / ct, fc = (1 - vh) ** 5;
+                scale += (1 - fc) * g; bias += fc * g;
+            }
+            const o = (j * N + i) * 4, h = THREE.DataUtils.toHalfFloat;
+            data[o] = h(scale / S); data[o + 1] = h(bias / S); data[o + 2] = 0; data[o + 3] = h(1);
+        }
+    }
+    const table = new THREE.DataTexture(data, N, N, THREE.RGBAFormat, THREE.HalfFloatType);
+    table.minFilter = table.magFilter = THREE.LinearFilter;
+    table.needsUpdate = true;
+    return table;
+})();
+const DFG_FROM_TABLE = `uniform sampler2D willowDFG;
+vec2 DFGApprox( const in vec3 normal, const in vec3 viewDir, const in float roughness ) {
+    float dotNV = saturate( dot( normal, viewDir ) );
+    return texture2D( willowDFG, vec2( dotNV, roughness ) * ( 31.0 / 32.0 ) + 0.5 / 32.0 ).rg;
+}`;
+
+const lampUniforms = {
+    willowDFG: { value: specularTable },
+    willowLampView: { value: LAMPS.map(() => new THREE.Vector3()) },
+    willowLampColor: { value: LAMPS.map(l => new THREE.Color(...l.color).multiplyScalar(l.watts / (4 * Math.PI))) },
+    willowLampInside: { value: LAMPS.map(l => (l.inside ? 1 : 0)) },
+    willowLampFloor: { value: LAMPS.map(l => l.floor) },
+    willowRoomMin: { value: new THREE.Vector3(...CABIN_ROOM.min) },
+    willowRoomBounce: { value: new THREE.Color(...CABIN_ROOM.bounce) },
+    willowRoomSky: { value: CABIN_ROOM.sky },
+    willowRoomMax: { value: new THREE.Vector3(...CABIN_ROOM.max) },
+    willowMirrorPass: { value: 0 }
+};
+const lampWorld = LAMPS.map(l => new THREE.Vector3(...l.at));
+function updateLampUniforms(eye = camera) {
+    lampWorld.forEach((p, i) => lampUniforms.willowLampView.value[i].copy(p).applyMatrix4(eye.matrixWorldInverse));
+}
+function addLamps(material) {
+    material.onBeforeCompile = shader => {
+        Object.assign(shader.uniforms, lampUniforms);
+        shader.vertexShader = 'varying vec3 vWillowWorld;\n' + shader.vertexShader.replace('#include <worldpos_vertex>', `#include <worldpos_vertex>
+            {
+                vec4 w = vec4( transformed, 1.0 );
+                #ifdef USE_BATCHING
+                    w = batchingMatrix * w;
+                #endif
+                #ifdef USE_INSTANCING
+                    w = instanceMatrix * w;
+                #endif
+                vWillowWorld = ( modelMatrix * w ).xyz;
+            }`);
+        shader.fragmentShader = `varying vec3 vWillowWorld;
+            uniform vec3 willowLampView[ ${LAMPS.length} ];
+            uniform vec3 willowLampColor[ ${LAMPS.length} ];
+            uniform float willowLampInside[ ${LAMPS.length} ];
+            uniform float willowLampFloor[ ${LAMPS.length} ];
+            uniform vec3 willowRoomMin;
+            uniform vec3 willowRoomMax;
+            uniform vec3 willowRoomBounce;
+            uniform float willowRoomSky;
+            ` + shader.fragmentShader.replace('#include <lights_fragment_begin>', `#include <lights_fragment_begin>
+            vec3 inRoom = step( willowRoomMin, vWillowWorld ) * step( vWillowWorld, willowRoomMax );
+            float room = inRoom.x * inRoom.y * inRoom.z;
+            {
+                // indoors: only the window share of the sky, plus the room's own bounce light
+                irradiance = irradiance * mix( 1.0, willowRoomSky, room ) + room * willowRoomBounce;
+                for ( int i = 0; i < ${LAMPS.length}; i ++ ) {
+                    float reach = willowLampInside[ i ] > 0.5 ? room : 1.0 - room;
+                    if ( reach < 0.5 || vWillowWorld.y < willowLampFloor[ i ] ) continue;
+                    vec3 toLamp = willowLampView[ i ] - geometryPosition;
+                    float d2 = max( dot( toLamp, toLamp ), 0.01 );
+                    IncidentLight lamp;
+                    lamp.direction = toLamp * inversesqrt( d2 );
+                    lamp.color = willowLampColor[ i ] / d2;
+                    lamp.visible = true;
+                    if ( willowLampInside[ i ] > 0.5 ) {
+                        reflectedLight.directDiffuse += saturate( dot( geometryNormal, lamp.direction ) ) * lamp.color * BRDF_Lambert( material.diffuseColor );
+                    } else {
+                        RE_Direct( lamp, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );
+                    }
+                }
+            }`);
+        shader.fragmentShader = shader.fragmentShader.replace('#include <lights_physical_pars_fragment>', DFG_FROM_TABLE + '\n' +
+            THREE.ShaderChunk.lights_physical_pars_fragment.replace(/vec2 DFGApprox\([\s\S]*?return fab;\s*\}/, '')
+                .replaceAll('vec3 F = F_Schlick( f0, f90, dotVH );', 'vec2 lobe = DFGApprox( normal, viewDir, roughness ); vec3 F = ( f0 * lobe.x + f90 * lobe.y ) / max( lobe.x + lobe.y, 1e-4 );'));
+        if (material.userData.patch) material.userData.patch(shader);
+        if (DAYLIGHT.shDiffuse) shader.fragmentShader = shader.fragmentShader.replace('#include <lights_fragment_maps>',
+            THREE.ShaderChunk.lights_fragment_maps.replace('iblIrradiance += getIBLIrradiance( geometryNormal );', ''));
+        shader.fragmentShader = shader.fragmentShader.replace('#include <lights_fragment_end>',
+            'radiance *= mix( 1.0, willowRoomSky, room );\niblIrradiance *= mix( 1.0, willowRoomSky, room );\n#include <lights_fragment_end>');
+        // in the water's mirror pass the leaves' opaque stand-ins mark themselves (alpha 2), since the water reads
+        // leaves from the mirror only
+        if (!material.transparent) shader.fragmentShader = shader.fragmentShader.replace('#include <dithering_fragment>',
+            '#include <dithering_fragment>\n#ifdef WILLOW_LEAF\nif ( willowMirrorPass > 0.5 ) gl_FragColor.a = 2.0;\n#endif');
+        shader.fragmentShader = 'uniform float willowMirrorPass;\n' + shader.fragmentShader;
+    };
+    material.customProgramCacheKey = () => 'willow-lamps' + (material.transparent ? '-see-through' : '') + (material.userData.patchKey || '');
+    return material;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Water: the .blend's flat "Water" plane, shaded the way EEVEE shades it. First the eye mirrored in the water plane
+// draws the depth of everything above the water, one pixel per pixel of the page (the mirror); then the scene is drawn
+// without the water. Each water pixel ripples its normal with the package's water normal map and takes, from
+// the mirror, the first surface its reflected ray meets. That surface gets the colour the eye sees there, as in
+// EEVEE's screen-space ray tracing, and the sky when the eye cannot see it (an underside, or something off screen).
+// Finding the hit in the mirror instead of marching through the picture keeps a ray from slipping past the hull and
+// picking up a rail behind it, so the reflection holds still while the camera moves. The reflection is smoothed (EEVEE
+// denoises its trace) and the last pass lays the water over the scene with its Fresnel term, its dark base colour and
+// the glints of the sun and of the HDRI's sun.
+// ---------------------------------------------------------------------------------------------------------
+const water = (() => {
+    const uniforms = {
+        tColor: { value: null }, tDepth: { value: null }, tSky: { value: null }, tDFG: { value: specularTable },
+        tWaterColor: { value: null }, tWaterNormal: { value: null }, tReflect: { value: null }, tMirror: { value: null }, tMirrorDepth: { value: null },
+        uProj: { value: new THREE.Matrix4() }, uProjInv: { value: new THREE.Matrix4() }, uView: { value: new THREE.Matrix4() }, uViewInv: { value: new THREE.Matrix4() },
+        uMirror: { value: new THREE.Matrix4() }, uMirrorProjInv: { value: new THREE.Matrix4() }, uMirrorWorld: { value: new THREE.Matrix4() },
+        uEye: { value: new THREE.Vector3() }, uNear: { value: VIEW.near }, uFar: { value: VIEW.far },
+        uSkyStrength: { value: DAYLIGHT.skyStrength }, uSkyCap: { value: DAYLIGHT.sunThreshold }, uSkyUp: { value: new THREE.Vector3() },
+        uHeight: { value: 0 }, uTile: { value: WATER.tile }, uSlide: { value: 0 }, uNormalStrength: { value: WATER.normalStrength },
+        uRough: { value: WATER.roughness }, uF0: { value: 0.04 }, uThickness: { value: WATER.thickness },
+        uSunDir: { value: new THREE.Vector3(...DAYLIGHT.sun.towards).normalize() }, uSunLight: { value: new THREE.Color(...DAYLIGHT.sun.color).multiplyScalar(DAYLIGHT.sun.strength) },
+        uSkySunDir: { value: new THREE.Vector3(...DAYLIGHT.skySun.towards).normalize() }, uSkySunLight: { value: new THREE.Color(...DAYLIGHT.skySun.color).multiplyScalar(DAYLIGHT.skySun.strength) },
+        uGlintRough: { value: WATER.glintRoughness }, uGlintScale: { value: WATER.glintScale },
+        uStep: { value: new THREE.Vector2() }, uSpread: { value: WATER.smoothing }, uRippleDetail: { value: WATER.rippleDetail },
+        uMirrorTexel: { value: new THREE.Vector2() }
+    };
+    const common = `
+        uniform sampler2D tColor, tDepth, tSky, tDFG, tWaterColor, tWaterNormal, tReflect, tMirror, tMirrorDepth;
+        uniform mat4 uProj, uProjInv, uView, uViewInv, uMirror, uMirrorProjInv, uMirrorWorld;
+        uniform vec3 uEye, uSkyUp, uSunDir, uSunLight, uSkySunDir, uSkySunLight;
+        uniform vec2 uStep, uMirrorTexel;
+        uniform float uNear, uFar, uSkyStrength, uSkyCap, uHeight, uTile, uSlide, uNormalStrength, uRough, uF0, uThickness, uGlintRough, uGlintScale, uSpread, uRippleDetail;
+        varying vec2 vUv;
+        const float PI = 3.14159265;
+        float depthAt(vec2 uv) {                      // distance in front of the eye, along -z
+            float z = texture2D(tDepth, uv).x * 2.0 - 1.0;
+            return 2.0 * uNear * uFar / (uFar + uNear - z * (uFar - uNear));
+        }
+        vec3 sky(vec3 d) {                            // the world clipped at the sun threshold, as EEVEE's probe holds it
+            vec2 uv = vec2(atan(d.z, d.x) / (2.0 * PI) + 0.5, asin(clamp(d.y, -1.0, 1.0)) / PI + 0.5);
+            return min(textureLod(tSky, uv, 0.0).rgb, vec3(uSkyCap)) * uSkyStrength;
+        }
+        vec2 lobe(float nv) { return texture2D(tDFG, vec2(nv, uRough) * (31.0 / 32.0) + 0.5 / 32.0).rg; }
+        // the water under a screen position: how much of the pixel it covers, where it is and its rippled normal
+        float findWater(vec2 uv, out vec3 pw, out vec3 n, out vec3 dir) {
+            vec4 pv = uProjInv * vec4(uv * 2.0 - 1.0, 1.0, 1.0);
+            vec3 dv = normalize(pv.xyz / pv.w);
+            dir = normalize((uViewInv * vec4(dv, 0.0)).xyz);
+            pw = vec3(0.0); n = vec3(0.0, 1.0, 0.0);
+            if (dir.y > -1e-5 || uEye.y <= uHeight) return 0.0;
+            float t = (uHeight - uEye.y) / dir.y;
+            float sceneDist = depthAt(uv) / max(-dv.z, 1e-4);
+            float cover = clamp((sceneDist - t) / max(0.004 * t, 0.01) + 0.5, 0.0, 1.0);
+            pw = uEye + dir * t;
+            // the water quad's glTF UVs: u = x / tile (sliding with the plane), v = 1 + z / tile
+            vec2 wuv = vec2(pw.x / uTile + uSlide, 1.0 + pw.z / uTile);
+            vec3 m = textureGrad(tWaterNormal, wuv, dFdx(wuv) * uRippleDetail, dFdy(wuv) * uRippleDetail).xyz * 2.0 - 1.0;
+            n = normalize(vec3(m.x * uNormalStrength, m.z, -m.y * uNormalStrength));
+            return cover;
+        }`;
+    const lookup = new THREE.ShaderMaterial({
+        uniforms,
+        vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+        fragmentShader: common + `
+            void main() {
+                vec3 pw, n, dir;
+                if (findWater(vUv, pw, n, dir) <= 0.0) { gl_FragColor = vec4(0.0); return; }
+                vec3 rw = reflect(dir, n);
+                rw.y = abs(rw.y);                             // a ripple can't send the reflection under the water
+                vec3 hit = sky(rw);
+                // the first surface along the reflected ray, from the mirror's depth (the rippled ray meets it at the
+                // same distance, a little to the side)
+                vec4 c0 = uMirror * vec4(pw, 1.0);
+                vec2 m0 = c0.xy / c0.w;
+                float z = texture2D(tMirrorDepth, m0).x;
+                // Right where something stands in the water (a shore, a pile, the hull), the mirror can
+                // miss the foot of it by a texel and show the sky instead: short bright dashes along the far shore that
+                // crawled as the camera moved. A surface up to three texels lower in the mirror that stands at the water
+                // (within half a metre, plus the height a few texels cover that far away) is the one the ray meets.
+                if (z >= 0.99999) {
+                    for (int k = 1; k <= 3; k++) {
+                        vec2 m1 = m0 - vec2(0.0, float(k) * uMirrorTexel.y);
+                        float z1 = texture2D(tMirrorDepth, m1).x;
+                        if (z1 < 0.99999) {
+                            vec4 v1 = uMirrorProjInv * vec4(m1 * 2.0 - 1.0, z1 * 2.0 - 1.0, 1.0);
+                            vec3 s1 = (uMirrorWorld * vec4(v1.xyz / v1.w, 1.0)).xyz;
+                            if (s1.y < uHeight + 0.5 + 0.004 * distance(s1, uEye)) { m0 = m1; z = z1; }
+                            break;
+                        }
+                    }
+                }
+                if (z < 0.99999) {
+                    vec4 v = uMirrorProjInv * vec4(m0 * 2.0 - 1.0, z * 2.0 - 1.0, 1.0);
+                    vec3 surface = (uMirrorWorld * vec4(v.xyz / v.w, 1.0)).xyz;
+                    bool atWater = surface.y < uHeight + 0.5 + 0.004 * distance(surface, uEye);
+                    // the rippled ray reaches about as far, a little to the side
+                    vec3 rippled = pw + rw * distance(surface, pw);
+                    // Where the screen can't give the colour, the mirror does: the water mirrors whatever stands above it
+                    // along the reflected ray, whichever way that surface faces (the underside of the jetty deck and of
+                    // the boat's deck edge, the eaves, the cabin ceiling seen through a window, the raked bow from
+                    // above, a tree above the top of the picture). The sky stays only where the mirror sees nothing.
+                    vec4 cm = uMirror * vec4(rippled, 1.0);
+                    vec2 ms = clamp(cm.xy / cm.w, vec2(0.0), vec2(1.0));
+                    vec4 seen = texture2D(tMirror, ms);
+                    bool leaf = seen.a > 1.5;                    // leaves are drawn after the water: only the mirror has them
+                    if (texture2D(tMirrorDepth, ms).x < 0.99999) hit = seen.rgb;
+                    else if (atWater) hit = texture2D(tMirror, m0).rgb;   // a ripple slid off the foot of the shore: keep the foot
+                    // The surface gets the colour on screen, as in EEVEE's screen-space trace, if the eye sees it or it
+                    // lies within the trace thickness behind what the eye sees; towards the edge of the picture it
+                    // blends into the mirror's colour.
+                    vec3 fv = (uView * vec4(surface, 1.0)).xyz;
+                    vec4 fc = uProj * vec4(fv, 1.0);
+                    vec2 fs = fc.xy / fc.w * 0.5 + 0.5;
+                    if (!leaf && fc.w > 0.0 && all(greaterThan(fs, vec2(0.0))) && all(lessThan(fs, vec2(1.0)))
+                            && -fv.z - depthAt(fs) < uThickness * (1.0 + 0.02 * -fv.z)) {
+                        vec4 cs = uProj * uView * vec4(rippled, 1.0);
+                        vec2 s = clamp(cs.xy / cs.w * 0.5 + 0.5, vec2(0.0), vec2(1.0));
+                        vec2 edge = min(fs, 1.0 - fs);
+                        hit = mix(hit, texture2D(tColor, s).rgb, smoothstep(0.0, 0.06, min(edge.x, edge.y)));
+                    }
+                }
+                gl_FragColor = vec4(hit, 1.0);
+            }`,
+        depthTest: false, depthWrite: false
+    });
+    // separable smoothing of the reflection, weighted by the water mask so the boat never bleeds into it
+    const smooth = new THREE.ShaderMaterial({
+        uniforms,
+        vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+        fragmentShader: `uniform sampler2D tReflect; uniform vec2 uStep; uniform float uSpread; varying vec2 vUv;
+            void main() {
+                vec4 sum = vec4(0.0);
+                for (int i = -4; i <= 4; i++) {
+                    float w = exp(-0.5 * float(i * i) / (uSpread * uSpread));
+                    vec4 s = texture2D(tReflect, vUv + uStep * float(i));
+                    sum += vec4(s.rgb * s.a, s.a) * w;
+                }
+                gl_FragColor = sum.a > 0.0 ? vec4(sum.rgb / sum.a, 1.0) : vec4(0.0);
+            }`,
+        depthTest: false, depthWrite: false
+    });
+    const compose = new THREE.ShaderMaterial({
+        uniforms,
+        vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+        fragmentShader: common + `
+            // a sun's glint on the water: a GGX lobe as wide and as strong as the streak EEVEE draws on this water,
+            // with the water's own Fresnel term
+            vec3 glint(vec3 n, vec3 v, float nv, float fr, vec3 l, vec3 light) {
+                float nl = dot(n, l);
+                if (nl <= 0.0) return vec3(0.0);
+                float nh = max(dot(n, normalize(l + v)), 0.0);
+                float a = uGlintRough * uGlintRough, a2 = a * a;
+                float dd = nh * nh * (a2 - 1.0) + 1.0;
+                float vis = 0.5 / (nl * sqrt(nv * nv * (1.0 - a2) + a2) + nv * sqrt(nl * nl * (1.0 - a2) + a2));
+                return light * nl * fr * a2 / (PI * dd * dd) * vis * uGlintScale;
+            }
+            void main() {
+                gl_FragDepth = texture2D(tDepth, vUv).x;     // the solid scene's depth, for the see-through pass after
+                vec3 base = texture2D(tColor, vUv).rgb;
+                vec3 pw, n, dir;
+                float cover = findWater(vUv, pw, n, dir);
+                if (cover <= 0.0) { gl_FragColor = vec4(base, 1.0); return; }
+                vec4 reflected = texture2D(tReflect, vUv);
+                vec3 rw = reflect(dir, n); rw.y = abs(rw.y);
+                vec3 reflection = reflected.a > 0.0 ? reflected.rgb : sky(rw);
+                vec3 v = -dir;
+                float nv = clamp(dot(n, v), 1e-4, 1.0);
+                vec2 ab = lobe(nv);
+                float fr = uF0 * ab.x + ab.y;
+                vec3 albedo = texture2D(tWaterColor, vec2(pw.x / uTile + uSlide, 1.0 + pw.z / uTile)).rgb;
+                vec3 diffuse = albedo / PI * (uSkyUp + uSunLight * max(dot(n, uSunDir), 0.0)) * (1.0 - fr);
+                vec3 col = diffuse + fr * reflection + glint(n, v, nv, fr, uSkySunDir, uSkySunLight);   // the HDRI's sun only (WATER)
+                gl_FragColor = vec4(mix(base, col, cover), 1.0);
+            }`,
+        depthTest: true, depthFunc: THREE.AlwaysDepth, depthWrite: true
+    });
+    const reflectFrame = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: false });
+    const spareFrame = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: false });
+    const mirrorFrame = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, colorSpace: THREE.LinearSRGBColorSpace,
+        depthTexture: new THREE.DepthTexture(1, 1, THREE.FloatType) });
+    uniforms.tMirror.value = mirrorFrame.texture;
+    uniforms.tMirrorDepth.value = mirrorFrame.depthTexture;
+    const mirrorEye = new THREE.PerspectiveCamera();
+    const ahead = new THREE.Vector3(), waterPlane = new THREE.Plane(), clip = new THREE.Vector4(), q = new THREE.Vector4();
+    const toImage = new THREE.Matrix4().set(0.5, 0, 0, 0.5, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0.5, 0, 0, 0, 1);
+    // The eye mirrored in the water plane (three.js's Reflector construction). Its near plane is tilted onto the water
+    // (Lengyel's oblique clipping), so the piles and the hull under the water never reach the mirror image.
+    function placeMirrorEye() {
+        const h = uniforms.uHeight.value;
+        if (camera.position.y <= h + 1e-3) return false;
+        mirrorEye.position.set(camera.position.x, 2 * h - camera.position.y, camera.position.z);
+        ahead.set(0, 0, -1).transformDirection(camera.matrixWorld).add(camera.position);
+        ahead.y = 2 * h - ahead.y;
+        mirrorEye.up.set(0, 1, 0).transformDirection(camera.matrixWorld);
+        mirrorEye.up.y = -mirrorEye.up.y;
+        mirrorEye.lookAt(ahead);
+        mirrorEye.updateMatrixWorld();
+        mirrorEye.projectionMatrix.copy(camera.projectionMatrix);
+        waterPlane.normal.set(0, 1, 0); waterPlane.constant = -h;
+        waterPlane.applyMatrix4(mirrorEye.matrixWorldInverse);
+        clip.set(waterPlane.normal.x, waterPlane.normal.y, waterPlane.normal.z, waterPlane.constant);
+        const p = mirrorEye.projectionMatrix.elements;
+        q.set((Math.sign(clip.x) + p[8]) / p[0], (Math.sign(clip.y) + p[9]) / p[5], -1, (1 + p[10]) / p[14]);
+        clip.multiplyScalar(2 / clip.dot(q));
+        p[2] = clip.x; p[6] = clip.y; p[10] = clip.z + 1; p[14] = clip.w;
+        mirrorEye.projectionMatrixInverse.copy(mirrorEye.projectionMatrix).invert();
+        uniforms.uMirror.value.copy(toImage).multiply(mirrorEye.projectionMatrix).multiply(mirrorEye.matrixWorldInverse);
+        uniforms.uMirrorProjInv.value.copy(mirrorEye.projectionMatrixInverse);
+        uniforms.uMirrorWorld.value.copy(mirrorEye.matrixWorld);
+        return true;
+    }
+    // everything above the water seen from the mirrored eye, each surface with the way it faces (the sky is left out)
+    function drawMirror() {
+        if (!placeMirrorEye()) return;
+        const sky = scene.background;
+        scene.background = null;
+        lampUniforms.willowMirrorPass.value = 1;
+        updateLampUniforms(mirrorEye);
+        renderer.setRenderTarget(mirrorFrame);
+        renderer.render(scene, mirrorEye);
+        lampUniforms.willowMirrorPass.value = 0;
+        scene.background = sky;
+    }
+    // The lake as a stand-in inside the solid frame: the flat water plane, drawn first and writing no depth, in about
+    // the colour the water pass will give it (what the mirror sees there, or the sky, by the water's Fresnel term, over
+    // the water's own colour). Without it the solid frame held the sky's bright lower half wherever the lake lies, so
+    // the anti-aliased edge of anything standing against the lake (the far shore, the hills) blended towards that sky,
+    // and a reflection looked up on the screen could land on it: a broken bright line that crawled along the far shore
+    // as the camera moved. Only the eye sees it (LAYER.waterStandIn), not the mirror and not the shadow map.
+    function makeStandIn() {
+        const pick = ['tMirror', 'tMirrorDepth', 'tSky', 'tDFG', 'tWaterColor', 'uMirror', 'uSkyStrength', 'uSkyCap', 'uSkyUp',
+            'uSunDir', 'uSunLight', 'uTile', 'uSlide', 'uF0', 'uRough'];
+        const material = new THREE.ShaderMaterial({
+            uniforms: Object.fromEntries(pick.map(k => [k, uniforms[k]])),
+            vertexShader: `varying vec3 vWorld;
+                void main() { vec4 w = modelMatrix * vec4(position, 1.0); vWorld = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+            fragmentShader: `uniform sampler2D tMirror, tMirrorDepth, tSky, tDFG, tWaterColor;
+                uniform mat4 uMirror;
+                uniform vec3 uSkyUp, uSunDir, uSunLight;
+                uniform float uSkyStrength, uSkyCap, uTile, uSlide, uF0, uRough;
+                varying vec3 vWorld;
+                const float PI = 3.14159265;
+                vec3 sky(vec3 d) {
+                    vec2 uv = vec2(atan(d.z, d.x) / (2.0 * PI) + 0.5, asin(clamp(d.y, -1.0, 1.0)) / PI + 0.5);
+                    return min(textureLod(tSky, uv, 0.0).rgb, vec3(uSkyCap)) * uSkyStrength;
+                }
+                void main() {
+                    vec3 dir = normalize(vWorld - cameraPosition);
+                    vec3 reflection = sky(reflect(dir, vec3(0.0, 1.0, 0.0)));
+                    vec4 cm = uMirror * vec4(vWorld, 1.0);
+                    vec2 ms = clamp(cm.xy / cm.w, vec2(0.0), vec2(1.0));
+                    if (texture2D(tMirrorDepth, ms).x < 0.99999) reflection = texture2D(tMirror, ms).rgb;
+                    vec2 ab = texture2D(tDFG, vec2(clamp(-dir.y, 1e-4, 1.0), uRough) * (31.0 / 32.0) + 0.5 / 32.0).rg;
+                    float fr = uF0 * ab.x + ab.y;
+                    vec3 albedo = texture2D(tWaterColor, vec2(vWorld.x / uTile + uSlide, 1.0 + vWorld.z / uTile)).rgb;
+                    gl_FragColor = vec4(albedo / PI * (uSkyUp + uSunLight * max(uSunDir.y, 0.0)) * (1.0 - fr) + fr * reflection, 1.0);
+                }`,
+            depthWrite: false
+        });
+        const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000).rotateX(-Math.PI / 2).translate(0, uniforms.uHeight.value, 0), material);
+        mesh.name = 'water:stand-in';
+        mesh.renderOrder = -1;                 // before every solid surface, which then draws over it
+        mesh.frustumCulled = false;
+        return mesh;
+    }
+    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), lookup);
+    quad.frustumCulled = false;
+    const stage = new THREE.Scene(); stage.add(quad);
+    const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    const pass = (material, target) => { quad.material = material; renderer.setRenderTarget(target); renderer.render(stage, cam); };
+    // The mirror and the reflection get one pixel per pixel of the page (w x h in CSS pixels: the frame's own size on
+    // most displays, a quarter of it where the pixel ratio is 2). At half that, the leaves of a far tree or shrub fell
+    // between the mirror's pixels or onto them as the camera moved, and their reflection flickered.
+    function resize(w, h, pixelRatio) {
+        for (const f of [reflectFrame, spareFrame, mirrorFrame]) f.setSize(Math.max(1, w), Math.max(1, h));
+        uniforms.uMirrorTexel.value.set(1 / mirrorFrame.width, 1 / mirrorFrame.height);
+        uniforms.uSpread.value = WATER.smoothing / pixelRatio;
+    }
+    function render(source, target, time) {
+        uniforms.tColor.value = source.texture;
+        uniforms.tDepth.value = source.depthTexture;
+        uniforms.uProj.value.copy(camera.projectionMatrix);
+        uniforms.uProjInv.value.copy(camera.projectionMatrixInverse);
+        uniforms.uView.value.copy(camera.matrixWorldInverse);
+        uniforms.uViewInv.value.copy(camera.matrixWorld);
+        uniforms.uEye.value.copy(camera.position);
+        uniforms.uNear.value = camera.near; uniforms.uFar.value = camera.far;
+        uniforms.uSlide.value = -((time * WATER.drift / uniforms.uTile.value) % 1);
+        pass(lookup, reflectFrame);
+        uniforms.tReflect.value = reflectFrame.texture; uniforms.uStep.value.set(1 / reflectFrame.width, 0);
+        pass(smooth, spareFrame);
+        uniforms.tReflect.value = spareFrame.texture; uniforms.uStep.value.set(0, 1 / reflectFrame.height);
+        pass(smooth, reflectFrame);
+        uniforms.tReflect.value = reflectFrame.texture;
+        pass(compose, target);
+    }
+    return { uniforms, render, resize, drawMirror, mirrorEye, mirrorFrame, makeStandIn };
+})();
+
+// ---------------------------------------------------------------------------------------------------------
+// Building the scene from the package.
+// ---------------------------------------------------------------------------------------------------------
+const pictures = new Map();
+function texture(rel, srgb) {
+    const key = rel + (srgb ? '|srgb' : '');
+    if (!pictures.has(key)) {
+        const tex = new THREE.Texture(pictureCache.get(rel));
+        tex.flipY = false;                                     // glTF UVs
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+        tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+        tex.needsUpdate = true;
+        pictures.set(key, tex);
+    }
+    return pictures.get(key);
+}
+const pictureCache = new Map();
+
+// Leaves, as the .blend draws them ("Dithered" alpha): each pixel is covered in proportion to the leaf's alpha, through
+// the multisampled alpha-to-coverage, instead of three.js's cut at alphaTest. With the cut, a far canopy, whose
+// filtered alpha falls under 0.5, lost almost every leaf. The shadow map and the water's mirror keep the cut.
+function foliageCoverage(shader) {
+    shader.fragmentShader = shader.fragmentShader.replace('#include <alphatest_fragment>', `
+        if ( willowMirrorPass > 0.5 ) { if ( diffuseColor.a < alphaTest ) discard; }
+        else {
+            diffuseColor.a = min( diffuseColor.a * ${SCENERY.leafOpacity.toFixed(3)}, 1.0 );
+            if ( diffuseColor.a < 0.02 ) discard;
+        }`);
+}
+
+const iorForLevel = level => { const r = Math.sqrt(0.04 * 2 * level); return (1 + r) / (1 - r); };
+const finishes = new Map();
+function finish(name, cutout = false) {
+    const key = name + (cutout ? '|cutout' : '');
+    if (finishes.has(key)) return finishes.get(key);
+    const f = FINISHES[name];
+    if (!f) throw new Error('No finish for material ' + name);
+    const m = new THREE.MeshPhysicalMaterial({
+        name,
+        map: texture(f.map, true),
+        roughness: f.roughness ?? 1,
+        metalness: f.metalness ?? (f.metalnessMap ? 1 : 0),
+        ior: iorForLevel(f.level ?? 0.35),
+        side: THREE.DoubleSide                                 // Blender draws both sides of every face (the shore meshes face down)
+    });
+    if (f.roughnessMap) m.roughnessMap = texture(f.roughnessMap);
+    if (f.metalnessMap) m.metalnessMap = texture(f.metalnessMap);
+    if (f.normalMap) { m.normalMap = texture(f.normalMap); m.normalScale.set(f.normal ?? 1, -(f.normal ?? 1)); }
+    if (f.alphaMap) { m.alphaMap = texture(f.alphaMap); m.alphaTest = 0.5; m.alphaToCoverage = true; }
+    if (f.foliage && cutout) { m.alphaToCoverage = false; m.defines.WILLOW_LEAF = ''; }   // the opaque stand-in seen by the mirror and the sun
+    else if (f.foliage) {
+        m.userData.patch = foliageCoverage; m.userData.patchKey = '-foliage';
+        m.alphaToCoverage = false; m.transparent = true; m.depthWrite = false; m.forceSinglePass = true;
+    }
+    if (f.glass) { m.transparent = true; m.opacity = f.opacity; m.depthWrite = false; m.polygonOffset = true; m.polygonOffsetFactor = 1; m.polygonOffsetUnits = 4; }
+    if (f.glow) { m.emissive = new THREE.Color(...LAMPS[1].color); m.emissiveIntensity = f.glow; m.emissiveMap = m.map; }
+    addLamps(m);
+    finishes.set(key, m);
+    return m;
+}
+
+// See-through leaves write no depth, so neither the water's mirror nor the sun's shadow map would see them. Each
+// foliage mesh therefore gets an opaque stand-in, cut at alpha 0.5, on its own layer: the mirror and the shadow map see
+// the stand-ins (LAYER.leafStandIns). The see-through leaves and the glass (LAYER.seeThrough) are drawn last, over the
+// water, against the solid scene's depth: drawn before it, the water pass painted over them wherever water lay behind.
+const LAYER = { seeThrough: 2, leafStandIns: 1, waterStandIn: 3 };
+const leafStandIns = [];
+function foliageStandIn(mesh, name) {
+    const standIn = mesh.isInstancedMesh ? new THREE.InstancedMesh(mesh.geometry, finish(name, true), mesh.instanceMatrix.count) : new THREE.Mesh(mesh.geometry, finish(name, true));
+    if (mesh.isInstancedMesh) { standIn.instanceMatrix = mesh.instanceMatrix; standIn.count = mesh.count; }
+    standIn.name = mesh.name + ':stand-in';
+    standIn.frustumCulled = mesh.frustumCulled;
+    standIn.castShadow = true; standIn.receiveShadow = false;
+    standIn.layers.set(LAYER.leafStandIns);
+    mesh.layers.set(LAYER.seeThrough);
+    mesh.castShadow = false;
+    mesh.userData.standIn = standIn;
+    leafStandIns.push(standIn);
+    return standIn;
+}
+
+async function buildScene(gltf) {
+    const root = gltf.scene;
+    root.updateMatrixWorld(true);
+    const batches = new Map();            // static boat and shore parts merged per material
+    const repeats = new Map();            // meshes that share one geometry (shrubs, rocks, trees)
+    const waterPlanes = [];
+    const treeFar = [];
+    const moorings = new Map();           // the cleats and piles the mooring ropes run between
+    const fittings = [];                  // the posts that get a ball fitting (RAIL_FITTINGS)
+    const doors = new Map();              // the doors that get a knob (DOOR_KNOBS)
+    const doorParts = [];                 // the doors' parts, copied onto the inside of their walls (DOORS_INSIDE)
+    const stubs = MOORING.lines.map(l => l[0]);
+    root.traverse(o => {
+        if (!o.isMesh) return;
+        const name = (o.parent && o.parent.isGroup && o.parent !== root ? o.parent.name : o.name);
+        if (MOORING.lines.some(l => l.includes(name))) moorings.set(name, new THREE.Box3().setFromObject(o));
+        if (stubs.includes(name) || SHARED_POSTS.includes(name)) return;
+        if (RAIL_FITTINGS.posts.includes(name)) fittings.push(new THREE.Box3().setFromObject(o));
+        if (DOOR_KNOBS.doors.includes(name)) doors.set(name, new THREE.Box3().setFromObject(o));
+        if (name.startsWith(SCENERY.treeFarSource)) { treeFar.push(o); return; }
+        const family = name.startsWith(SCENERY.treeNear) ? SCENERY.treeNear : SCENERY.instanced.find(p => name.startsWith(p));
+        if (family) {
+            const key = family + '|' + o.material.name;
+            if (!repeats.has(key)) repeats.set(key, { geometry: o.geometry, material: o.material.name, family, matrices: [] });
+            repeats.get(key).matrices.push(o.matrixWorld.clone());
+            return;
+        }
+        if (o.material.name === 'hb_water') { waterPlanes.push(o); return; }
+        const g = o.geometry.clone().applyMatrix4(o.matrixWorld);
+        for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+        if (SCENERY.faceDown.includes(name)) turnFacesUp(g);
+        if (BOW_CLEATS[name]) stretchAlongX(g, new THREE.Box3().setFromObject(root.getObjectByName(BOW_CLEATS[name])));
+        if (DOORS_INSIDE.moved[name]) g.translate(...DOORS_INSIDE.moved[name]);
+        const door = DOORS_INSIDE.parts.find(d => name.startsWith(d));
+        if (door) doorParts.push({ g, material: o.material.name, door });
+        if (!batches.has(o.material.name)) batches.set(o.material.name, []);
+        batches.get(o.material.name).push(g);
+    });
+    if (!batches.has('hb_rope')) batches.set('hb_rope', []);
+    for (const [, cleat, pile] of MOORING.lines) batches.get('hb_rope').push(mooringRope(moorings.get(cleat), moorings.get(pile)));
+    for (const b of fittings) batches.get('hb_rail').push(new THREE.SphereGeometry(RAIL_FITTINGS.radius, 24, 16).translate((b.min.x + b.max.x) / 2, b.max.y, (b.min.z + b.max.z) / 2));
+    for (const { g, material, door } of doorParts) batches.get(material).push(insideCopy(g.clone(), doors.get(door)));
+    for (const b of doors.values()) batches.get('Lantern_01_brass').push(doorKnob(b), insideCopy(doorKnob(b), b));
+    const world = new THREE.Group();
+    world.name = 'TheWillow';
+    for (const [mat, list] of batches) {
+        const mesh = new THREE.Mesh(mergeGeometries(list, false), finish(mat));
+        mesh.name = 'batch:' + mat;
+        const glass = !!FINISHES[mat].glass;
+        mesh.castShadow = !glass && mat !== 'hb_ground' && mat !== 'hb_sand';
+        mesh.receiveShadow = true;
+        world.add(mesh);
+        if (glass) mesh.layers.set(LAYER.seeThrough);
+        if (FINISHES[mat].foliage) world.add(foliageStandIn(mesh, mat));
+    }
+    // instanced scenery
+    const farGeometry = new Map(treeFar.map(o => [o.material.name, o.geometry]));
+    const trees = [];
+    for (const r of repeats.values()) {
+        const near = new THREE.InstancedMesh(r.geometry, finish(r.material), r.matrices.length);
+        r.matrices.forEach((m, i) => near.setMatrixAt(i, m));
+        near.name = 'instances:' + r.family + r.material;
+        near.castShadow = near.receiveShadow = true;
+        if (r.family === SCENERY.treeNear) near.frustumCulled = false;   // which trees are near changes with the eye
+        world.add(near);
+        if (FINISHES[r.material].foliage) world.add(foliageStandIn(near, r.material));
+        if (r.family === SCENERY.treeNear && farGeometry.has(r.material)) {
+            const far = new THREE.InstancedMesh(farGeometry.get(r.material), finish(r.material), r.matrices.length);
+            far.name = 'instances:far:' + r.material;
+            far.castShadow = far.receiveShadow = true;
+            far.frustumCulled = false;
+            world.add(far);
+            if (FINISHES[r.material].foliage) world.add(foliageStandIn(far, r.material));
+            trees.push({ near, far, matrices: r.matrices, centres: r.matrices.map(m => new THREE.Vector3().setFromMatrixPosition(m)) });
+        }
+    }
+    // water: the plane's height and texture repeat, then its textures for the water pass
+    const plane = waterPlanes[0];
+    plane.geometry.computeBoundingBox();
+    const box = plane.geometry.boundingBox.clone().applyMatrix4(plane.matrixWorld);
+    const uvs = plane.geometry.attributes.uv, pos = plane.geometry.attributes.position;
+    water.uniforms.uHeight.value = box.max.y;
+    water.uniforms.uTile.value = Math.abs((pos.getX(1) - pos.getX(0)) / (uvs.getX(1) - uvs.getX(0))) || WATER.tile;
+    water.uniforms.tWaterColor.value = texture(FINISHES.hb_water.map, true);
+    water.uniforms.tWaterNormal.value = texture(FINISHES.hb_water.normalMap);
+    water.uniforms.tSky.value = scene.background;
+    // the mirror, and the shadow map drawn during its pass, see the leaves' stand-ins
+    water.mirrorEye.layers.enable(LAYER.leafStandIns);
+    // the eye alone sees the lake's stand-in under the solid scene
+    const lake = water.makeStandIn();
+    lake.layers.set(LAYER.waterStandIn);
+    camera.layers.enable(LAYER.waterStandIn);
+    world.add(lake);
+    scene.add(world);
+    return { trees };
+}
+
+function turnFacesUp(g) {
+    const index = g.index.array;
+    for (let i = 0; i < index.length; i += 3) { const t = index[i + 1]; index[i + 1] = index[i + 2]; index[i + 2] = t; }
+    g.index.needsUpdate = true;
+    const n = g.attributes.normal.array;
+    for (let i = 0; i < n.length; i++) n[i] = -n[i];
+    g.attributes.normal.needsUpdate = true;
+}
+
+// The way out of the cabin through a door, given the door's world box: away from the cabin's middle (x -1.7), so +1
+// (towards +x) for the bow door and -1 for the stern door.
+const outwards = door => (door.min.x + door.max.x) / 2 > -1.7 ? 1 : -1;
+
+// A door knob (DOOR_KNOBS) for a door, given the door's world box: on the face away from the cabin's middle (x -1.7),
+// so +x for the bow door and -x for the stern door, 8 cm in from the door's starboard edge, at knob height above the
+// deck the door stands on.
+function doorKnob(door) {
+    const out = outwards(door);
+    const g = new THREE.LatheGeometry(DOOR_KNOBS.profile.map(([r, depth]) => new THREE.Vector2(r, depth)), 32);
+    const uv = g.attributes.uv, [u0, v0, size] = DOOR_KNOBS.uv;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + size * uv.getX(i), v0 + size * uv.getY(i));
+    return g.rotateZ(-out * Math.PI / 2).translate(out > 0 ? door.max.x : door.min.x, door.min.y + DOOR_KNOBS.height, door.max.z - DOOR_KNOBS.fromEdge);
+}
+
+// A part of a door (DOORS_INSIDE), in world space, mirrored through the middle of the door's wall onto its inside. The
+// mirror turns the triangles inside out, so two corners of each are swapped back.
+function insideCopy(g, door) {
+    const middle = (outwards(door) > 0 ? door.min.x : door.max.x) - outwards(door) * DOORS_INSIDE.wall / 2;
+    g.applyMatrix4(new THREE.Matrix4().makeScale(-1, 1, 1).setPosition(2 * middle, 0, 0));
+    const index = g.index.array;
+    for (let i = 0; i < index.length; i += 3) [index[i + 1], index[i + 2]] = [index[i + 2], index[i + 1]];
+    return g;
+}
+
+// Stretches a world-space geometry along x, about its own centre, to the length of another box (see BOW_CLEATS).
+function stretchAlongX(g, to) {
+    g.computeBoundingBox();
+    const b = g.boundingBox, centre = (b.min.x + b.max.x) / 2, scale = (to.max.x - to.min.x) / (b.max.x - b.min.x);
+    const pos = g.attributes.position;
+    for (let i = 0; i < pos.count; i++) pos.setX(i, centre + (pos.getX(i) - centre) * scale);
+    pos.needsUpdate = true;
+    g.computeBoundingBox();
+}
+
+// A mooring rope from a cleat's neck to a pile, in world space (see MOORING). Both ends are tucked out of sight, one
+// in the neck and one in the pile.
+function mooringRope(neck, pile) {
+    const r = MOORING.radius;
+    const c = neck.getCenter(new THREE.Vector3()), p = pile.getCenter(new THREE.Vector3());
+    const heading = Math.atan2(p.z - c.z, p.x - c.x);            // from the cleat towards the pile, in the x-z plane
+    // The turns run with the angle falling, so the rope leaves the cleat on its outboard side, over the gunwale's outer
+    // edge: leaving on the deck side, the slack span ran along the gunwale and sank 4 cm into it.
+    const side = heading + Math.PI / 2;
+    const at = (centre, radius, angle, y) => new THREE.Vector3(centre.x + radius * Math.cos(angle), y, centre.z + radius * Math.sin(angle));
+    // most of a turn round the neck, squeezed between the base and the horns
+    const ring = Math.max(neck.max.x - neck.min.x, neck.max.z - neck.min.z) / 2 + r, ringY = neck.min.y + 0.01;
+    const points = [new THREE.Vector3(c.x, ringY, c.z)];
+    for (let i = 0; i <= 16; i++) points.push(at(c, ring, side + 1.6 * Math.PI * (1 - i / 16), ringY));
+    // the slack span, leaving the turn and reaching the pile along the same heading
+    const loop = (pile.max.x - pile.min.x) / 2 + r, loopY = pile.max.y - MOORING.pileDrop;
+    const from = points[points.length - 1], to = at(p, loop, side, loopY);
+    const span = Math.hypot(to.x - from.x, to.z - from.z);
+    for (let i = 1; i < 24; i++) {
+        const t = i / 24;
+        points.push(new THREE.Vector3(from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t - MOORING.sag * span * 4 * t * (1 - t),
+            from.z + (to.z - from.z) * t));
+    }
+    // a round turn and a little more on the pile, dropping a rope's width, then the end goes into the pile
+    for (let i = 0; i <= 24; i++) points.push(at(p, loop, side - (2 * Math.PI + 0.5) * i / 24, loopY - 2.2 * r * i / 24));
+    points.push(at(p, loop - 2 * r, side - 2 * Math.PI - 0.7, loopY - 2.2 * r));
+    const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal');
+    const length = curve.getLength();
+    const g = new THREE.TubeGeometry(curve, Math.ceil(length / 0.015), r, MOORING.sides, false);
+    const uv = g.attributes.uv;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * length * MOORING.repeatsPerMetre, uv.getY(i) * 2 * Math.PI * r * MOORING.repeatsPerMetre);
+    return g;
+}
+
+// Trees within SCENERY.farTreeFrom metres of the eye use the full copy, the rest the lighter one.
+function sortTrees(trees) {
+    for (const t of trees) {
+        let n = 0, f = 0;
+        t.centres.forEach((c, i) => {
+            if (c.distanceTo(camera.position) < SCENERY.farTreeFrom) t.near.setMatrixAt(n++, t.matrices[i]);
+            else t.far.setMatrixAt(f++, t.matrices[i]);
+        });
+        t.near.count = n; t.far.count = f;
+        if (t.near.userData.standIn) t.near.userData.standIn.count = n;
+        if (t.far.userData.standIn) t.far.userData.standIn.count = f;
+        t.near.instanceMatrix.needsUpdate = t.far.instanceMatrix.needsUpdate = true;
+    }
+}
+
+async function loadSky() {
+    const bytes = dataUrlBytes(await readPackageFile(PACKAGE.sky));
+    const hdr = new RGBELoader().setDataType(THREE.HalfFloatType).parse(bytes.buffer);
+    const sky = new THREE.DataTexture(hdr.data, hdr.width, hdr.height, THREE.RGBAFormat, THREE.HalfFloatType);
+    sky.colorSpace = THREE.LinearSRGBColorSpace;
+    sky.mapping = THREE.EquirectangularReflectionMapping;
+    sky.minFilter = sky.magFilter = THREE.LinearFilter;
+    sky.generateMipmaps = false;
+    sky.flipY = true;
+    sky.needsUpdate = true;
+    scene.background = sky;
+    scene.backgroundIntensity = DAYLIGHT.skyStrength;
+    // the light the materials see: the sky clipped at the sun threshold, over the lake
+    const world = lightingWorld(sky, DAYLIGHT.reflectLake);
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromEquirectangular(world.texture).texture;
+    scene.environmentIntensity = DAYLIGHT.skyStrength;
+    pmrem.dispose(); world.dispose();
+    if (DAYLIGHT.shDiffuse) {
+        const probe = new THREE.LightProbe();
+        skyHarmonics(hdr.data, hdr.width, hdr.height).forEach((c, i) => probe.sh.coefficients[i].copy(c));
+        probe.layers.enableAll();
+        scene.add(probe);
+        water.uniforms.uSkyUp.value.copy(probe.sh.coefficients[0]).multiplyScalar(0.886227).addScaledVector(probe.sh.coefficients[1], 1.023328);
+    }
+}
+
+// The sky the reflections see: clipped at the sun threshold; below the horizon, lakeShare of the HDRI's lower half is
+// replaced by the lake (the sky above mirrored with Schlick's Fresnel for the water's F0 0.04, over its dark colour).
+function lightingWorld(sky, lakeShare) {
+    const target = new THREE.WebGLRenderTarget(1024, 512, { type: THREE.HalfFloatType, colorSpace: THREE.LinearSRGBColorSpace, depthBuffer: false });
+    const pass = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+        uniforms: { tSky: { value: sky }, uCap: { value: DAYLIGHT.sunThreshold }, uLake: { value: lakeShare }, uWater: { value: new THREE.Vector3(...DAYLIGHT.waterGlow) } },
+        vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+        fragmentShader: `uniform sampler2D tSky; uniform float uCap; uniform float uLake; uniform vec3 uWater; varying vec2 vUv;
+            void main() {
+                vec3 c = min(texture2D(tSky, vUv).rgb, vec3(uCap));
+                if (vUv.y < 0.5) {
+                    float f = 0.04 + 0.96 * pow(1.0 - sin((0.5 - vUv.y) * 3.14159265), 5.0);
+                    vec3 lake = f * min(texture2D(tSky, vec2(vUv.x, 1.0 - vUv.y)).rgb, vec3(uCap)) + (1.0 - f) * uWater;
+                    c = mix(c, lake, uLake);
+                }
+                gl_FragColor = vec4(c, 1.0);
+            }`,
+        depthTest: false, depthWrite: false
+    }));
+    pass.frustumCulled = false;
+    const stage = new THREE.Scene(); stage.add(pass);
+    renderer.setRenderTarget(target);
+    renderer.render(stage, new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1));
+    renderer.setRenderTarget(null);
+    pass.geometry.dispose(); pass.material.dispose();
+    return target;
+}
+// First-order spherical harmonics of the diffuse sky light (three.js order: constant, y, z, x), every 4th texel.
+function skyHarmonics(half, w, h) {
+    const read = THREE.DataUtils.fromHalfFloat, cap = DAYLIGHT.sunThreshold, step = 4;
+    const sums = [0, 1, 2, 3].map(() => new THREE.Vector3());
+    const texel = (x, y) => { const i = (y * w + x) * 4; return [0, 1, 2].map(k => Math.min(read(half[i + k]), cap)); };
+    for (let y = step / 2; y < h; y += step) {
+        const lat = (0.5 - (y + 0.5) / h) * Math.PI, cosLat = Math.cos(lat), sinLat = Math.sin(lat);
+        const solid = (2 * Math.PI / w) * (Math.PI / h) * step * step * cosLat * DAYLIGHT.skyStrength;
+        for (let x = step / 2; x < w; x += step) {
+            const lon = ((x + 0.5) / w - 0.5) * 2 * Math.PI;
+            const dir = [cosLat * Math.cos(lon), sinLat, cosLat * Math.sin(lon)];
+            const L = DAYLIGHT.groundOccluded && lat < 0 ? DAYLIGHT.waterGlow : texel(x, y);
+            const basis = [0.282095, 0.488603 * dir[1], 0.488603 * dir[2], 0.488603 * dir[0]];
+            basis.forEach((b, i) => sums[i].add(new THREE.Vector3(L[0], L[1], L[2]).multiplyScalar(b * solid)));
+        }
+    }
+    return sums;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Start-up.
+// ---------------------------------------------------------------------------------------------------------
+let scenery = { trees: [] };
+let ready = false;
+async function start() {
+    const sizes = new Map();      // a map shared with a boat material keeps its full size
+    for (const f of Object.values(FINISHES)) for (const rel of [f.map, f.roughnessMap, f.metalnessMap, f.normalMap, f.alphaMap]) {
+        if (rel) sizes.set(rel, sizes.has(rel) && !sizes.get(rel) ? 0 : (f.propSize || 0));
+    }
+    const total = sizes.size + 2;
+    let done = 0;
+    const tick = () => progress(++done, total);
+    const picturesReady = Promise.all([...sizes].map(([rel, size]) => readPicture(rel, size).then(bmp => { pictureCache.set(rel, bmp); tick(); })));
+    const skyReady = loadSky().then(tick);
+    const draco = new DRACOLoader().setDecoderPath(PACKAGE.dracoPath);
+    const loader = new GLTFLoader().setDRACOLoader(draco);
+    const modelBytes = dataUrlBytes(await readPackageFile(PACKAGE.model));
+    const gltf = await loader.parseAsync(modelBytes.buffer, '');
+    tick();
+    await Promise.all([picturesReady, skyReady]);
+    scenery = await buildScene(gltf);
+    draco.dispose();
+    sortTrees(scenery.trees);
+    resize();
+    updateLampUniforms();
+    renderer.setRenderTarget(sceneFrame);
+    await renderer.compileAsync(scene, camera, scene);
+    renderer.setRenderTarget(null);
+    renderer.shadowMap.needsUpdate = true;
+    ready = true;
+    document.documentElement.dataset.ready = 'true';
+    loadingEl.classList.add('done');
+    setTimeout(() => loadingEl.remove(), 900);
+}
+
+function resize() {
+    const w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w, h);
+    const pr = renderer.getPixelRatio();
+    sceneFrame.setSize(Math.round(w * pr), Math.round(h * pr));
+    linearFrame.setSize(Math.round(w * pr), Math.round(h * pr));
+    water.resize(w, h, pr);
+    const before = camera.aspect;
+    camera.aspect = w / h;
+    // keep the visitor's own angle and zoom; only the opening distance rule follows the new shape
+    const d = camera.position.distanceTo(controls.target);
+    const want = framingDistance(camera.aspect), had = framingDistance(before);
+    camera.position.sub(controls.target).setLength(THREE.MathUtils.clamp(d * want / had, controls.minDistance, controls.maxDistance)).add(controls.target);
+    controls.minDistance = Math.min(VIEW.minDistance, want);
+    controls.maxDistance = Math.max(VIEW.maxDistance, want);
+    camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+
+const clock = new THREE.Clock();
+let waterTime = 0;
+function frame() {
+    requestAnimationFrame(frame);
+    const dt = Math.min(clock.getDelta(), 0.05);
+    controls.update();
+    if (!ready) return;
+    waterTime += dt;
+    drawFrame();
+}
+// One frame, in order: near or far copies of the trees by distance, the mirrored view the water reflects, the lantern
+// light for this eye, the solid scene, the water over it, the leaves and glass on top, the leaves' depth, the blend
+// with the last frame, then the AgX look to the screen.
+function drawFrame() {
+    sortTrees(scenery.trees);
+    camera.updateMatrixWorld();
+    water.drawMirror();
+    updateLampUniforms();
+    renderer.setRenderTarget(sceneFrame);
+    renderer.render(scene, camera);
+    water.render(sceneFrame, linearFrame, waterTime);
+    drawSeeThrough();
+    drawLeafDepth();
+    finishPass.render(temporal.render(linearFrame, sceneFrame.depthTexture, water.uniforms));
+}
+
+// Leaves and glass, last and over the water: linearFrame holds the picture with the water laid in and the solid
+// scene's depth (written by the water pass), so they blend over the water and hide behind solid things.
+const seeThroughEye = new THREE.PerspectiveCamera();
+function drawSeeThrough() {
+    seeThroughEye.copy(camera);
+    seeThroughEye.layers.set(LAYER.seeThrough);
+    const sky = scene.background, autoClear = renderer.autoClear;
+    scene.background = null; renderer.autoClear = false;
+    renderer.setRenderTarget(linearFrame);
+    renderer.render(scene, seeThroughEye);
+    renderer.autoClear = autoClear; scene.background = sky;
+}
+
+// The leaves' depth, for the blend with the last frame alone. The see-through leaves write none, so a leaf's pixel had
+// the depth of whatever lay behind it and was looked up a frame ago where that had been: a potted plant on the terrace
+// faded while the view turned. After the colour is done, the leaves' stand-ins (cut at alpha 0.5) write their depth,
+// with a plain material that writes no colour.
+const leafDepthEye = new THREE.PerspectiveCamera();
+const depthOnly = new Map();
+function drawLeafDepth() {
+    leafDepthEye.copy(camera);
+    leafDepthEye.layers.set(LAYER.leafStandIns);
+    const shaded = leafStandIns.map(m => m.material);
+    leafStandIns.forEach((m, i) => {
+        const full = shaded[i];
+        if (!depthOnly.has(full)) depthOnly.set(full, new THREE.MeshBasicMaterial({ map: full.map, alphaMap: full.alphaMap,
+            alphaTest: full.alphaTest, side: full.side, colorWrite: false }));
+        m.material = depthOnly.get(full);
+    });
+    const sky = scene.background, autoClear = renderer.autoClear;
+    scene.background = null; renderer.autoClear = false;
+    renderer.setRenderTarget(linearFrame);
+    renderer.render(scene, leafDepthEye);
+    renderer.autoClear = autoClear; scene.background = sky;
+    leafStandIns.forEach((m, i) => { m.material = shaded[i]; });
+}
+
+start().then(frame).catch(error => {
+    console.error(error);
+    loadingEl.querySelector('p').textContent = 'The 3D tour could not load.';
+    toast('Sorry, the 3D tour could not be loaded: ' + error.message);
+});
+</script>
+</body>
+</html>

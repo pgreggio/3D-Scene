@@ -1,0 +1,17 @@
+{
+  "name": "evening-board-3d",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "jest"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ]
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

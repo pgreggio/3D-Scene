@@ -1,0 +1,5 @@
+# Source exports and the generator: only needed to rebuild, not to view the page.
+exported_tasks_*.jsonl
+build_scenes.py
+
+.DS_Store

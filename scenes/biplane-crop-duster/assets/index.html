@@ -1,0 +1,2460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biplane Crop Duster — Interactive 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --card: #f0eadf;
+        --border: #d9d1c1;
+        --ink: #1d2833;
+        --label: #837f75;
+        --blue: #2b5db2;
+        --orange: #e9631b;
+        --off: #9a968c;
+        --mono: 'IBM Plex Mono', Consolas, monospace;
+        --cond: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #87b5e0; font-family: var(--mono); color: var(--ink); }
+    #app { position: fixed; inset: 0; }
+    canvas { display: block; }
+
+    .card {
+        position: fixed;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        box-shadow: 0 6px 20px rgba(20, 30, 40, 0.28);
+        z-index: 10;
+    }
+
+    #brandCard { top: 18px; left: 18px; padding: 13px 16px 14px; }
+    #brandCard .biplane-svg { display: block; }
+    #brandCard .brand-label {
+        margin-top: 7px;
+        font-size: 9.5px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--label);
+    }
+    #brandCard .brand-title {
+        margin-top: 2px;
+        font-family: var(--cond);
+        font-weight: 700;
+        font-size: 31px;
+        line-height: 1;
+        color: var(--blue);
+    }
+
+    #camCard { top: 18px; right: 18px; padding: 12px; text-align: right; }
+    .cam-buttons { display: flex; gap: 8px; justify-content: flex-end; }
+    .cam-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-family: var(--mono); font-size: 12px; text-transform: uppercase;
+        color: var(--ink); background: #fff6;
+        border: 1px solid var(--border); border-radius: 6px;
+        padding: 7px 10px; cursor: pointer; line-height: 1;
+    }
+    .cam-btn:hover { background: #e7dfd0; }
+    .cam-btn svg { display: block; }
+    #camSelect { display: none; }
+    .hint-line { margin-top: 10px; font-size: 11.5px; color: #000; white-space: nowrap; }
+    .hint-line + .hint-line { margin-top: 3px; }
+
+    #panel {
+        bottom: 18px; left: 50%; transform: translateX(-50%);
+        width: min(1180px, 100vw - 24px);
+        display: flex; align-items: stretch;
+    }
+    .panel-left { width: 212px; padding: 14px 16px; border-right: 1px solid var(--border); flex-shrink: 0; }
+    .panel-mid { flex: 1; padding: 14px 18px; border-right: 1px solid var(--border); display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px 18px; align-content: start; }
+    .panel-right { width: 262px; padding: 14px 16px; flex-shrink: 0; }
+
+    .panel-label { font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--label); margin-bottom: 10px; }
+
+    .switch-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .switch {
+        width: 66px; height: 32px; border-radius: 16px; position: relative; cursor: pointer;
+        background: var(--off); transition: background 0.2s; flex-shrink: 0;
+    }
+    .switch .knob {
+        position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%;
+        background: #fff; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+    .switch.on { background: var(--orange); }
+    .switch.on .knob { transform: translateX(34px); }
+    .switch-word { font-family: var(--cond); font-weight: 700; font-size: 27px; line-height: 1; }
+    .status-line { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .status-dot.on { background: var(--orange); box-shadow: 0 0 0 2px rgba(233, 99, 27, 0.25); }
+    .status-dot.off { background: var(--off); }
+
+    .readout { display: flex; flex-direction: column; }
+    .ro-label { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--label); }
+    .ro-value { font-size: 26px; font-weight: 500; color: var(--ink); line-height: 1.1; white-space: nowrap; }
+    .ro-unit { font-size: 11px; color: var(--label); margin-left: 5px; font-weight: 400; }
+    .hop-bar { height: 4px; border-radius: 2px; background: #e2d9c6; margin-top: 6px; overflow: hidden; }
+    .hop-fill { height: 100%; background: var(--blue); border-radius: 2px; }
+
+    .boom-svg { display: block; margin-top: 4px; }
+
+    @media (max-width: 999px) {
+        #panel { flex-wrap: wrap; max-height: calc(100vh - 90px); overflow-y: auto; }
+        .panel-left { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+        .panel-mid { width: 100%; border-right: none; border-bottom: 1px solid var(--border); grid-template-columns: repeat(3, 1fr); }
+        .panel-right { width: 100%; }
+    }
+
+    @media (max-width: 767px) {
+        #brandCard { top: 10px; left: 10px; padding: 8px 10px; max-width: 46vw; }
+        #brandCard .biplane-svg { display: none; }
+        #brandCard .brand-label { font-size: 8px; letter-spacing: 0.1em; margin-top: 4px; line-height: 1.3; }
+        #brandCard .brand-title { font-size: 20px; }
+        #camCard { top: 10px; right: 10px; padding: 8px 10px; max-width: 46vw; }
+        #camCard .cam-buttons { display: none; }
+        #camSelect {
+            display: block; width: 100%;
+            font-family: var(--mono); font-size: 11px; text-transform: uppercase;
+            color: var(--ink); background: #fff; border: 1px solid var(--border);
+            border-radius: 6px; padding: 7px 8px;
+        }
+        .hint-line { display: none; }
+        #panel {
+            bottom: 8px; left: 8px; right: 8px; transform: none; width: auto;
+            max-height: 56vh; overflow-y: auto;
+            flex-wrap: wrap;
+        }
+        .panel-left {
+            width: 100%; border-right: none; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+        }
+        .panel-left .panel-label { margin-bottom: 0; flex-shrink: 0; }
+        .switch-row { margin-bottom: 0; }
+        .switch { width: 46px; height: 24px; }
+        .switch .knob { width: 18px; height: 18px; top: 2px; left: 2px; }
+        .switch.on .knob { transform: translateX(22px); }
+        .switch-word { font-size: 18px; }
+        .status-line { font-size: 10px; }
+        .panel-mid {
+            width: 100%; border-right: none; border-bottom: 1px solid var(--border);
+            grid-template-columns: repeat(2, 1fr); gap: 6px 10px; padding: 8px 10px;
+        }
+        .ro-label { font-size: 8px; letter-spacing: 0.08em; }
+        .ro-value { font-size: 14px; }
+        .ro-unit { font-size: 9px; margin-left: 3px; }
+        .hop-bar { margin-top: 3px; }
+        .panel-right { display: none; }
+    }
+
+    @media (max-width: 767px) and (orientation: landscape) {
+        #panel { max-height: 72vh; }
+        .panel-mid { grid-template-columns: repeat(3, 1fr); }
+        .panel-left { flex-wrap: wrap; gap: 6px 10px; }
+    }
+    #loader {
+        position: fixed; inset: 0; z-index: 9999;
+        background: #0f1620;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--mono);
+        transition: opacity 0.6s ease;
+    }
+    #loader.hidden { opacity: 0; pointer-events: none; }
+    .loader-box { width: 320px; }
+    .loader-label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--label); margin-bottom: 12px; }
+    .loader-bar { height: 6px; background: #2a3440; border-radius: 3px; overflow: hidden; }
+    .loader-fill { height: 100%; width: 0%; background: var(--orange); border-radius: 3px; transition: width 0.3s ease; }
+    .loader-pct { margin-top: 8px; font-size: 11px; color: var(--off); }
+
+</style>
+</head>
+<body>
+<div id="loader">
+    <div class="loader-box">
+        <div class="loader-label">Loading Scene</div>
+        <div class="loader-bar"><div class="loader-fill" id="loaderFill"></div></div>
+        <div class="loader-pct" id="loaderPct">0%</div>
+    </div>
+</div>
+<div id="app"></div>
+
+<div id="brandCard" class="card">
+    <svg class="biplane-svg" width="140" height="42" viewBox="0 0 140 42" fill="none" stroke="#2b5db2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M30 25 H110"/>
+        <path d="M26 11 H114"/>
+        <path d="M44 11 L50 25 M86 11 L80 25 M62 11 L62 25 M68 11 L68 25"/>
+        <path d="M14 18 L104 18 Q118 18 124 25 Q118 32 104 32 L30 32 Q20 32 14 27 Z"/>
+        <path d="M14 13 L4 9 M14 19 L4 15"/>
+        <circle cx="124" cy="25" r="6"/>
+        <path d="M130 25 L138 19 M130 25 L138 31"/>
+        <path d="M52 32 L52 37 M76 32 L76 37"/>
+        <circle cx="52" cy="39" r="3"/>
+        <circle cx="76" cy="39" r="3"/>
+    </svg>
+    <div class="brand-label">AG-1 CROP DUSTER · GROUND SPRAY RUN</div>
+    <div class="brand-title">BLUEJACKET</div>
+</div>
+
+<div id="camCard" class="card">
+    <div class="cam-buttons">
+        <button class="cam-btn" id="btnHero">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 1 L11 5.5 H9.5 V11 H2.5 V5.5 H1 Z"/>
+            </svg>
+            HERO
+        </button>
+        <button class="cam-btn" id="btnNozzles">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 1 C4 4 2.5 6 2.5 8 A3.5 3.5 0 0 0 9.5 8 C9.5 6 8 4 6 1 Z"/>
+            </svg>
+            NOZZLES
+        </button>
+        <button class="cam-btn" id="btnOrbit">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6.5 1.5 A5 5 0 1 1 2 3.5"/>
+                <path d="M2 0.5 L2 3.5 L5 3.5"/>
+            </svg>
+            ORBIT
+        </button>
+    </div>
+    <select id="camSelect">
+        <option value="">Camera</option>
+        <option value="HERO">Hero</option>
+        <option value="NOZZLES">Nozzles</option>
+        <option value="ORBIT">Orbit</option>
+    </select>
+    <div class="hint-line">Drag to orbit · Scroll to zoom · Right-drag to pan</div>
+    <div class="hint-line">S toggles the spray system</div>
+</div>
+
+<div id="panel" class="card">
+    <div class="panel-left">
+        <div class="panel-label">SPRAY SYSTEM</div>
+        <div class="switch-row">
+            <div class="switch on" id="spraySwitch"><div class="knob"></div></div>
+            <div class="switch-word" id="switchWord">ON</div>
+        </div>
+        <div class="status-line"><span class="status-dot on" id="statusDot"></span><span id="statusText">Spraying</span></div>
+    </div>
+    <div class="panel-mid">
+        <div class="readout">
+            <div class="ro-label">FLOW</div>
+            <div class="ro-value"><span id="roFlow">142</span><span class="ro-unit">L/min</span></div>
+        </div>
+        <div class="readout">
+            <div class="ro-label">BOOM PRESSURE</div>
+            <div class="ro-value"><span id="roPressure">2.80</span><span class="ro-unit">bar</span></div>
+        </div>
+        <div class="readout">
+            <div class="ro-label">NOZZLES OPEN</div>
+            <div class="ro-value"><span id="roOpen">26/26</span></div>
+        </div>
+        <div class="readout">
+            <div class="ro-label">APERTURE</div>
+            <div class="ro-value"><span id="roAperture">100</span><span class="ro-unit">%</span></div>
+        </div>
+        <div class="readout">
+            <div class="ro-label">ENGINE</div>
+            <div class="ro-value"><span id="roEngine">1851</span><span class="ro-unit">rpm</span></div>
+        </div>
+        <div class="readout">
+            <div class="ro-label">HOPPER</div>
+            <div class="ro-value"><span id="roHopper">74.0</span><span class="ro-unit">%</span></div>
+            <div class="hop-bar"><div class="hop-fill" id="hopFill" style="width:74%"></div></div>
+        </div>
+    </div>
+    <div class="panel-right">
+        <div class="panel-label">BOOM · 26 NOZZLES</div>
+        <svg id="boomSvg" class="boom-svg" width="236" height="56" viewBox="0 0 236 56">
+            <rect x="8" y="20" width="220" height="9" rx="4.5" fill="#b9b2a2"/>
+            <rect x="110" y="4" width="16" height="4" rx="2" fill="#2b5db2"/>
+            <rect x="115.5" y="8" width="5" height="40" rx="2.5" fill="#2b5db2"/>
+            <rect x="110" y="48" width="16" height="4" rx="2" fill="#2b5db2"/>
+        </svg>
+    </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/fflate.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/EXRLoader.js"></script>
+<script src="assets/meshy/meshy_Meshy_AI_Blue_Biplane_1001000228_texture.glb.js"></script>
+<script src="assets/hdri/hdri_farm_field_4k.exr.js"></script>
+<script src="assets/models/polyhaven/Barrel_01/models_polyhaven_Barrel_01_Barrel_01_2k.gltf.js"></script>
+<script src="assets/models/polyhaven/grass_medium_01/models_polyhaven_grass_medium_01_grass_medium_01_2k.gltf.js"></script>
+<script src="assets/models/polyhaven/grass_medium_01/textures/models_polyhaven_grass_medium_01_textures_grass_medium_01_alpha_2k.png.js"></script>
+<script src="assets/textures/polyhaven/leafy_grass/textures_polyhaven_leafy_grass_leafy_grass_diff_2k.jpg.js"></script>
+<script src="assets/textures/polyhaven/leafy_grass/textures_polyhaven_leafy_grass_leafy_grass_nor_gl_2k.jpg.js"></script>
+<script src="assets/textures/polyhaven/leafy_grass/textures_polyhaven_leafy_grass_leafy_grass_rough_2k.jpg.js"></script>
+<script src="assets/textures/polyhaven/muddy_tracks/textures_polyhaven_muddy_tracks_muddy_tracks_diff_2k.jpg.js"></script>
+<script src="assets/textures/polyhaven/muddy_tracks/textures_polyhaven_muddy_tracks_muddy_tracks_rough_2k.jpg.js"></script>
+<script src="assets/textures/polyhaven/muddy_tracks/textures_polyhaven_muddy_tracks_muddy_tracks_nor_gl_2k.jpg.js"></script>
+<script src="assets/textures/polyhaven/farm_furrows/textures_polyhaven_farm_furrows_farm_furrows_diff_2k.jpg.js"></script>
+<script src="assets/textures/polyhaven/farm_furrows/textures_polyhaven_farm_furrows_farm_furrows_rough_2k.jpg.js"></script>
+<script src="assets/textures/polyhaven/farm_furrows/textures_polyhaven_farm_furrows_farm_furrows_nor_gl_2k.jpg.js"></script>
+<script src="assets/textures/polyhaven/dry_ground_01/textures_polyhaven_dry_ground_01_dry_ground_01_diff_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/industrial_pastic_container/textures/models_polyhaven_industrial_pastic_container_textures_industrial_pastic_container_diff_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/industrial_pastic_container/textures/models_polyhaven_industrial_pastic_container_textures_industrial_pastic_container_nor_gl_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/industrial_pastic_container/textures/models_polyhaven_industrial_pastic_container_textures_industrial_pastic_container_arm_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/Barrel_01/textures/models_polyhaven_Barrel_01_textures_Barrel_01_explosive_diff_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/Barrel_01/textures/models_polyhaven_Barrel_01_textures_Barrel_01_explosive_nor_gl_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/Barrel_01/textures/models_polyhaven_Barrel_01_textures_Barrel_01_explosive_arm_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/barrel_03/textures/models_polyhaven_barrel_03_textures_barrel_03_diff_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/barrel_03/textures/models_polyhaven_barrel_03_textures_barrel_03_nor_gl_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/barrel_03/textures/models_polyhaven_barrel_03_textures_barrel_03_arm_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/metal_jerrycan/textures/models_polyhaven_metal_jerrycan_textures_metal_jerrycan_diff_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/metal_jerrycan/textures/models_polyhaven_metal_jerrycan_textures_metal_jerrycan_nor_gl_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/metal_jerrycan/textures/models_polyhaven_metal_jerrycan_textures_metal_jerrycan_arm_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/old_tyre/textures/models_polyhaven_old_tyre_textures_old_tyre_diff_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/old_tyre/textures/models_polyhaven_old_tyre_textures_old_tyre_nor_gl_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/old_tyre/textures/models_polyhaven_old_tyre_textures_old_tyre_arm_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/wooden_crate_01/textures/models_polyhaven_wooden_crate_01_textures_wooden_crate_01_diff_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/wooden_crate_01/textures/models_polyhaven_wooden_crate_01_textures_wooden_crate_01_nor_gl_2k.jpg.js"></script>
+<script src="assets/models/polyhaven/wooden_crate_01/textures/models_polyhaven_wooden_crate_01_textures_wooden_crate_01_arm_2k.jpg.js"></script>
+<script>
+/*
+ * Asset resolver.
+ *
+ * Every converted asset is registered on window as a base64 data URI:
+ *   window.__ASSET__<assetname> = "data:<mime>;base64,...."
+ * (files named <assetname>.<filetype>.js inside assets/).
+ *
+ * resolveAsset(name, THREE) inspects the data URI's MIME type and returns a
+ * Promise resolving to the matching THREE.js object:
+ *   - jpeg / png / webp   -> THREE.Texture
+ *   - gltf / glb          -> GLTFLoader result (has .scene, .animations, ...)
+ *   - exr                 -> EXRLoader result (THREE.DataTexture)
+ *   - bin / anything else -> the raw data URI string
+ *
+ * Data URIs are exempt from CORS, so this works when index.html is opened
+ * directly from disk (file://).
+ */
+window.resolveAsset = function resolveAsset(name, THREE) {
+    function mimeOf(uri) {
+        var m = /^data:([^;,]+)/.exec(uri || '');
+        return m ? m[1].toLowerCase() : '';
+    }
+    function wrap(loader, uri) {
+        return new Promise(function (resolve, reject) {
+            loader.load(uri, resolve, undefined, reject);
+        });
+    }
+    var uri = window['__ASSET__' + name];
+    if (!uri) return Promise.reject(new Error('Unknown asset: ' + name));
+    switch (mimeOf(uri)) {
+        case 'image/jpeg':
+        case 'image/png':
+        case 'image/webp':
+            return wrap(new THREE.TextureLoader(), uri);
+        case 'model/gltf-binary':
+        case 'model/gltf+json':
+            return wrap(new THREE.GLTFLoader(), uri);
+        case 'image/x-exr':
+        case 'image/vnd.radiance':
+        case 'image/hdr':
+            if (THREE.EXRLoader) return wrap(new THREE.EXRLoader(), uri);
+            if (THREE.RGBELoader) return wrap(new THREE.RGBELoader(), uri);
+            return Promise.resolve(uri);
+        default:
+            return Promise.resolve(uri);
+    }
+};
+</script>
+<script>
+(function () {
+    var container = document.getElementById('app');
+    var loaderEl = document.getElementById('loader');
+    var loaderFill = document.getElementById('loaderFill');
+    var loaderPct = document.getElementById('loaderPct');
+    var loadProg = 0;
+    var loadTimer = setInterval(function () {
+        loadProg += (85 - loadProg) * 0.02 + 0.1;
+        if (loadProg > 85) loadProg = 85;
+        loaderFill.style.width = loadProg + '%';
+        loaderPct.textContent = Math.round(loadProg) + '%';
+    }, 100);
+    function hideLoader() {
+        clearInterval(loadTimer);
+        loaderFill.style.width = '100%';
+        loaderPct.textContent = '100%';
+        setTimeout(function () {
+            loaderEl.classList.add('hidden');
+            setTimeout(function () { if (loaderEl.parentNode) loaderEl.parentNode.removeChild(loaderEl); }, 700);
+        }, 350);
+    }
+    var renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.55;
+    container.appendChild(renderer.domElement);
+
+    var HAZE_HEX = 0xc3d2e2;
+    THREE.ShaderChunk.fog_fragment = THREE.ShaderChunk.fog_fragment.replace(
+        'smoothstep( fogNear, fogFar, fogDepth );',
+        '1.0 - exp( -pow( fogDepth * 0.0005, 1.55 ) );'
+    );
+
+    var scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(HAZE_HEX, 140, 450);
+
+    var camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.1, 4000);
+    camera.position.set(9.1, 2.8, -9.5);
+
+    var controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.target.set(-0.19, 1.1, -0.19);
+    if (window.location.search.indexOf('nozzles') !== -1) {
+        camera.position.set(3.3, 0.72, -3.2);
+        controls.target.set(0.1, 0.65, -1.9);
+    }
+    window.__CAMERA = camera;
+    window.__CONTROLS = controls;
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.minDistance = 6;
+    controls.maxDistance = 45;
+    controls.maxPolarAngle = Math.PI * 0.495;
+
+    var cameraColliders = [];
+    var cameraRay = new THREE.Raycaster();
+    var cameraDir = new THREE.Vector3();
+
+    var cropMinX = Infinity, cropMaxX = -Infinity, cropMinZ = Infinity, cropMaxZ = -Infinity;
+    var clampCameraPlaceholder = null;
+
+    var sun = new THREE.DirectionalLight(0xfff3e0, 1.8);
+    sun.position.set(5, 18, -20);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -18; sun.shadow.camera.right = 18;
+    sun.shadow.camera.top = 18; sun.shadow.camera.bottom = -18;
+    sun.shadow.camera.far = 60;
+    sun.shadow.bias = 0;
+    scene.add(sun);
+    scene.add(new THREE.HemisphereLight(0xbdd7f5, 0x3d5a2e, 0.3));
+    var fill = new THREE.DirectionalLight(0xcfe0ff, 0.25);
+    fill.position.set(-10, 6, -8);
+    scene.add(fill);
+
+    var plane = new THREE.Group();
+    scene.add(plane);
+    var nodes = {};
+    var assetsLoaded = false;
+    var spray = { on: true, amount: 0, fans: [], flaps: [], noz: [], fanMat: null, emitAcc: 0 };
+    var coneMat = null;
+    var sprayCones = [];
+
+    function mulberry32(seed) {
+        return function () {
+            seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+            var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+            t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+            return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        };
+    }
+
+    var MAXP = 5000;
+    var mistPos = new Float32Array(MAXP * 3);
+    var mistVel = new Float32Array(MAXP * 3);
+    var mistLife = new Float32Array(MAXP);
+    var mistAge = new Float32Array(MAXP);
+    var mistSeed = new Float32Array(MAXP);
+    var mistSize = new Float32Array(MAXP);
+    var mistAlpha = new Float32Array(MAXP);
+    var mistCursor = 0;
+    for (var mp = 0; mp < MAXP; mp++) {
+        mistLife[mp] = 0;
+        mistPos[mp * 3 + 1] = -10000;
+        mistSeed[mp] = Math.random();
+    }
+
+    var DMAX = 9000;
+    var dPos = new Float32Array(DMAX * 3);
+    var dVel = new Float32Array(DMAX * 3);
+    var dAge = new Float32Array(DMAX);
+    var dLife = new Float32Array(DMAX);
+    var dFine = new Float32Array(DMAX);
+    var dSize = new Float32Array(DMAX);
+    var dAlpha = new Float32Array(DMAX);
+    var dropCursor = 0;
+    var dropAcc = 0;
+    var mistAcc = 0;
+    var sprayClock = 0;
+    for (var dp = 0; dp < DMAX; dp++) {
+        dLife[dp] = 0;
+        dPos[dp * 3 + 1] = -10000;
+    }
+
+    var mistGeo = new THREE.BufferGeometry();
+    mistGeo.setAttribute('position', new THREE.BufferAttribute(mistPos, 3));
+    mistGeo.setAttribute('aSize', new THREE.BufferAttribute(mistSize, 1));
+    mistGeo.setAttribute('aAlpha', new THREE.BufferAttribute(mistAlpha, 1));
+    mistGeo.setAttribute('aSeed', new THREE.BufferAttribute(mistSeed, 1));
+    /* Mist = soft noisy billboards. Each puff has its own noise offset so the plume reads as
+       billowing vapour instead of a stack of identical round dots, and it fades out where it
+       would intersect the ground so there is no hard cut line. */
+    var mistMat = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        uniforms: { uScale: { value: 1 }, uTime: { value: 0 }, uUpY: { value: 1 } },
+        vertexShader: [
+            'uniform float uScale;',
+            'attribute float aSize;',
+            'attribute float aAlpha;',
+            'attribute float aSeed;',
+            'varying float vAlpha;',
+            'varying float vSeed;',
+            'varying float vCY;',
+            'varying float vR;',
+            'void main() {',
+            '    vAlpha = aAlpha;',
+            '    vSeed = aSeed;',
+            '    vCY = position.y;',
+            '    vR = aSize * 0.5;',
+            '    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);',
+            '    gl_PointSize = aSize * uScale / -mvPosition.z;',
+            '    gl_Position = projectionMatrix * mvPosition;',
+            '}'
+        ].join('\n'),
+        fragmentShader: [
+            'uniform float uTime;',
+            'uniform float uUpY;',
+            'varying float vAlpha;',
+            'varying float vSeed;',
+            'varying float vCY;',
+            'varying float vR;',
+            'float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }',
+            'float vn(vec2 p) {',
+            '    vec2 i = floor(p); vec2 f = fract(p);',
+            '    f = f * f * (3.0 - 2.0 * f);',
+            '    return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y);',
+            '}',
+            'void main() {',
+            '    vec2 p = (gl_PointCoord - 0.5) * 2.0;',
+            '    float r = length(p);',
+            '    if (r > 1.0) discard;',
+            '    float ang = vSeed * 6.2831;',
+            '    vec2 q = vec2(cos(ang) * p.x - sin(ang) * p.y, sin(ang) * p.x + cos(ang) * p.y);',
+            '    vec2 o = vec2(vSeed * 91.7, vSeed * 37.3 + uTime * 0.12);',
+            '    float n = 0.55 * vn(q * 1.9 + o) + 0.30 * vn(q * 4.1 + o * 1.7) + 0.15 * vn(q * 8.3 + o * 2.3);',
+            '    float body = smoothstep(1.0, 0.12, r + (n - 0.5) * 0.85);',
+            '    float yFrag = vCY + (0.5 - gl_PointCoord.y) * 2.0 * vR * uUpY;',
+            '    float ground = smoothstep(0.02, 0.55, yFrag);',
+            '    float a = body * ground * vAlpha;',
+            '    if (a < 0.002) discard;',
+            '    float shade = 0.80 + 0.20 * n + 0.10 * (0.5 - gl_PointCoord.y);',
+            '    gl_FragColor = vec4(vec3(0.97, 0.985, 1.0) * (0.88 + 0.12 * shade), a);',
+            '}'
+        ].join('\n')
+    });
+    var mistPoints = new THREE.Points(mistGeo, mistMat);
+    mistPoints.frustumCulled = false;
+    mistPoints.renderOrder = 4;
+    scene.add(mistPoints);
+
+    var dropGeo = new THREE.BufferGeometry();
+    dropGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3));
+    dropGeo.setAttribute('aSize', new THREE.BufferAttribute(dSize, 1));
+    dropGeo.setAttribute('aAlpha', new THREE.BufferAttribute(dAlpha, 1));
+    var dropMat = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        uniforms: { uScale: { value: 1 } },
+        vertexShader: [
+            'uniform float uScale;',
+            'attribute float aSize;',
+            'attribute float aAlpha;',
+            'varying float vAlpha;',
+            'void main() {',
+            '    vAlpha = aAlpha;',
+            '    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);',
+            '    gl_PointSize = max(4.5, aSize * uScale / -mvPosition.z);',
+            '    gl_Position = projectionMatrix * mvPosition;',
+            '}'
+        ].join('\n'),
+        fragmentShader: [
+            'varying float vAlpha;',
+            'void main() {',
+            '    float d = length(gl_PointCoord - 0.5) * 2.0;',
+            '    if (d > 1.0) discard;',
+            '    float g = exp(-d * d * 4.5);',
+            '    vec3 colour = mix(vec3(0.80, 0.88, 0.96), vec3(1.0), g);',
+            '    float alpha = vAlpha * g;',
+            '    gl_FragColor = vec4(colour, alpha);',
+            '}'
+        ].join('\n')
+    });
+    var dropPoints = new THREE.Points(dropGeo, dropMat);
+    dropPoints.frustumCulled = false;
+    dropPoints.visible = false;
+    scene.add(dropPoints);
+
+    var streakPos = new Float32Array(DMAX * 6);
+    var streakAlpha = new Float32Array(DMAX * 2);
+    var streakGeo = new THREE.BufferGeometry();
+    streakGeo.setAttribute('position', new THREE.BufferAttribute(streakPos, 3));
+    streakGeo.setAttribute('aAlpha', new THREE.BufferAttribute(streakAlpha, 1));
+    var streakMat = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        vertexShader: [
+            'attribute float aAlpha;',
+            'varying float vAlpha;',
+            'void main() {',
+            '    vAlpha = aAlpha;',
+            '    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+            '}'
+        ].join('\n'),
+        fragmentShader: [
+            'varying float vAlpha;',
+            'void main() {',
+            '    gl_FragColor = vec4(0.88, 0.94, 1.0, vAlpha);',
+            '}'
+        ].join('\n')
+    });
+    var streaks = new THREE.LineSegments(streakGeo, streakMat);
+    streaks.frustumCulled = false;
+    streaks.visible = false;
+    scene.add(streaks);
+
+    /* Cheap divergence-free-ish turbulence + slowly wandering wind, shared by droplets and mist. */
+    var windV = new THREE.Vector3();
+    function updateWind(t) {
+        windV.set(
+            -0.55 + 0.35 * Math.sin(t * 0.31) + 0.15 * Math.sin(t * 0.83 + 1.3),
+            0,
+            0.30 * Math.sin(t * 0.19 + 0.7) + 0.12 * Math.sin(t * 0.61)
+        );
+    }
+    function turbX(x, y, z, t) { return Math.sin(z * 0.9 + t * 0.7 + y * 1.7) + 0.6 * Math.sin(x * 0.45 - t * 0.5 + z * 0.3); }
+    function turbY(x, y, z, t) { return Math.sin(x * 0.55 + t * 0.9 + z * 0.8) * 0.8 + 0.5 * Math.sin(z * 1.3 - t * 0.6); }
+    function turbZ(x, y, z, t) { return Math.sin(x * 0.7 - t * 0.8 + y * 1.1) + 0.6 * Math.sin(y * 2.1 + t * 0.4 + x * 0.2); }
+
+    var _n = new THREE.Vector3();
+
+    function setSpray(on) {
+        spray.on = !!on;
+        var sw = document.getElementById('spraySwitch');
+        if (sw) sw.className = 'switch ' + (spray.on ? 'on' : 'off');
+        var w = document.getElementById('switchWord');
+        if (w) w.textContent = spray.on ? 'ON' : 'OFF';
+        var st = document.getElementById('statusText');
+        if (st) st.textContent = spray.on ? 'Spraying' : 'Standby';
+        var sd = document.getElementById('statusDot');
+        if (sd) sd.className = 'status-dot ' + (spray.on ? 'on' : 'off');
+    }
+
+    function addOilStreaks(mat) {
+        var OIL_FRAG_PREFIX = [
+            'varying vec3 vOilP;',
+            'varying vec3 vOilN;',
+            'float gOil;',
+            'float oilH(float n) { return fract(sin(n * 127.1 + 311.7) * 43758.5453); }',
+            'float oilV(vec2 p) {',
+            '    vec2 i = floor(p);',
+            '    vec2 f = fract(p);',
+            '    vec2 u = f * f * (3.0 - 2.0 * f);',
+            '    return mix(mix(oilH(i.x + i.y * 57.0), oilH(i.x + 1.0 + i.y * 57.0), u.x),',
+            '                mix(oilH(i.x + (i.y + 1.0) * 57.0), oilH(i.x + 1.0 + (i.y + 1.0) * 57.0), u.x), u.y);',
+            '}'
+        ].join('\n');
+
+        var OIL_STREAK = [
+            'float X0 = 1.45;',
+            'float side = smoothstep(0.35, 0.7, abs(vOilN.z)) * (1.0 - smoothstep(0.85, 1.0, abs(vOilP.z)));',
+            'float tt0 = clamp((X0 - vOilP.x) / 3.0, 0.0, 1.0);',
+            'float yd = vOilP.y + tt0 * tt0 * 0.35;',
+            'float band = smoothstep(0.9, 1.05, yd) * (1.0 - smoothstep(1.85, 2.0, yd));',
+            'float lv = yd * 22.0 + sign(vOilP.z) * 17.0 + vOilP.z * 3.0;',
+            'float lane = floor(lv);',
+            'float h = oilH(lane);',
+            'float h2 = oilH(lane + 9.0);',
+            'float h3 = oilH(lane + 21.0);',
+            'float across = 1.0 - abs(fract(lv) - 0.5) * 2.0;',
+            'float len = 0.9 + h * h * 3.4;',
+            'float t = (X0 - h2 * 0.25 - vOilP.x) / len;',
+            'float run = smoothstep(0.0, 0.05, t) * pow(1.0 - clamp(t, 0.0, 1.0), 1.5);',
+            'float breakup = 0.35 + 0.65 * oilV(vec2(vOilP.x * 5.0, lane)) * oilV(vec2(vOilP.x * 1.7 + 4.0, lane + 3.0) + 2.0);',
+            'float on = step(0.22, h3);',
+            'gOil = clamp(side * band * run * smoothstep(0.0, 0.55, across) * breakup * on * 1.5, 0.0, 0.88);',
+            'diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.012, 0.01, 0.008), gOil);'
+        ].join('\n');
+
+        mat.onBeforeCompile = function (shader) {
+            shader.vertexShader = shader.vertexShader.replace(
+                '#include <common>',
+                '#include <common>\nvarying vec3 vOilP;\nvarying vec3 vOilN;'
+            );
+            shader.vertexShader = shader.vertexShader.replace(
+                '#include <begin_vertex>',
+                '#include <begin_vertex>\n\tvOilP = (modelMatrix * vec4(position, 1.0)).xyz;\n\tvOilN = mat3(modelMatrix) * normal;'
+            );
+            shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <common>',
+                '#include <common>\n' + OIL_FRAG_PREFIX
+            );
+            shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <map_fragment>',
+                '#include <map_fragment>\n' + OIL_STREAK
+            );
+            shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <roughnessmap_fragment>',
+                '#include <roughnessmap_fragment>\n\troughnessFactor = mix(roughnessFactor, 0.95, gOil);'
+            );
+            shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <metalnessmap_fragment>',
+                '#include <metalnessmap_fragment>\n\tmetalnessFactor *= 1.0 - gOil;'
+            );
+        };
+        mat.customProgramCacheKey = function () { return 'oil-streaks'; };
+        mat.needsUpdate = true;
+    }
+
+    function spawnMistPuff(x, y, z, life, vx, vy, vz) {
+        var found = -1;
+        for (var s2 = 0; s2 < MAXP; s2++) {
+            var ci = (mistCursor + s2) % MAXP;
+            if (mistLife[ci] <= 0) { found = ci; mistCursor = (ci + 1) % MAXP; break; }
+        }
+        if (found < 0) return;
+        mistPos[found * 3] = x;
+        mistPos[found * 3 + 1] = y;
+        mistPos[found * 3 + 2] = z;
+        mistVel[found * 3] = vx !== undefined ? vx : -(0.6 + Math.random() * 1.2);
+        mistVel[found * 3 + 1] = vy !== undefined ? vy : 0.05 + Math.random() * 0.25;
+        mistVel[found * 3 + 2] = vz !== undefined ? vz : (Math.random() - 0.5) * 0.5;
+        mistLife[found] = life;
+        mistAge[found] = 0;
+        mistSeed[found] = Math.random();
+        mistSize[found] = 0;
+        mistAlpha[found] = 0;
+    }
+
+    function spawnSplash(x, y, z, size, pvx) {
+        var found = -1;
+        for (var s3 = 0; s3 < DMAX; s3++) {
+            var ci2 = (dropCursor + s3) % DMAX;
+            if (dLife[ci2] <= 0) { found = ci2; dropCursor = (ci2 + 1) % DMAX; break; }
+        }
+        if (found < 0) return;
+        dPos[found * 3] = x;
+        dPos[found * 3 + 1] = y;
+        dPos[found * 3 + 2] = z;
+        dVel[found * 3] = pvx * 0.3;
+        dVel[found * 3 + 1] = 1.2 + Math.random() * 1.8;
+        dVel[found * 3 + 2] = -0.75 + Math.random() * 1.5;
+        dSize[found] = size * 0.45;
+        dLife[found] = 0.35;
+        dAge[found] = 0;
+        dAlpha[found] = 0;
+    }
+
+    function emitDroplets(dt) {
+        if (!spray.on) return;
+        dropAcc += dt * 500 * spray.amount;
+        var toEmit = Math.floor(dropAcc);
+        dropAcc -= toEmit;
+        for (var e = 0; e < toEmit; e++) {
+            var found = -1;
+            for (var s4 = 0; s4 < DMAX; s4++) {
+                var ci3 = (dropCursor + s4) % DMAX;
+                if (dLife[ci3] <= 0) { found = ci3; dropCursor = (ci3 + 1) % DMAX; break; }
+            }
+            if (found < 0 || !spray.noz.length) break;
+            var nz = spray.noz[Math.floor(Math.random() * spray.noz.length)];
+            nz.getWorldPosition(_n);
+            var az = (Math.random() - 0.5) * 1.25;
+            var ax = (Math.random() - 0.5) * 0.45;
+            var sp = 2.4 + Math.random() * 1.4;
+            dPos[found * 3] = _n.x + (Math.random() - 0.5) * 0.08;
+            dPos[found * 3 + 1] = _n.y - 0.12;
+            dPos[found * 3 + 2] = _n.z + (Math.random() - 0.5) * 0.08;
+            dVel[found * 3] = -sp * (0.12 + Math.sin(ax));
+            dVel[found * 3 + 1] = -sp * Math.cos(az) * Math.cos(ax);
+            dVel[found * 3 + 2] = sp * Math.sin(az);
+            var fine = Math.random() < 0.5;
+            dFine[found] = fine ? 1 : 0;
+            dSize[found] = fine ? 0.008 + Math.random() * 0.010 : 0.015 + Math.random() * 0.015;
+            dLife[found] = (0.9 + Math.random() * 0.5) / (sp * Math.cos(az) * Math.cos(ax)) * (fine ? 2.6 + Math.random() * 2.0 : 1);
+            dAge[found] = 0;
+            dAlpha[found] = 0;
+        }
+    }
+
+    function updateDroplets(dt) {
+        var tt = sprayClock;
+        for (var i = 0; i < DMAX; i++) {
+            if (dLife[i] <= 0) continue;
+            var px = dPos[i * 3], py = dPos[i * 3 + 1], pz = dPos[i * 3 + 2];
+            var tb = Math.min(1, dAge[i] * 1.6);
+            var fn = dFine[i];
+            /* fine droplets follow the air: strong wind coupling, strong turbulence, weak gravity */
+            dVel[i * 3] += (windV.x - dVel[i * 3]) * Math.min(1, dt * (0.9 + 1.6 * fn)) + turbX(px, py, pz, tt) * (0.9 + 1.5 * fn) * tb * dt;
+            dVel[i * 3 + 2] += (windV.z - dVel[i * 3 + 2]) * Math.min(1, dt * (1.1 + 1.0 * fn)) + turbZ(px, py, pz, tt) * (0.9 + 1.5 * fn) * tb * dt;
+            dVel[i * 3 + 1] -= (1.1 - 0.5 * fn) * dt;
+            if (fn > 0) {
+                var side = pz < 0 ? -1 : 1;
+                var tip = Math.min(1, Math.abs(pz) / 3.6);
+                dVel[i * 3 + 1] += (0.05 * tip + 0.02) * tb * dt + turbY(px, py, pz, tt) * 0.08 * tb * dt;
+                dVel[i * 3 + 2] += side * (0.35 + 0.9 * tip) * tb * dt;
+            }
+            dPos[i * 3] += dVel[i * 3] * dt;
+            dPos[i * 3 + 1] += dVel[i * 3 + 1] * dt;
+            dPos[i * 3 + 2] += dVel[i * 3 + 2] * dt;
+            if (dFine[i] > 0 && dPos[i * 3 + 1] < 0.14) {
+                dPos[i * 3 + 1] = 0.14;
+                if (dVel[i * 3 + 1] < 0) dVel[i * 3 + 1] *= -0.25;
+            }
+            if (dPos[i * 3 + 1] < 0.03) {
+                if (Math.random() < 0.05) {
+                    spawnMistPuff(dPos[i * 3], 0.1 + Math.random() * 0.2, dPos[i * 3 + 2], 3.0 + Math.random() * 3.0, windV.x * 1.5 - Math.random() * 1.5);
+                }
+                dLife[i] = 0;
+                dPos[i * 3 + 1] = -10000;
+                continue;
+            }
+            dAge[i] += dt;
+            if (dAge[i] >= dLife[i]) {
+                dLife[i] = 0;
+                dPos[i * 3 + 1] = -10000;
+                continue;
+            }
+            var t = dAge[i] / dLife[i];
+            dSize[i] *= 1 + dt * 1.2;
+            var fadeIn = Math.min(1, dAge[i] * 14);
+            var fade = t > 0.75 ? (1.0 - (t - 0.75) / 0.25) : 1.0;
+            dAlpha[i] = (0.95 - 0.30 * dFine[i]) * fade * fadeIn;
+        }
+        dropGeo.attributes.position.needsUpdate = true;
+        dropGeo.attributes.aSize.needsUpdate = true;
+        dropGeo.attributes.aAlpha.needsUpdate = true;
+        for (var j = 0; j < DMAX; j++) {
+            if (dLife[j] <= 0) {
+                streakAlpha[j * 2] = 0;
+                streakAlpha[j * 2 + 1] = 0;
+                continue;
+            }
+            var sl = 0.02;
+            streakPos[j * 6] = dPos[j * 3];
+            streakPos[j * 6 + 1] = dPos[j * 3 + 1];
+            streakPos[j * 6 + 2] = dPos[j * 3 + 2];
+            streakPos[j * 6 + 3] = dPos[j * 3] - dVel[j * 3] * sl;
+            streakPos[j * 6 + 4] = dPos[j * 3 + 1] - dVel[j * 3 + 1] * sl;
+            streakPos[j * 6 + 5] = dPos[j * 3 + 2] - dVel[j * 3 + 2] * sl;
+            streakAlpha[j * 2] = dAge[j] < 0.5 ? dAlpha[j] * 0.7 * Math.min(1, dAge[j] * 10) : 0;
+            streakAlpha[j * 2 + 1] = 0.0;
+        }
+        streakGeo.attributes.position.needsUpdate = true;
+        streakGeo.attributes.aAlpha.needsUpdate = true;
+    }
+
+    var MIST_OFFSET = { x: 0.35, y: 0.0, z: 0.0 };   // tune here: moves where the mist is born, relative to each nozzle
+    function emitMist(dt) {
+        if (!spray.on) return;
+        mistAcc += dt * 700 * spray.amount;
+        var toEmit = Math.floor(mistAcc);
+        mistAcc -= toEmit;
+        for (var e = 0; e < toEmit; e++) {
+            if (!spray.noz.length) break;
+            var nz = spray.noz[Math.floor(Math.random() * spray.noz.length)];
+            nz.getWorldPosition(_n);
+            var sp = 1.6 + Math.random() * 1.8;
+            var up = Math.random() * 0.1;
+            var side = (Math.random() - 0.5) * 0.95;
+            spawnMistPuff(
+                _n.x - 0.05 + (Math.random() - 0.5) * 0.08,
+                0.06,
+                _n.z + (Math.random() - 0.5) * 0.08,
+                4.4 + Math.random() * 3.2,
+                -sp, sp * up, sp * side
+            );
+        }
+    }
+
+    function updateMist(dt) {
+        var tt = sprayClock;
+        for (var i = 0; i < MAXP; i++) {
+            if (mistLife[i] <= 0) continue;
+            if (!spray.on && mistLife[i] > mistAge[i] + 0.6) mistLife[i] = mistAge[i] + 0.6;
+            var px = mistPos[i * 3], py = mistPos[i * 3 + 1], pz = mistPos[i * 3 + 2];
+            var age = mistAge[i];
+            var drag = Math.exp(-0.35 * dt);
+            /* prop-wash velocity bleeds off into the ambient wind; turbulence stirs it as it ages */
+            mistVel[i * 3] += (windV.x - mistVel[i * 3]) * Math.min(1, 0.55 * dt);
+            mistVel[i * 3 + 2] = (mistVel[i * 3 + 2] + (windV.z - mistVel[i * 3 + 2]) * Math.min(1, 0.4 * dt)) * drag;
+            var stir = Math.min(1, age * 0.6) * 0.55;
+            mistVel[i * 3] += turbX(px * 0.6, py, pz * 0.6, tt) * stir * dt;
+            mistVel[i * 3 + 1] += (0.0 - mistVel[i * 3 + 1]) * Math.min(1, 0.4 * dt);
+            mistVel[i * 3 + 2] += turbZ(px * 0.6, py, pz * 0.6, tt) * stir * dt;
+            /* lateral billow: puffs spread outward from the centre line as they age */
+            mistVel[i * 3 + 2] += Math.sign(pz || 1) * (0.22 + 0.28 * Math.min(1, Math.abs(pz) / 3.6)) * dt * (mistSeed[i] + 0.5);
+            mistPos[i * 3] += mistVel[i * 3] * dt;
+            mistPos[i * 3 + 1] += mistVel[i * 3 + 1] * dt;
+            mistPos[i * 3 + 2] += mistVel[i * 3 + 2] * dt;
+            if (mistPos[i * 3 + 1] < 0.05) { mistPos[i * 3 + 1] = 0.05; if (mistVel[i * 3 + 1] < 0) mistVel[i * 3 + 1] *= -0.2; }
+            if (mistPos[i * 3 + 1] > 1.5) mistPos[i * 3 + 1] = 1.5;
+            mistAge[i] += dt;
+            if (mistAge[i] >= mistLife[i]) {
+                mistLife[i] = 0;
+                mistPos[i * 3 + 1] = -10000;
+                continue;
+            }
+            var t = mistAge[i] / mistLife[i];
+            mistSize[i] = 0.6 + t * 2.4;
+            mistAlpha[i] = 0.07 * Math.min(1, t / 0.06) * (0.5 - t * t) * (0.6 + 0.4 * mistSeed[i]);
+        }
+        mistGeo.attributes.position.needsUpdate = true;
+        mistGeo.attributes.aSize.needsUpdate = true;
+        mistGeo.attributes.aAlpha.needsUpdate = true;
+    }
+
+    function updateSpray(dt) {
+        spray.amount += ((spray.on ? 1 : 0) - spray.amount) * Math.min(1, dt * 5);
+        for (var hi = 0; hi < spray.flaps.length; hi++) {
+            if (spray.flaps[hi]) spray.flaps[hi].rotation.x = 1.32 * spray.amount;
+        }
+    }
+
+    var propDefs = [
+        { prefix: 'industrial_pastic_container', tex: 'models_polyhaven_industrial_pastic_container_textures_industrial_pastic_container' },
+        { prefix: 'Barrel_01', tex: 'models_polyhaven_Barrel_01_textures_Barrel_01_explosive' },
+        { prefix: 'barrel_03', tex: 'models_polyhaven_barrel_03_textures_barrel_03' },
+        { prefix: 'metal_jerrycan', tex: 'models_polyhaven_metal_jerrycan_textures_metal_jerrycan' },
+        { prefix: 'old_tyre', tex: 'models_polyhaven_old_tyre_textures_old_tyre' },
+        { prefix: 'wooden_crate_01', tex: 'models_polyhaven_wooden_crate_01_textures_wooden_crate_01' }
+    ];
+    var propTexKeys = [];
+    for (var pdI = 0; pdI < propDefs.length; pdI++) {
+        var pdBase = propDefs[pdI].tex;
+        propTexKeys.push(pdBase + '_diff_2k', pdBase + '_nor_gl_2k', pdBase + '_arm_2k');
+    }
+
+    var groundTexKeys = [
+        'textures_polyhaven_leafy_grass_leafy_grass_rough_2k',
+        'textures_polyhaven_muddy_tracks_muddy_tracks_diff_2k',
+        'textures_polyhaven_muddy_tracks_muddy_tracks_rough_2k',
+        'textures_polyhaven_muddy_tracks_muddy_tracks_nor_gl_2k',
+        'textures_polyhaven_farm_furrows_farm_furrows_diff_2k',
+        'textures_polyhaven_farm_furrows_farm_furrows_rough_2k',
+        'textures_polyhaven_farm_furrows_farm_furrows_nor_gl_2k',
+        'textures_polyhaven_dry_ground_01_dry_ground_01_diff_2k'
+    ];
+
+    var loads = [
+        window.resolveAsset('meshy_Meshy_AI_Blue_Biplane_1001000228_texture', THREE),
+        window.resolveAsset('models_polyhaven_Barrel_01_Barrel_01_2k', THREE),
+        window.resolveAsset('textures_polyhaven_leafy_grass_leafy_grass_diff_2k', THREE),
+        window.resolveAsset('textures_polyhaven_leafy_grass_leafy_grass_nor_gl_2k', THREE),
+        window.resolveAsset('hdri_farm_field_4k', THREE)
+    ];
+    for (var pkI = 0; pkI < propTexKeys.length; pkI++) {
+        loads.push(window.resolveAsset(propTexKeys[pkI], THREE));
+    }
+    for (var gkI = 0; gkI < groundTexKeys.length; gkI++) {
+        loads.push(window.resolveAsset(groundTexKeys[gkI], THREE));
+    }
+    loads.push(window.resolveAsset('models_polyhaven_grass_medium_01_grass_medium_01_2k', THREE));
+    loads.push(window.resolveAsset('models_polyhaven_grass_medium_01_textures_grass_medium_01_alpha_2k', THREE));
+
+    Promise.all(loads).then(function (results) {
+        var biplaneGltf = results[0];
+        var terrainGltf = results[1];
+        var diffTex = results[2];
+        var norTex = results[3];
+        var hdr = results[4];
+        var grassGltf = results[31];
+        var grassAlphaTex = results[32];
+
+        plane.add(biplaneGltf.scene);
+        biplaneGltf.scene.traverse(function (o) {
+            if (o.name) nodes[o.name] = o;
+            if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
+        });
+
+        plane.updateMatrixWorld(true);
+        var lowest = Infinity;
+        var v = new THREE.Vector3();
+        var mesh = nodes.AVIAO_MESHY;
+        var posAttr = mesh.geometry.attributes.position;
+        for (var i = 0; i < posAttr.count; i++) {
+            v.fromBufferAttribute(posAttr, i).applyMatrix4(mesh.matrixWorld);
+            if (v.y < lowest) lowest = v.y;
+        }
+        plane.position.y -= lowest;
+
+        addOilStreaks(nodes.AVIAO_MESHY.material);
+        if (nodes.PROP) {
+            nodes.PROP.rotation.z = 10 * Math.PI / 180;
+        }
+        if (nodes.PROP_BLUR_DISC) {
+            nodes.PROP_BLUR_DISC.visible = true;
+            nodes.PROP_BLUR_DISC.rotation.z = 10 * Math.PI / 180;
+            nodes.PROP_BLUR_DISC.castShadow = false;
+            nodes.PROP_BLUR_DISC.receiveShadow = false;
+            nodes.PROP_BLUR_DISC.traverse(function (child) {
+                child.castShadow = false;
+                child.receiveShadow = false;
+            });
+        }
+
+        if (nodes.PROP_BLADES) {
+            nodes.PROP_BLADES.traverse(function (o) {
+                if (o.isMesh && o.material) {
+                    var mat = o.material.clone();
+                    o.material = mat;
+                    mat.onBeforeCompile = function (shader) {
+                        shader.vertexShader = shader.vertexShader.replace(
+                            '#include <common>',
+                            '#include <common>\nvarying vec3 vPropLocalPos;'
+                        ).replace(
+                            '#include <begin_vertex>',
+                            '#include <begin_vertex>\nvPropLocalPos = position;'
+                        );
+                        shader.fragmentShader = shader.fragmentShader.replace(
+                            '#include <common>',
+                            '#include <common>\nvarying vec3 vPropLocalPos;'
+                        ).replace(
+                            '#include <map_fragment>',
+                            '#include <map_fragment>\n' +
+                            'float tipFactor = smoothstep(1.075, 1.085, abs(vPropLocalPos.z));\n' +
+                            'diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.96, 0.78, 0.06), tipFactor);'
+                        );
+                    };
+                    mat.customProgramCacheKey = function () { return 'prop-yellow-tips'; };
+                    mat.needsUpdate = true;
+                }
+            });
+        }
+
+        // Shared materials for realistic nozzle cap & hinge assembly
+        var rCapMat = new THREE.MeshStandardMaterial({
+            color: 0x93341d,
+            roughness: 0.38,
+            metalness: 0.10,
+            name: 'RealisticNozzleCap_Plastic'
+        });
+        var rBracketMat = new THREE.MeshStandardMaterial({
+            color: 0x3d4349,
+            roughness: 0.35,
+            metalness: 0.85,
+            name: 'RealisticNozzle_BracketSteel'
+        });
+        var rBrassMat = new THREE.MeshStandardMaterial({
+            color: 0xc49432,
+            roughness: 0.28,
+            metalness: 0.95,
+            name: 'RealisticNozzle_BrassHardware'
+        });
+        var rGasketMat = new THREE.MeshStandardMaterial({
+            color: 0x181818,
+            roughness: 0.85,
+            metalness: 0.02,
+            name: 'RealisticNozzle_RubberSeal'
+        });
+
+        // Shared geometries for performance
+        // Fixed mounting assembly (parented to NOZ_xx)
+        var geoClamp = new THREE.CylinderGeometry(0.0175, 0.0178, 0.009, 20);
+        var geoClampBolt = new THREE.CylinderGeometry(0.0016, 0.0016, 0.006, 8);
+        geoClampBolt.rotateZ(Math.PI / 2);
+        var geoEar = new THREE.BoxGeometry(0.0024, 0.011, 0.013);
+        var geoPin = new THREE.CylinderGeometry(0.0022, 0.0022, 0.022, 14);
+        geoPin.rotateZ(Math.PI / 2);
+        var geoPinNut = new THREE.CylinderGeometry(0.0034, 0.0034, 0.0018, 6);
+        geoPinNut.rotateZ(Math.PI / 2);
+
+        // Moving hinge & realistic cap assembly (parented to NOZ_xx_HINGE)
+        var geoSleeve = new THREE.CylinderGeometry(0.0038, 0.0038, 0.0125, 14);
+        geoSleeve.rotateZ(Math.PI / 2);
+        var geoArm = new THREE.BoxGeometry(0.0024, 0.0036, 0.014);
+        var geoBoss = new THREE.BoxGeometry(0.014, 0.004, 0.006);
+        var geoCapBody = new THREE.CylinderGeometry(0.022, 0.021, 0.0052, 28);
+        var geoCapRim = new THREE.TorusGeometry(0.0215, 0.0016, 10, 28);
+        geoCapRim.rotateX(Math.PI / 2);
+        var geoGasket = new THREE.TorusGeometry(0.0142, 0.0018, 12, 28);
+        geoGasket.rotateX(Math.PI / 2);
+        var geoCenterBoss = new THREE.CylinderGeometry(0.0085, 0.0095, 0.0025, 20);
+        var geoCenterNut = new THREE.CylinderGeometry(0.0045, 0.0045, 0.0025, 6);
+        var geoPullTab = new THREE.BoxGeometry(0.0065, 0.0025, 0.0045);
+
+        for (var sfI = 0; sfI < 26; sfI++) {
+            var sfId = sfI < 10 ? '0' + sfI : '' + sfI;
+            var fanNode = nodes['SPRAY_FAN_' + sfId];
+            var nozNode = nodes['NOZ_' + sfId];
+            var hingeNode = nodes['NOZ_' + sfId + '_HINGE'];
+            var flapNode = nodes['NOZ_' + sfId + '_FLAP'];
+
+            spray.fans.push(fanNode);
+            spray.noz.push(nozNode);
+            spray.flaps.push(hingeNode);
+
+            // Hide old primitive floating flap disc
+            if (flapNode) flapNode.visible = false;
+
+            if (nozNode) {
+                // 1. Build Fixed Mounting Bracket on Nozzle Body
+                var fixedMount = new THREE.Group();
+                fixedMount.name = 'NOZ_MOUNT_' + sfId;
+
+                // Clamping collar around lower nozzle body right above brass ring
+                var mClamp = new THREE.Mesh(geoClamp, rBracketMat);
+                mClamp.position.set(0, -0.147, 0);
+                fixedMount.add(mClamp);
+
+                // Clamping bolt/screw
+                var mBolt = new THREE.Mesh(geoClampBolt, rBrassMat);
+                mBolt.position.set(0, -0.147, 0.0185);
+                fixedMount.add(mBolt);
+
+                // Twin bracket ears reaching rearward to hinge pivot (-0.021 Z, -0.156 Y)
+                var mEarL = new THREE.Mesh(geoEar, rBracketMat);
+                mEarL.position.set(-0.008, -0.153, -0.016);
+                fixedMount.add(mEarL);
+
+                var mEarR = new THREE.Mesh(geoEar, rBracketMat);
+                mEarR.position.set(0.008, -0.153, -0.016);
+                fixedMount.add(mEarR);
+
+                // Pivot pin passing through both ears
+                var mPin = new THREE.Mesh(geoPin, rBrassMat);
+                mPin.position.set(0, -0.156, -0.021);
+                fixedMount.add(mPin);
+
+                // Retaining nuts on ends of pin
+                var mNutL = new THREE.Mesh(geoPinNut, rBrassMat);
+                mNutL.position.set(-0.0115, -0.156, -0.021);
+                fixedMount.add(mNutL);
+
+                var mNutR = new THREE.Mesh(geoPinNut, rBrassMat);
+                mNutR.position.set(0.0115, -0.156, -0.021);
+                fixedMount.add(mNutR);
+
+                nozNode.add(fixedMount);
+            }
+
+            if (hingeNode) {
+                // 2. Build Articulated Moving Cap Assembly on Hinge Node
+                // Local (0,0,0) is exactly the pivot axis on the pin!
+                // Local Z=+0.021 is the center of the nozzle tip/orifice when closed!
+                var movingAssembly = new THREE.Group();
+                movingAssembly.name = 'REALISTIC_CAP_' + sfId;
+
+                // Hinge knuckle sleeve around pivot pin
+                var mSleeve = new THREE.Mesh(geoSleeve, rCapMat);
+                mSleeve.position.set(0, 0, 0);
+                movingAssembly.add(mSleeve);
+
+                // Twin linkage arms connecting sleeve to cap
+                var mArmL = new THREE.Mesh(geoArm, rCapMat);
+                mArmL.position.set(-0.006, 0.0005, 0.008);
+                movingAssembly.add(mArmL);
+
+                var mArmR = new THREE.Mesh(geoArm, rCapMat);
+                mArmR.position.set(0.006, 0.0005, 0.008);
+                movingAssembly.add(mArmR);
+
+                // Reinforced hinge mount boss on cap rim
+                var mBoss = new THREE.Mesh(geoBoss, rCapMat);
+                mBoss.position.set(0, 0.0005, 0.0125);
+                movingAssembly.add(mBoss);
+
+                // Main cap body disc
+                var mCap = new THREE.Mesh(geoCapBody, rCapMat);
+                mCap.position.set(0, 0.0006, 0.021);
+                movingAssembly.add(mCap);
+
+                // Rounded outer rim
+                var mRim = new THREE.Mesh(geoCapRim, rCapMat);
+                mRim.position.set(0, 0.0022, 0.021);
+                movingAssembly.add(mRim);
+
+                // Rubber Viton O-ring seal on inner face (seats against brass ring when closed)
+                var mGasket = new THREE.Mesh(geoGasket, rGasketMat);
+                mGasket.position.set(0, 0.0028, 0.021);
+                movingAssembly.add(mGasket);
+
+                // Raised center dome on outer face
+                var mCenterBoss = new THREE.Mesh(geoCenterBoss, rCapMat);
+                mCenterBoss.position.set(0, -0.0025, 0.021);
+                movingAssembly.add(mCenterBoss);
+
+                // Brass compression nut / relief fastener in center
+                var mCenterNut = new THREE.Mesh(geoCenterNut, rBrassMat);
+                mCenterNut.position.set(0, -0.0040, 0.021);
+                movingAssembly.add(mCenterNut);
+
+                // Manual pull tab on leading rim
+                var mTab = new THREE.Mesh(geoPullTab, rCapMat);
+                mTab.position.set(0, 0.0005, 0.043);
+                movingAssembly.add(mTab);
+
+                hingeNode.add(movingAssembly);
+            }
+        }
+        for (var fh = 0; fh < spray.fans.length; fh++) {
+            if (spray.fans[fh]) spray.fans[fh].visible = false;
+        }
+        // Realistic truncated spray cone matching the exact orifice ring diameter at apex
+        var coneGeo = new THREE.CylinderGeometry(0.0095, 0.125, 0.46, 32, 16, true);
+        coneGeo.translate(0, -0.23, 0);
+        coneMat = new THREE.ShaderMaterial({
+            transparent: true,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+            uniforms: { uTime: { value: 0 }, uAmount: { value: 1 } },
+            vertexShader: [
+                'uniform float uTime;',
+                'uniform float uAmount;',
+                'varying vec3 vW;',
+                'varying vec3 vN;',
+                'varying vec3 vV;',
+                'varying float vT;',
+                'varying float vA;',
+                'varying float vPh;',
+                'varying float vBack;',
+                'void main() {',
+                '    float t = clamp(-position.y / 0.46, 0.0, 1.0);',
+                '    float ph = modelMatrix[3].z * 3.7 + modelMatrix[3].x * 1.3;',
+                '    vec3 pos = position;',
+                '    float sway = t * t;',
+                '    /* Aerodynamic backward drift from aircraft motion and prop-wash (doubled distance) */',
+                '    float backDrift = 0.22 * t + 0.16 * sway;',
+                '    pos.x -= backDrift;',
+                '    /* Trailing wake expansion backwards */',
+                '    if (pos.x < 0.0) {',
+                '        pos.x *= (1.0 + 0.76 * t);',
+                '    }',
+                '    /* Fast micro-flutter and spray turbulence */',
+                '    float fastT = uTime * 4.8;',
+                '    pos.x += sway * 0.016 * sin(fastT * 3.2 + ph + t * 8.0);',
+                '    pos.z += sway * 0.012 * sin(fastT * 2.6 + ph * 0.8 + t * 7.0);',
+                '    /* Subtle radius flutter preserving non-overlapping separation */',
+                '    pos.xz *= 1.0 + 0.05 * sin(fastT * 3.8 + ph + t * 9.0) * t;',
+                '    vec4 wp = modelMatrix * vec4(pos, 1.0);',
+                '    vW = wp.xyz;',
+                '    vN = normalize(mat3(modelMatrix) * normal);',
+                '    vV = normalize(cameraPosition - wp.xyz);',
+                '    vT = t;',
+                '    vA = atan(position.z, position.x);',
+                '    vPh = ph;',
+                '    /* Normalized backward metric (0 at front leading edge, 1 at trailing fog wake) */',
+                '    vBack = clamp((-pos.x - 0.01) / (0.32 * t + 0.10), 0.0, 1.0);',
+                '    gl_Position = projectionMatrix * viewMatrix * wp;',
+                '}'
+            ].join('\n'),
+            fragmentShader: [
+                'uniform float uTime;',
+                'uniform float uAmount;',
+                'varying vec3 vW;',
+                'varying vec3 vN;',
+                'varying vec3 vV;',
+                'varying float vT;',
+                'varying float vA;',
+                'varying float vPh;',
+                'varying float vBack;',
+                'float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
+                'float n(vec2 p) {',
+                '    vec2 i = floor(p);',
+                '    vec2 f = fract(p);',
+                '    vec2 u = f * f * (3.0 - 2.0 * f);',
+                '    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);',
+                '}',
+                'void main() {',
+                '    float facing = abs(dot(normalize(vN), normalize(vV)));',
+                '    /* Volumetric spray intensity with clear side visibility */',
+                '    float soft = 0.70 + 0.50 * pow(1.0 - facing, 1.2);',
+                '    /* High density pressurized liquid core emerging directly from orifice hole */',
+                '    float apex = mix(0.92, 1.0, smoothstep(0.0, 0.03, vT));',
+                '    /* Soft fluffy bottom mist fadeout so the bottom edge is natural and never marked */',
+                '    float tail = smoothstep(1.0, 0.52, vT);',
+                '    /* Smooth fade before reaching ground plane */',
+                '    float groundFade = smoothstep(0.01, 0.11, vW.y);',
+                '    /* Fast streaming downward liquid streaks (high-speed pressurized spray) */',
+                '    float streamSpeed = uTime * 15.0;',
+                '    vec2 s1 = vec2(vA * 4.6 + vPh, vT * 9.5 - streamSpeed);',
+                '    vec2 s2 = vec2(vA * 9.2 - vPh * 0.7, vT * 17.0 - streamSpeed * 1.5);',
+                '    vec2 s3 = vec2(vBack * 4.5 - streamSpeed * 0.7, vT * 6.5 - streamSpeed * 0.85);',
+                '    float streak = 0.50 * n(vec2(s1.x, s1.y * 0.36)) + 0.32 * n(vec2(s2.x, s2.y * 0.44)) + 0.18 * n(s3);',
+                '    float breakup = mix(0.94, smoothstep(0.16, 0.82, streak), smoothstep(0.06, 0.85, vT));',
+                '    /* Fine micro-droplet mist texture rushing downwards */',
+                '    float microMist = 0.90 + 0.20 * hash(floor(vec2(vA * 28.0, (vT - uTime * 20.0) * 40.0)));',
+                '    float flicker = 0.94 + 0.06 * sin(uTime * 16.0 + vPh * 2.0);',
+                '    float cloud = 0.85 + 0.28 * n(vW.xz * 2.8 + vec2(-uTime * 1.2, uTime * 0.4));',
+                '    /* Color: Transitions from bright concentrated liquid white at apex/front to soft atmospheric fog backward */',
+                '    vec3 liquidFront = vec3(0.98, 1.0, 1.0);',
+                '    vec3 fogBack = vec3(0.86, 0.92, 0.96);',
+                '    float fogFactor = clamp(vT * 0.60 + vBack * 0.70, 0.0, 1.0);',
+                '    vec3 sprayCol = mix(liquidFront, fogBack, fogFactor);',
+                '    /* Alpha: denser at liquid core, diffusing into soft semi-translucent mist at trailing wake */',
+                '    float density = mix(0.78, 0.58, vBack);',
+                '    float a = soft * apex * tail * groundFade * breakup * microMist * flicker * cloud * density * uAmount;',
+                '    gl_FragColor = vec4(sprayCol, clamp(a, 0.0, 0.82));',
+                '}'
+            ].join('\n')
+        });
+        var _tipLocal = new THREE.Vector3(0, -0.154, 0);
+        var _coneP = new THREE.Vector3();
+        for (var scI = 0; scI < spray.noz.length; scI++) {
+            var cone = new THREE.Mesh(coneGeo, coneMat);
+            spray.noz[scI].localToWorld(_coneP.copy(_tipLocal));
+            cone.position.copy(_coneP);
+            cone.scale.set(1.0, 1.0, 1.0);
+            cone.renderOrder = 5;
+            cone.frustumCulled = false;
+            scene.add(cone);
+            sprayCones.push(cone);
+        }
+
+        diffTex.wrapS = diffTex.wrapT = THREE.RepeatWrapping;
+        diffTex.repeat.set(1, 1);
+        diffTex.encoding = THREE.sRGBEncoding;
+        diffTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        norTex.wrapS = norTex.wrapT = THREE.RepeatWrapping;
+        norTex.repeat.set(1, 1);
+        norTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+        function configGroundTexture(t) {
+            t.wrapS = t.wrapT = THREE.RepeatWrapping;
+            t.repeat.set(1, 1);
+            t.encoding = THREE.LinearEncoding;
+            t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        }
+
+        var groundTex = {
+            tGrassD: (function () { var c = diffTex.clone(); c.needsUpdate = true; return c; })(),
+            tGrassR: results[23],
+            tGrassN: norTex,
+            tMudD: results[24],
+            tMudR: results[25],
+            tMudN: results[26],
+            tFurD: results[27],
+            tFurR: results[28],
+            tFurN: results[29],
+            tDryD: results[30]
+        };
+        for (var gt in groundTex) {
+            configGroundTexture(groundTex[gt]);
+        }
+
+        var GROUND_FRAG_PREFIX = [
+            'varying vec3 vObj;',
+            'uniform sampler2D tGrassD;',
+            'uniform sampler2D tGrassR;',
+            'uniform sampler2D tGrassN;',
+            'uniform sampler2D tMudD;',
+            'uniform sampler2D tMudR;',
+            'uniform sampler2D tMudN;',
+            'uniform sampler2D tFurD;',
+            'uniform sampler2D tFurR;',
+            'uniform sampler2D tFurN;',
+            'uniform sampler2D tDryD;',
+            'float sat(float x) { return clamp(x, 0.0, 1.0); }',
+            'vec3 hash3(vec3 p) {',
+            '    p = fract(p * 0.3183099 + 0.1);',
+            '    p *= 17.0;',
+            '    return fract(p.x * p.y * p.z * (p.x + p.y + p.z) + p);',
+            '}',
+            'float noise3(vec3 x) {',
+            '    vec3 i = floor(x);',
+            '    vec3 f = fract(x);',
+            '    f = f * f * (3.0 - 2.0 * f);',
+            '    return mix(',
+            '        mix(mix(hash3(i + vec3(0,0,0)).x, hash3(i + vec3(1,0,0)).x, f.x),',
+            '            mix(hash3(i + vec3(0,1,0)).x, hash3(i + vec3(1,1,0)).x, f.x), f.y),',
+            '        mix(mix(hash3(i + vec3(0,0,1)).x, hash3(i + vec3(1,0,1)).x, f.x),',
+            '            mix(hash3(i + vec3(0,1,1)).x, hash3(i + vec3(1,1,1)).x, f.x), f.y),',
+            '        f.z);',
+            '}',
+            'float fbm(vec3 p) {',
+            '    float v = 0.0;',
+            '    float a = 0.5;',
+            '    for (int i = 0; i < 5; i++) {',
+            '        v += a * noise3(p);',
+            '        p *= 2.0;',
+            '        a *= 0.5;',
+            '    }',
+            '    return v;',
+            '}',
+            'vec2 rotate(vec2 p, float a) {',
+            '    float c = cos(a);',
+            '    float s = sin(a);',
+            '    return vec2(c * p.x - s * p.y, s * p.x + c * p.y);',
+            '}',
+            'float gRough;',
+            'vec3 gMapN;'
+        ].join('\n');
+
+        var GROUND_COLOUR = [
+            'float bx = vObj.x;',
+            'float by = -vObj.z;',
+            'float A = abs(by);',
+            'vec2 p = vec2(bx, by);',
+            'vec2 uvG = p * 0.42;',
+            'vec2 uvM = rotate(p * 0.45, 0.3);',
+            'vec2 uvF = p * 0.33;',
+            'vec2 uvD = p * 0.40;',
+            'float N = fbm(vec3(bx, by, 0.0) * 0.35) / 0.97;',
+            'float tracks = sat(1.0 - abs(A - 1.44 - sin(bx * 0.21) * 0.06) / (N * 0.18 + 0.14));',
+            'float tail = sat(1.0 - A / 0.12) * (bx < -4.6 ? 1.0 : 0.0) * 0.85;',
+            'float mud = sat(pow(max(tracks, tail), 0.6) * (N * 0.7 + 0.35));',
+            'float F = sat((A - 6.6) * 2.0);',
+            'float D = sat(A - 5.5) * (1.0 - F) * 0.8;',
+            'float S = sat(sat((-0.3 - bx) * 0.8) * sat((bx + 18.0) * 0.1) * sat(1.0 - (A - 3.7)) * (N * 0.5 + 0.55));',
+            'float rowT = abs(fract((A - 7.18) / 0.76) - 0.5);',
+            'float stripe = sat(1.0 - (rowT - 0.16) * 7.0);',
+            'stripe = mix(stripe, 0.46, smoothstep(0.1, 0.5, fwidth(A) / 0.76));',
+            'float rows = stripe * sat((A - 6.9) * 2.0) * 0.92;',
+            'vec3 grass = sRGBToLinear(texture2D(tGrassD, uvG)).rgb;',
+            'vec3 c = grass * vec3(0.46, 0.80, 0.28);',
+            'c = mix(c, sRGBToLinear(texture2D(tMudD, uvM)).rgb, mud);',
+            'c = mix(c, sRGBToLinear(texture2D(tDryD, uvD)).rgb, D);',
+            'c = mix(c, sRGBToLinear(texture2D(tFurD, uvF)).rgb, F);',
+            'c = mix(c, c * 0.62, S);',
+            'c = mix(c, grass * vec3(0.42, 0.85, 0.25), rows);',
+            'diffuseColor.rgb = c;',
+            'float r = mix(texture2D(tGrassR, uvG).r, texture2D(tMudR, uvM).r, mud);',
+            'r = mix(r, texture2D(tFurR, uvF).r, F);',
+            'gRough = mix(r, 0.55, S);',
+             'vec3 nrm = mix(texture2D(tGrassN, uvG).rgb, texture2D(tMudN, uvM).rgb, mud);',
+             'nrm = mix(nrm, texture2D(tFurN, uvF).rgb, F);',
+             'gMapN = nrm * 2.0 - 1.0;',
+             'vec2 wxz = vec2(vObj.x, vObj.z);',
+             'float camD = length(cameraPosition - vec3(wxz.x, 0.0, wxz.y));',
+'float wFar = smoothstep(120.0, 360.0, camD);',
+              'float ew = 9.0 * sin(wxz.x * 0.05 + 1.3) + 7.0 * sin(wxz.y * 0.07 + 0.4) + 5.0 * sin((wxz.x + wxz.y) * 0.11);',
+              'float rowC = 7.56 + 0.76 * floor((A - 7.56) / 0.76 + 0.5);',
+              'float rowSh = 0.0;',
+              'for (int sk = 0; sk < 5; sk++) {',
+              '    float st = float(sk) / 4.0;',
+              '    float sdx = (fract((bx - PLANT_X0) / 0.5 + 0.5 + st * 0.7) - 0.5) * 0.5;',
+              '    float sdz = (A - rowC) - 0.2 * st * sign(by);',
+              '    rowSh = max(rowSh, exp(-(sdx * sdx / 0.014 + sdz * sdz / 0.008)) * (1.0 - 0.45 * st));',
+              '}',
+              'rowSh = mix(rowSh, 0.30, smoothstep(0.1, 0.5, fwidth(A) / 0.76));',
+              'float eFade = smoothstep(0.0, 60.0, max(abs(bx + 5.0) - 80.0, A - 66.0) + ew);',
+              'float wOut = eFade * sat((A - 6.0) * 1.5);',
+              'float wM = max(wFar, wOut);',
+              'diffuseColor.rgb = mix(diffuseColor.rgb, farmlandAt(wxz), wM);',
+              'diffuseColor.rgb *= 1.0 - 0.72 * rowSh * sat((A - 6.6) * 4.0) * (1.0 - eFade) * (1.0 - smoothstep(320.0, 420.0, camD));',
+              'gRough = mix(gRough, 0.95, wM);',
+              'gMapN = mix(gMapN, vec3(0.0, 0.0, 1.0), wM);'
+        ].join('\n');
+
+        var GROUND_NORMAL = [
+            'vec3 gWorldN = gMapN.x * vec3(1.0, 0.0, 0.0) + gMapN.y * vec3(0.0, 0.0, -1.0) + gMapN.z * vec3(0.0, 1.0, 0.0);',
+            'vec3 nW = normalize(mix(vec3(0.0, 1.0, 0.0), gWorldN, 0.8));',
+            'normal = normalize((viewMatrix * vec4(nW, 0.0)).xyz);'
+        ].join('\n');
+
+        function makeGroundMaterial() {
+            var mat = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                roughness: 1,
+                metalness: 0,
+                envMapIntensity: 0.4
+            });
+            mat.extensions = { derivatives: true };
+            mat.customProgramCacheKey = function () { return 'ground_strip_field'; };
+            mat.onBeforeCompile = function (shader) {
+                for (var u in groundTex) {
+                    shader.uniforms[u] = { value: groundTex[u] };
+                }
+                shader.vertexShader = 'varying vec3 vObj;\n' + shader.vertexShader;
+                shader.vertexShader = shader.vertexShader.replace(
+                    '#include <begin_vertex>',
+                    '#include <begin_vertex>\n\tvObj = position;'
+                );
+                shader.fragmentShader = shader.fragmentShader.replace(
+                    '#include <common>',
+                    '#include <common>\n' + GROUND_FRAG_PREFIX + '\n' + FARMLAND_GLSL
+                );
+                shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', GROUND_COLOUR.replace('PLANT_X0', (typeof xMin === 'number' && isFinite(xMin) ? xMin : 0).toFixed(4)));
+                shader.fragmentShader = shader.fragmentShader.replace('#include <roughnessmap_fragment>', 'float roughnessFactor = gRough;');
+                shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_maps>', GROUND_NORMAL);
+            };
+            return mat;
+        }
+
+        function buildTerrain(name, m, color) {
+            var obj = terrainGltf.scene.getObjectByName(name);
+            if (!obj || !obj.isMesh) return;
+            if (obj.parent) obj.parent.remove(obj);
+            scene.add(obj);
+            var geom = obj.geometry;
+            if (!geom.attributes.uv) {
+                var pos = geom.attributes.position;
+                var uvs = new Float32Array(pos.count * 2);
+                for (var k = 0; k < pos.count; k++) {
+                    uvs[k * 2] = pos.getX(k) / m;
+                    uvs[k * 2 + 1] = pos.getZ(k) / m;
+                }
+                geom.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+            }
+            if (!geom.attributes.normal) geom.computeVertexNormals();
+            obj.material = new THREE.MeshStandardMaterial({
+                color: color,
+                roughness: 1,
+                metalness: 0,
+                envMapIntensity: 0.4,
+                map: diffTex,
+                normalMap: norTex
+            });
+            obj.receiveShadow = true;
+            return obj;
+        }
+        var hillsNode = terrainGltf.scene.getObjectByName('HILLS');
+        if (hillsNode && hillsNode.parent) hillsNode.parent.remove(hillsNode);
+
+        var groundObj = terrainGltf.scene.getObjectByName('GROUND');
+        if (groundObj && groundObj.isMesh) {
+            if (groundObj.parent) groundObj.parent.remove(groundObj);
+            scene.add(groundObj);
+            if (!groundObj.geometry.attributes.normal) groundObj.geometry.computeVertexNormals();
+            groundObj.material = makeGroundMaterial();
+            groundObj.receiveShadow = true;
+        }
+
+        var propsGroup = new THREE.Group();
+        while (terrainGltf.scene.children.length) {
+            var child = terrainGltf.scene.children[0];
+            terrainGltf.scene.remove(child);
+            propsGroup.add(child);
+        }
+        propsGroup.traverse(function (o) {
+            if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
+        });
+        scene.add(propsGroup);
+
+        function hh(x, y) { var s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return s - Math.floor(s); }
+        function vnoise(x, y) { var ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy; fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy); var a = hh(ix, iy), b = hh(ix + 1, iy), c = hh(ix, iy + 1), d = hh(ix + 1, iy + 1); return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy; }
+        function fbm(x, y, o) { var v = 0, a = 0.5, n = 0; for (var i = 0; i < o; i++) { v += a * vnoise(x, y); n += a; x = x * 2.03 + 17.3; y = y * 2.03 + 5.1; a *= 0.5; } return v / n; }
+        function ridged(x, y, o) { var s = 0, a = 0.5, p = 1, n = 0; for (var i = 0; i < o; i++) { var r = 1 - Math.abs(2 * vnoise(x, y) - 1); r *= r; s += r * a * p; n += a; p = Math.min(1, r * 1.7); x = x * 2.07 + 3.1; y = y * 2.07 + 1.7; a *= 0.5; } return s / n; }
+        function sstep(a, b, x) { var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
+        function heightAt(x, z) {
+            var r = Math.hypot(x, z), s = Math.max(Math.abs(x), Math.abs(z));
+            var m1 = sstep(0.30, 0.62, fbm(x * 0.0007 + 5, z * 0.0007 + 2, 3));
+            var m2 = sstep(0.28, 0.60, fbm(x * 0.0006 + 31, z * 0.0006 + 12, 3));
+            var base = -0.45 * (1 - sstep(452, 472, s));
+            var und = 6 * sstep(520, 900, r) * fbm(x * 0.004, z * 0.004, 3);
+            var foot = 80 * sstep(740, 1250, r) * (0.25 + 0.75 * ridged(x * 0.0028 + 2, z * 0.0028, 5)) * (0.4 + 0.6 * m1);
+            var mid = 230 * sstep(1150, 1700, r) * Math.pow(ridged(x * 0.0017 + 9, z * 0.0017, 6), 1.1) * (0.30 + 0.70 * m1);
+            var far = 360 * sstep(1750, 2300, r) * Math.pow(ridged(x * 0.0011 + 20, z * 0.0011 + 7, 6), 1.05) * (0.28 + 0.72 * m2);
+            return base + (und + foot + mid + far) * (1 - sstep(2350, 2640, r));
+        }
+
+        var NR = 170, NA = 900, R0 = 420, R1 = 2640, tpos = new Float32Array((NR + 1) * NA * 3);
+        for (var ti = 0; ti <= NR; ti++) {
+            var rr = R0 + (R1 - R0) * Math.pow(ti / NR, 1.4);
+            for (var tj = 0; tj < NA; tj++) {
+                var th = tj / NA * Math.PI * 2, tx = Math.cos(th) * rr, tz = Math.sin(th) * rr, to = (ti * NA + tj) * 3;
+                tpos[to] = tx; tpos[to + 1] = heightAt(tx, tz); tpos[to + 2] = tz;
+            }
+        }
+        var tidx = new Uint32Array(NR * NA * 6), tk = 0;
+        for (var tri = 0; tri < NR; tri++) for (var taj = 0; taj < NA; taj++) {
+            var ta0 = tri * NA + taj, ta1 = tri * NA + (taj + 1) % NA, tb0 = (tri + 1) * NA + taj, tb1 = (tri + 1) * NA + (taj + 1) % NA;
+            tidx[tk++] = ta0; tidx[tk++] = ta1; tidx[tk++] = tb0; tidx[tk++] = ta1; tidx[tk++] = tb1; tidx[tk++] = tb0;
+        }
+        var terrainGeo = new THREE.BufferGeometry();
+        terrainGeo.setAttribute('position', new THREE.BufferAttribute(tpos, 3));
+        terrainGeo.setIndex(new THREE.BufferAttribute(tidx, 1));
+        terrainGeo.computeVertexNormals();
+
+        var FARMLAND_GLSL = `
+float mH(vec2 p){ p = fract(p * vec2(0.1031, 0.1030)); p += dot(p, p.yx + 33.33); return fract((p.x + p.y) * p.x); }
+float mN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(mH(i), mH(i+vec2(1,0)), f.x), mix(mH(i+vec2(0,1)), mH(i+vec2(1,1)), f.x), f.y); }
+float mF(vec2 p){ float v = 0.0, a = 0.5; for (int i = 0; i < 5; i++){ v += a * mN(p); p = p * 2.02 + 17.3; a *= 0.5; } return v / 0.97; }
+vec3 farmlandAt(vec2 xz){
+  float f1 = mF(xz * 0.0035), f2 = mF(xz * 0.02 + 9.0), f3 = mN(xz * 0.21);
+  vec3 forest = mix(vec3(0.016,0.046,0.016), vec3(0.034,0.080,0.022), f2) * (0.72 + 0.56 * f3);
+  vec3 meadow = mix(vec3(0.060,0.115,0.032), vec3(0.105,0.145,0.046), f1);
+  vec3 veg = mix(meadow, forest, smoothstep(0.40, 0.60, f1));
+  float rnd = mF(xz * 0.014 + 6.0);
+  return mix(meadow, veg, 0.35 + 0.65 * rnd);
+}
+`;
+        var TERRAIN_GLSL = FARMLAND_GLSL + `
+vec3 terrainAlbedo(vec3 W, vec3 N){
+  float slope = 1.0 - clamp(N.y, 0.0, 1.0), h = W.y;
+  float f1 = mF(W.xz * 0.0035), f2 = mF(W.xz * 0.02 + 9.0), f3 = mN(W.xz * 0.21);
+  vec3 forest = mix(vec3(0.016,0.046,0.016), vec3(0.034,0.080,0.022), f2) * (0.72 + 0.56 * f3);
+  vec3 meadow = mix(vec3(0.060,0.115,0.032), vec3(0.105,0.145,0.046), f1);
+  vec3 veg = mix(meadow, forest, smoothstep(0.40, 0.60, f1 + slope * 0.9));
+  float tree = 1.0 - smoothstep(150.0, 250.0, h + (f1 - 0.5) * 90.0);
+  vec3 rock = mix(vec3(0.095,0.085,0.080), vec3(0.20,0.185,0.17), f2) * (0.8 + 0.4 * f3);
+  float rm = clamp(smoothstep(0.28, 0.52, slope) + (1.0 - tree), 0.0, 1.0);
+  vec3 col = mix(veg, rock, rm);
+  float low = 1.0 - smoothstep(10.0, 110.0, h);
+  return mix(col, farmlandAt(W.xz), low);
+}
+`;
+        var terrainMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: 0, envMapIntensity: 0.4 });
+        terrainMat.extensions = { derivatives: true };
+        terrainMat.onBeforeCompile = function (sh) {
+            sh.vertexShader = 'varying vec3 vTW;\nvarying vec3 vTN;\n' + sh.vertexShader;
+            sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvTW = (modelMatrix * vec4(position, 1.0)).xyz;\nvTN = normalize(mat3(modelMatrix) * normal);');
+            sh.fragmentShader = 'varying vec3 vTW;\nvarying vec3 vTN;\n' + sh.fragmentShader;
+            sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + TERRAIN_GLSL);
+            sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', 'diffuseColor.rgb = terrainAlbedo(vTW, normalize(vTN));');
+        };
+        var terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
+        terrainMesh.frustumCulled = false;
+        scene.add(terrainMesh);
+
+        for (var pd = 0; pd < propDefs.length; pd++) {
+            var diff = results[5 + pd * 3];
+            var nor = results[5 + pd * 3 + 1];
+            var arm = results[5 + pd * 3 + 2];
+            var propTexes = [diff, nor, arm];
+            for (var pt = 0; pt < propTexes.length; pt++) {
+                var tex = propTexes[pt];
+                tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+                tex.repeat.set(1, 1);
+                tex.flipY = false;
+                tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            }
+            diff.encoding = THREE.sRGBEncoding;
+            var propMat = new THREE.MeshStandardMaterial({
+                map: diff,
+                normalMap: nor,
+                aoMap: arm,
+                roughnessMap: arm,
+                metalnessMap: arm,
+                roughness: 1,
+                metalness: 1
+            });
+            propsGroup.traverse(function (o) {
+                if (o.isMesh && o.name.indexOf(propDefs[pd].prefix) === 0) {
+                    o.material = propMat;
+                    if (o.geometry.attributes.uv && !o.geometry.attributes.uv2) {
+                        o.geometry.setAttribute('uv2', o.geometry.attributes.uv);
+                    }
+                }
+            });
+        }
+
+        var placeholder = null;
+        var cropMesh = null;
+        grassGltf.scene.traverse(function (o) {
+            if (!o.isMesh) return;
+            if (o.name === 'Crop_Placeholder') placeholder = o;
+            if (!cropMesh && /crop/i.test(o.name) && o.name !== 'Crop_Placeholder') cropMesh = o;
+        });
+        placeholder.visible = false;
+
+        var cropPosAttr = placeholder.geometry.attributes.position;
+        for (var cbI = 0; cbI < cropPosAttr.count; cbI++) {
+            var cbx = cropPosAttr.getX(cbI), cbz = cropPosAttr.getZ(cbI);
+            if (cbx < cropMinX) cropMinX = cbx;
+            if (cbx > cropMaxX) cropMaxX = cbx;
+            if (cbz < cropMinZ) cropMinZ = cbz;
+            if (cbz > cropMaxZ) cropMaxZ = cbz;
+        }
+        clampCameraPlaceholder = function () {
+            camera.position.x = Math.max(cropMinX, Math.min(cropMaxX, camera.position.x));
+            camera.position.z = Math.max(cropMinZ, Math.min(cropMaxZ, camera.position.z));
+            controls.target.x = Math.max(-26, Math.min(26, controls.target.x));
+            controls.target.z = Math.max(-16, Math.min(16, controls.target.z));
+        };
+
+        var phGeom = placeholder.geometry;
+        var phPos = phGeom.attributes.position;
+        var phIndex = phGeom.index;
+        var xMin = Infinity, xMax = -Infinity, zMin = Infinity, zMax = -Infinity;
+        var triangles = [];
+        for (var triI = 0; triI < phIndex.count; triI += 3) {
+            var ia = phIndex.getX(triI), ib = phIndex.getX(triI + 1), ic = phIndex.getX(triI + 2);
+            var tri = [
+                { x: phPos.getX(ia), z: phPos.getZ(ia) },
+                { x: phPos.getX(ib), z: phPos.getZ(ib) },
+                { x: phPos.getX(ic), z: phPos.getZ(ic) }
+            ];
+            triangles.push(tri);
+            for (var tv = 0; tv < 3; tv++) {
+                if (tri[tv].x < xMin) xMin = tri[tv].x;
+                if (tri[tv].x > xMax) xMax = tri[tv].x;
+                if (tri[tv].z < zMin) zMin = tri[tv].z;
+                if (tri[tv].z > zMax) zMax = tri[tv].z;
+            }
+        }
+
+        function pointInTri(px, pz, t) {
+            var ax = t[0].x, az = t[0].z, bx = t[1].x, bz = t[1].z, cx = t[2].x, cz = t[2].z;
+            var d1 = (px - bx) * (az - bz) - (ax - bx) * (pz - bz);
+            var d2 = (px - cx) * (bz - cz) - (bx - cx) * (pz - cz);
+            var d3 = (px - ax) * (cz - az) - (cx - ax) * (pz - az);
+            var hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+            var hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+            return !(hasNeg && hasPos);
+        }
+        function insidePlaceholder(px, pz) {
+            for (var tt = 0; tt < triangles.length; tt++) {
+                if (pointInTri(px, pz, triangles[tt])) return true;
+            }
+            return false;
+        }
+
+        var cropRnd = mulberry32(0x5EED);
+        var plantPositions = [];
+        var stripeK = 0;
+        while (true) {
+            var az = 7.56 + 0.76 * stripeK;
+            if (az > zMax) break;
+            var steps = Math.floor((xMax - xMin) / 0.5);
+            for (var side = 0; side < 2; side++) {
+                var rowZ = side === 0 ? az : -az;
+                for (var st = 0; st <= steps; st++) {
+                    var px = xMin + st * 0.5 + (cropRnd() * 2 - 1) * 0.02;
+                    var pz = rowZ + (cropRnd() * 2 - 1) * 0.02;
+                    if (insidePlaceholder(px, pz)) {
+                        plantPositions.push({
+                            x: px,
+                            z: pz,
+                            rot: cropRnd() * Math.PI * 2,
+                            scale: 0.55 + cropRnd() * 0.15
+                        });
+                    }
+                }
+            }
+            stripeK++;
+        }
+
+        var plantMat = cropMesh.material.clone();
+        plantMat.side = THREE.DoubleSide;
+        plantMat.map = null;
+        plantMat.color.set(0x466101);
+        plantMat.normalMap = null;
+        if (cropMesh.geometry.attributes.uv && !cropMesh.geometry.attributes.uv2) {
+            cropMesh.geometry.setAttribute('uv2', cropMesh.geometry.attributes.uv);
+        }
+        plantMat.aoMap = cropMesh.material.roughnessMap || cropMesh.material.metalnessMap;
+        plantMat.aoMapIntensity = 1;
+        addDistShrink(plantMat, 'crop');
+        var cropInst = new THREE.InstancedMesh(cropMesh.geometry, plantMat, plantPositions.length);
+        var tmpM = new THREE.Matrix4();
+        var tmpQ = new THREE.Quaternion();
+        var tmpE = new THREE.Euler();
+        var tmpS = new THREE.Vector3();
+        var tmpP = new THREE.Vector3();
+        for (var plI = 0; plI < plantPositions.length; plI++) {
+            var pl = plantPositions[plI];
+            tmpP.set(pl.x, 0, pl.z);
+            tmpE.set(0, pl.rot, 0);
+            tmpQ.setFromEuler(tmpE);
+            tmpS.set(pl.scale, pl.scale, pl.scale);
+            tmpM.compose(tmpP, tmpQ, tmpS);
+            cropInst.setMatrixAt(plI, tmpM);
+        }
+        cropInst.instanceMatrix.needsUpdate = true;
+        cropInst.frustumCulled = false;
+        cropInst.castShadow = false;
+        scene.add(cropInst);
+
+        function edgeWarp(x, z) {
+            return 9 * Math.sin(x * 0.05 + 1.3) + 7 * Math.sin(z * 0.07 + 0.4) + 5 * Math.sin((x + z) * 0.11);
+        }
+        var farPositions = [];
+        for (var fk = 0; ; fk++) {
+            var fz = 7.18 + 0.76 * fk;
+            if (fz > 150) break;
+            for (var fside = 0; fside < 2; fside++) {
+                var rowZ = fside === 0 ? fz : -fz;
+                for (var fx = -190; fx <= 170; fx += 0.5) {
+                    var fpx = fx + (cropRnd() * 2 - 1) * 0.02;
+                    var fpz = rowZ + (cropRnd() * 2 - 1) * 0.02;
+                    if (insidePlaceholder(fpx, fpz)) continue;
+                    var e = Math.max(Math.abs(fpx + 5) - 80, Math.abs(fpz) - 66) + edgeWarp(fpx, fpz);
+                    if (cropRnd() < 1 - sstep(0, 60, e)) {
+                        farPositions.push({
+                            x: fpx,
+                            z: fpz,
+                            rot: cropRnd() * Math.PI * 2,
+                            scale: 0.55 + cropRnd() * 0.15
+                        });
+                    }
+                }
+            }
+        }
+        var cropFarInst = new THREE.InstancedMesh(cropMesh.geometry, plantMat, farPositions.length);
+        for (var flI = 0; flI < farPositions.length; flI++) {
+            var fpl = farPositions[flI];
+            tmpP.set(fpl.x, 0, fpl.z);
+            tmpE.set(0, fpl.rot, 0);
+            tmpQ.setFromEuler(tmpE);
+            tmpS.set(fpl.scale, fpl.scale, fpl.scale);
+            tmpM.compose(tmpP, tmpQ, tmpS);
+            cropFarInst.setMatrixAt(flI, tmpM);
+        }
+        cropFarInst.instanceMatrix.needsUpdate = true;
+        cropFarInst.frustumCulled = false;
+        cropFarInst.castShadow = false;
+        scene.add(cropFarInst);
+
+        var grassPh = null;
+        grassGltf.scene.traverse(function (o) {
+            if (o.isMesh && o.name === 'Grass_Placeholder') grassPh = o;
+        });
+        grassPh.visible = false;
+
+        grassPh.scale.setScalar(0.9);
+        grassPh.updateMatrixWorld(true);
+        var gMat = grassPh.matrixWorld;
+
+        var gGeom = grassPh.geometry;
+        var gPos = gGeom.attributes.position;
+        var gIdx = gGeom.index;
+        var gTris = [];
+        var gAreas = [];
+        var gTotalArea = 0;
+        var gxMin = Infinity, gxMax = -Infinity, gzMin = Infinity, gzMax = -Infinity;
+        var _gA = new THREE.Vector3(), _gB = new THREE.Vector3(), _gC = new THREE.Vector3();
+        for (var gi = 0; gi < gIdx.count; gi += 3) {
+            var gA = gIdx.getX(gi), gB = gIdx.getX(gi + 1), gC = gIdx.getX(gi + 2);
+            _gA.set(gPos.getX(gA), gPos.getY(gA), gPos.getZ(gA)).applyMatrix4(gMat);
+            _gB.set(gPos.getX(gB), gPos.getY(gB), gPos.getZ(gB)).applyMatrix4(gMat);
+            _gC.set(gPos.getX(gC), gPos.getY(gC), gPos.getZ(gC)).applyMatrix4(gMat);
+            var gTri = [
+                { x: _gA.x, z: _gA.z },
+                { x: _gB.x, z: _gB.z },
+                { x: _gC.x, z: _gC.z }
+            ];
+            var gArea = Math.abs(
+                (gTri[1].x - gTri[0].x) * (gTri[2].z - gTri[0].z) -
+                (gTri[2].x - gTri[0].x) * (gTri[1].z - gTri[0].z)
+            ) * 0.5;
+            gTris.push(gTri);
+            gAreas.push(gArea);
+            gTotalArea += gArea;
+            for (var gv = 0; gv < 3; gv++) {
+                if (gTri[gv].x < gxMin) gxMin = gTri[gv].x;
+                if (gTri[gv].x > gxMax) gxMax = gTri[gv].x;
+                if (gTri[gv].z < gzMin) gzMin = gTri[gv].z;
+                if (gTri[gv].z > gzMax) gzMax = gTri[gv].z;
+            }
+        }
+
+        function insideGrassPlaceholder(px, pz) {
+            for (var gg = 0; gg < gTris.length; gg++) {
+                if (pointInTri(px, pz, gTris[gg])) return true;
+            }
+            return false;
+        }
+
+        scene.updateMatrixWorld(true);
+        var CELL = 0.05;
+        var gCols = Math.max(1, Math.ceil((gxMax - gxMin) / CELL));
+        var gRows = Math.max(1, Math.ceil((gzMax - gzMin) / CELL));
+        var occGrid = new Uint8Array(gCols * gRows);
+
+        function markTriOnGrid(t) {
+            var minC = Math.max(0, Math.floor((Math.min(t[0].x, t[1].x, t[2].x) - gxMin) / CELL));
+            var maxC = Math.min(gCols - 1, Math.floor((Math.max(t[0].x, t[1].x, t[2].x) - gxMin) / CELL));
+            var minR = Math.max(0, Math.floor((Math.min(t[0].z, t[1].z, t[2].z) - gzMin) / CELL));
+            var maxR = Math.min(gRows - 1, Math.floor((Math.max(t[0].z, t[1].z, t[2].z) - gzMin) / CELL));
+            for (var r = minR; r <= maxR; r++) {
+                for (var c = minC; c <= maxC; c++) {
+                    var cx0 = gxMin + c * CELL, cz0 = gzMin + r * CELL;
+                    var cx1 = cx0 + CELL, cz1 = cz0 + CELL;
+                    if (pointInTri(cx0, cz0, t) || pointInTri(cx1, cz0, t) ||
+                        pointInTri(cx0, cz1, t) || pointInTri(cx1, cz1, t) ||
+                        pointInTri((cx0 + cx1) * 0.5, (cz0 + cz1) * 0.5, t)) {
+                        occGrid[r * gCols + c] = 1;
+                    }
+                }
+            }
+        }
+
+        var occMeshes = [];
+        propsGroup.traverse(function (o) { if (o.isMesh) occMeshes.push(o); });
+        var _oA = new THREE.Vector3(), _oB = new THREE.Vector3(), _oC = new THREE.Vector3();
+        for (var omI = 0; omI < occMeshes.length; omI++) {
+            var occMesh = occMeshes[omI];
+            if (!occMesh.visible) continue;
+            if (occMesh.name === 'Crop_Placeholder' || occMesh.name === 'Grass_Placeholder') continue;
+            var occGeom = occMesh.geometry;
+            var occPos = occGeom.attributes.position;
+            var occIdx = occGeom.index;
+            var occTriCount = occIdx ? occIdx.count / 3 : occPos.count / 3;
+            for (var oti = 0; oti < occTriCount; oti++) {
+                var oia, oib, oic;
+                if (occIdx) { oia = occIdx.getX(oti * 3); oib = occIdx.getX(oti * 3 + 1); oic = occIdx.getX(oti * 3 + 2); }
+                else { oia = oti * 3; oib = oti * 3 + 1; oic = oti * 3 + 2; }
+                _oA.set(occPos.getX(oia), occPos.getY(oia), occPos.getZ(oia)).applyMatrix4(occMesh.matrixWorld);
+                _oB.set(occPos.getX(oib), occPos.getY(oib), occPos.getZ(oib)).applyMatrix4(occMesh.matrixWorld);
+                _oC.set(occPos.getX(oic), occPos.getY(oic), occPos.getZ(oic)).applyMatrix4(occMesh.matrixWorld);
+                if (Math.min(_oA.y, _oB.y, _oC.y) > 1.1) continue;
+                markTriOnGrid([{ x: _oA.x, z: _oA.z }, { x: _oB.x, z: _oB.z }, { x: _oC.x, z: _oC.z }]);
+            }
+        }
+
+        function touchesMesh(px, pz, radius) {
+            if (Math.hypot(px - 0.2, Math.abs(pz) - 1.44) < 0.25) return true;
+            if (Math.hypot(px + 4.6, pz) < 0.18) return true;
+            var c = Math.floor((px - gxMin) / CELL);
+            var r = Math.floor((pz - gzMin) / CELL);
+            if (c < 0 || c >= gCols || r < 0 || r >= gRows) return false;
+            var radC = Math.ceil(radius / CELL);
+            var r0 = Math.max(0, r - radC), r1 = Math.min(gRows - 1, r + radC);
+            var c0 = Math.max(0, c - radC), c1 = Math.min(gCols - 1, c + radC);
+            var rr2 = radius * radius;
+            for (var rr = r0; rr <= r1; rr++) {
+                for (var cc = c0; cc <= c1; cc++) {
+                    if (!occGrid[rr * gCols + cc]) continue;
+                    var cdx = gxMin + cc * CELL + CELL * 0.5 - px;
+                    var cdz = gzMin + rr * CELL + CELL * 0.5 - pz;
+                    if (cdx * cdx + cdz * cdz <= rr2) return true;
+                }
+            }
+            return false;
+        }
+
+        var weedRnd = mulberry32(0xBEEF);
+
+        var allGrassPrefixes = [
+            'grass_medium_01_large_a', 'grass_medium_01_large_b', 'grass_medium_01_large_c',
+            'grass_medium_01_mid_a', 'grass_medium_01_mid_b', 'grass_medium_01_mid_c',
+            'grass_medium_01_small_a', 'grass_medium_01_small_b',
+            'grass_medium_01_tall_a', 'grass_medium_01_tall_b', 'grass_medium_01_tall_c',
+            'grass_medium_01_tiny_a', 'grass_medium_01_tiny_b', 'grass_medium_01_tiny_c',
+            'grass_medium_01_tiny_d', 'grass_medium_01_tiny_e', 'grass_medium_01_tiny_f'
+        ];
+
+        var grassMeshes = {};
+        grassGltf.scene.traverse(function (o) {
+            if (!o.isMesh) return;
+            for (var bi = 0; bi < allGrassPrefixes.length; bi++) {
+                var p = allGrassPrefixes[bi];
+                if (!grassMeshes[p] && o.name.indexOf(p) === 0) {
+                    grassMeshes[p] = o;
+                }
+            }
+        });
+
+        var largeBushPrefixes = ['grass_medium_01_large_a', 'grass_medium_01_large_b', 'grass_medium_01_large_c'];
+        var midBushPrefixes = ['grass_medium_01_mid_a', 'grass_medium_01_mid_b', 'grass_medium_01_mid_c'];
+        var smallBushPrefixes = ['grass_medium_01_small_a', 'grass_medium_01_small_b'];
+        var tallStalkPrefixes = ['grass_medium_01_tall_a', 'grass_medium_01_tall_b', 'grass_medium_01_tall_c'];
+        var tinyTuftPrefixes = [
+            'grass_medium_01_tiny_a', 'grass_medium_01_tiny_b', 'grass_medium_01_tiny_c',
+            'grass_medium_01_tiny_d', 'grass_medium_01_tiny_e', 'grass_medium_01_tiny_f'
+        ];
+
+        var bushPlaced = {};
+        for (var pi = 0; pi < allGrassPrefixes.length; pi++) {
+            bushPlaced[allGrassPrefixes[pi]] = [];
+        }
+
+        function addBushInstance(pref, x, z, scale, rot, tiltX, tiltZ) {
+            if (!bushPlaced[pref]) return;
+            bushPlaced[pref].push({
+                x: x,
+                z: z,
+                scale: scale,
+                rot: rot !== undefined ? rot : weedRnd() * Math.PI * 2,
+                tiltX: tiltX !== undefined ? tiltX : (weedRnd() * 2 - 1) * 0.10,
+                tiltZ: tiltZ !== undefined ? tiltZ : (weedRnd() * 2 - 1) * 0.10
+            });
+        }
+
+        function laneProfile(z) { return 1.0; }
+
+        function pickWeedPoint() {
+            var pick = weedRnd() * gTotalArea;
+            var acc = 0;
+            var triIdx = 0;
+            for (var aI = 0; aI < gAreas.length; aI++) {
+                acc += gAreas[aI];
+                if (pick < acc) { triIdx = aI; break; }
+            }
+            var t = gTris[triIdx];
+            var u = weedRnd();
+            var w = weedRnd();
+            if (u + w > 1) { u = 1 - u; w = 1 - w; }
+            return {
+                x: t[0].x + u * (t[1].x - t[0].x) + w * (t[2].x - t[0].x),
+                z: t[0].z + u * (t[1].z - t[0].z) + w * (t[2].z - t[0].z)
+            };
+        }
+
+        grassAlphaTex.flipY = false;
+        grassAlphaTex.wrapS = grassAlphaTex.wrapT = THREE.RepeatWrapping;
+        grassAlphaTex.repeat.set(1, 1);
+        grassAlphaTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+        function addDistShrink(mat, key) {
+            var cropH = null;
+            if (key === 'crop') {
+                cropMesh.geometry.computeBoundingBox();
+                cropH = cropMesh.geometry.boundingBox.max.y * 0.95;
+            }
+            mat.onBeforeCompile = function (sh) {
+                if (key === 'crop') {
+                    sh.vertexShader = sh.vertexShader.replace('void main() {', 'varying float vPlantY;\nvoid main() {').replace('#include <begin_vertex>', '#include <begin_vertex>\nvPlantY = position.y;');
+                    sh.fragmentShader = sh.fragmentShader.replace('void main() {', 'varying float vPlantY;\nvoid main() {').replace('#include <dithering_fragment>', 'gl_FragColor.rgb *= mix(0.22, 1.0, pow(smoothstep(0.0, ' + cropH.toFixed(3) + ', vPlantY), 0.8));\n#include <dithering_fragment>');
+                }
+                sh.vertexShader = sh.vertexShader.replace(
+                    '#include <begin_vertex>',
+                    '#include <begin_vertex>\n#ifdef USE_INSTANCING\nvec4 iwp = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);\ntransformed *= 1.0 - smoothstep(320.0, 420.0, distance(cameraPosition, iwp.xyz));\n#endif'
+                );
+            };
+            mat.customProgramCacheKey = function () { return 'dist-shrink-' + key; };
+            mat.needsUpdate = true;
+        }
+
+        /* 1. CLUSTERS: Place dense, multi-tiered bush clumps across Grass_Placeholder */
+        var NUM_CLUMPS = 5000;
+        for (var clI = 0; clI < NUM_CLUMPS; clI++) {
+            var cp = null;
+            for (var trI = 0; trI < 30; trI++) {
+                var cand = pickWeedPoint();
+                if (touchesMesh(cand.x, cand.z, 0.35)) continue;
+                var edgeX = sstep(gxMin, gxMin + 3, cand.x) * (1 - sstep(gxMax - 3, gxMax, cand.x));
+                if (weedRnd() > edgeX) continue;
+                var lane = laneProfile(cand.z);
+                if (weedRnd() > lane) continue;
+                /* Keep tire tracks relatively clear like the reference render */
+                var trackDist = Math.min(Math.abs(cand.z - 1.44), Math.abs(cand.z + 1.44));
+                if (trackDist < 0.22 && weedRnd() < 0.78) continue;
+                cp = cand;
+                break;
+            }
+            if (!cp) continue;
+
+            var clumpScale = 2.0 + weedRnd() * 1.1;
+
+            /* Base broad bush mound */
+            var basePref = weedRnd() < 0.75
+                ? largeBushPrefixes[Math.floor(weedRnd() * largeBushPrefixes.length)]
+                : midBushPrefixes[Math.floor(weedRnd() * midBushPrefixes.length)];
+            addBushInstance(basePref, cp.x, cp.z, clumpScale * (1.0 + weedRnd() * 0.30));
+
+            /* Companion / filler bush for thick overlapping foliage */
+            if (weedRnd() < 0.88) {
+                var compPref = weedRnd() < 0.55
+                    ? midBushPrefixes[Math.floor(weedRnd() * midBushPrefixes.length)]
+                    : smallBushPrefixes[Math.floor(weedRnd() * smallBushPrefixes.length)];
+                var cAng = weedRnd() * Math.PI * 2, cDist = 0.10 + weedRnd() * 0.22;
+                addBushInstance(compPref, cp.x + Math.cos(cAng) * cDist, cp.z + Math.sin(cAng) * cDist, clumpScale * (0.80 + weedRnd() * 0.25));
+            }
+
+            /* Tall flowering seed stalks sprouting out of the bush mound */
+            var numTall = 2 + Math.floor(weedRnd() * 4);
+            for (var ti = 0; ti < numTall; ti++) {
+                var tallPref = tallStalkPrefixes[Math.floor(weedRnd() * tallStalkPrefixes.length)];
+                var tAng = weedRnd() * Math.PI * 2, tDist = weedRnd() * 0.26;
+                var tScale = 1.6 + weedRnd() * 1.0;
+                addBushInstance(tallPref, cp.x + Math.cos(tAng) * tDist, cp.z + Math.sin(tAng) * tDist, tScale);
+            }
+
+            /* Edge tufts around the perimeter of the clump */
+            var numEdge = 1 + Math.floor(weedRnd() * 2);
+            for (var ei = 0; ei < numEdge; ei++) {
+                var edgePref = tinyTuftPrefixes[Math.floor(weedRnd() * tinyTuftPrefixes.length)];
+                var eAng = weedRnd() * Math.PI * 2, eDist = 0.22 + weedRnd() * 0.30;
+                addBushInstance(edgePref, cp.x + Math.cos(eAng) * eDist, cp.z + Math.sin(eAng) * eDist, 1.9 + weedRnd() * 1.0);
+            }
+        }
+
+        /* 1b. SIDE FLANKS: Dedicated dense clusters along both sides of the runway to match center density */
+        var NUM_SIDE_CLUMPS = 3000;
+        for (var sClI = 0; sClI < NUM_SIDE_CLUMPS; sClI++) {
+            var scp = null;
+            for (var trI = 0; trI < 30; trI++) {
+                var cand = pickWeedPoint();
+                if (Math.abs(cand.z) < 1.85) continue;
+                if (touchesMesh(cand.x, cand.z, 0.35)) continue;
+                var edgeX = sstep(gxMin, gxMin + 3, cand.x) * (1 - sstep(gxMax - 3, gxMax, cand.x));
+                if (weedRnd() > edgeX) continue;
+                scp = cand;
+                break;
+            }
+            if (!scp) continue;
+
+            var clumpScale = 2.0 + weedRnd() * 1.1;
+
+            var basePref = weedRnd() < 0.75
+                ? largeBushPrefixes[Math.floor(weedRnd() * largeBushPrefixes.length)]
+                : midBushPrefixes[Math.floor(weedRnd() * midBushPrefixes.length)];
+            addBushInstance(basePref, scp.x, scp.z, clumpScale * (1.0 + weedRnd() * 0.30));
+
+            if (weedRnd() < 0.88) {
+                var compPref = weedRnd() < 0.55
+                    ? midBushPrefixes[Math.floor(weedRnd() * midBushPrefixes.length)]
+                    : smallBushPrefixes[Math.floor(weedRnd() * smallBushPrefixes.length)];
+                var cAng = weedRnd() * Math.PI * 2, cDist = 0.10 + weedRnd() * 0.22;
+                addBushInstance(compPref, scp.x + Math.cos(cAng) * cDist, scp.z + Math.sin(cAng) * cDist, clumpScale * (0.80 + weedRnd() * 0.25));
+            }
+
+            var numTall = 2 + Math.floor(weedRnd() * 4);
+            for (var ti = 0; ti < numTall; ti++) {
+                var tallPref = tallStalkPrefixes[Math.floor(weedRnd() * tallStalkPrefixes.length)];
+                var tAng = weedRnd() * Math.PI * 2, tDist = weedRnd() * 0.26;
+                var tScale = 1.6 + weedRnd() * 1.0;
+                addBushInstance(tallPref, scp.x + Math.cos(tAng) * tDist, scp.z + Math.sin(tAng) * tDist, tScale);
+            }
+
+            var numEdge = 1 + Math.floor(weedRnd() * 2);
+            for (var ei = 0; ei < numEdge; ei++) {
+                var edgePref = tinyTuftPrefixes[Math.floor(weedRnd() * tinyTuftPrefixes.length)];
+                var eAng = weedRnd() * Math.PI * 2, eDist = 0.22 + weedRnd() * 0.30;
+                addBushInstance(edgePref, scp.x + Math.cos(eAng) * eDist, scp.z + Math.sin(eAng) * eDist, 1.9 + weedRnd() * 1.0);
+            }
+        }
+
+        /* 2. SCATTER: Natural standalone tufts and small bushes between clumps */
+        var NUM_SCATTER = 2500;
+        for (var scI = 0; scI < NUM_SCATTER; scI++) {
+            var sp = pickWeedPoint();
+            if (touchesMesh(sp.x, sp.z, 0.20)) continue;
+            var edgeX = sstep(gxMin, gxMin + 3, sp.x) * (1 - sstep(gxMax - 3, gxMax, sp.x));
+            if (weedRnd() > edgeX) continue;
+            var lane = laneProfile(sp.z);
+            if (weedRnd() > lane) continue;
+            var trackDist = Math.min(Math.abs(sp.z - 1.44), Math.abs(sp.z + 1.44));
+            if (trackDist < 0.20 && weedRnd() < 0.55) continue;
+
+            var dice = weedRnd();
+            if (dice < 0.35) {
+                var sPref = smallBushPrefixes[Math.floor(weedRnd() * smallBushPrefixes.length)];
+                addBushInstance(sPref, sp.x, sp.z, 1.9 + weedRnd() * 1.0);
+            } else if (dice < 0.70) {
+                var ttPref = tinyTuftPrefixes[Math.floor(weedRnd() * tinyTuftPrefixes.length)];
+                addBushInstance(ttPref, sp.x, sp.z, 1.9 + weedRnd() * 1.0);
+            } else {
+                var tlPref = tallStalkPrefixes[Math.floor(weedRnd() * tallStalkPrefixes.length)];
+                addBushInstance(tlPref, sp.x, sp.z, 1.5 + weedRnd() * 1.0);
+            }
+        }
+
+        /* 3. RING: Clumps along the runway extending into the far distance */
+        var NUM_RING = 2000;
+        for (var rI = 0; rI < NUM_RING; rI++) {
+            var rx = -180 + weedRnd() * 360;
+            if (rx > gxMin && rx < gxMax) continue;
+            var rz = (weedRnd() * 2 - 1) * 6.5;
+            var dist = rx < gxMin ? gxMin - rx : rx - gxMax;
+            var lane = laneProfile(rz);
+            var keep = (1 - sstep(10, 160, dist + 4 * Math.sin(rz * 0.7))) * lane;
+            if (weedRnd() > keep) continue;
+
+            var rBasePref = weedRnd() < 0.70
+                ? largeBushPrefixes[Math.floor(weedRnd() * largeBushPrefixes.length)]
+                : midBushPrefixes[Math.floor(weedRnd() * midBushPrefixes.length)];
+            var rScale = 1.9 + weedRnd() * 1.0;
+            addBushInstance(rBasePref, rx, rz, rScale);
+
+            var rTallPref = tallStalkPrefixes[Math.floor(weedRnd() * tallStalkPrefixes.length)];
+            addBushInstance(rTallPref, rx + (weedRnd() * 2 - 1) * 0.20, rz + (weedRnd() * 2 - 1) * 0.20, 1.5 + weedRnd() * 0.9);
+
+            if (weedRnd() < 0.60) {
+                var rTinyPref = tinyTuftPrefixes[Math.floor(weedRnd() * tinyTuftPrefixes.length)];
+                addBushInstance(rTinyPref, rx + (weedRnd() * 2 - 1) * 0.25, rz + (weedRnd() * 2 - 1) * 0.25, 1.7 + weedRnd() * 0.9);
+            }
+        }
+
+        /* 4. INSTANCING: Build instanced meshes for each bush variant */
+        for (var vIdx = 0; vIdx < allGrassPrefixes.length; vIdx++) {
+            var pref = allGrassPrefixes[vIdx];
+            var mesh = grassMeshes[pref];
+            if (!mesh) continue;
+            var placed = bushPlaced[pref];
+            if (!placed || placed.length === 0) continue;
+
+            var weedMat = mesh.material.clone();
+            weedMat.alphaMap = grassAlphaTex;
+            weedMat.alphaTest = 0.45;
+            weedMat.transparent = false;
+            weedMat.depthWrite = true;
+            weedMat.side = THREE.DoubleSide;
+            addDistShrink(weedMat, pref);
+
+            var weedInst = new THREE.InstancedMesh(mesh.geometry, weedMat, placed.length);
+            for (var pI = 0; pI < placed.length; pI++) {
+                var pl = placed[pI];
+                tmpP.set(pl.x, 0, pl.z);
+                tmpE.set(pl.tiltX, pl.rot, pl.tiltZ);
+                tmpQ.setFromEuler(tmpE);
+                var BUSH_SCALE = 0.4;
+                var ws = pl.scale * BUSH_SCALE, wsY = ws * (0.8 + weedRnd() * 0.45);
+                tmpS.set(ws, wsY, ws);
+                tmpM.compose(tmpP, tmpQ, tmpS);
+                weedInst.setMatrixAt(pI, tmpM);
+            }
+            weedInst.instanceMatrix.needsUpdate = true;
+            weedInst.frustumCulled = false;
+            weedInst.castShadow = false;
+            weedInst.receiveShadow = true;
+            scene.add(weedInst);
+        }
+
+        cameraColliders = [];
+        biplaneGltf.scene.traverse(function (o) {
+            if (o.isMesh && o.visible) cameraColliders.push(o);
+        });
+        propsGroup.traverse(function (o) {
+            if (o.isMesh) cameraColliders.push(o);
+        });
+        if (groundObj && groundObj.isMesh) cameraColliders.push(groundObj);
+
+        var pmrem = new THREE.PMREMGenerator(renderer);
+        var envRT = pmrem.fromEquirectangular(hdr);
+        scene.environment = envRT.texture;
+        scene.background = envRT.texture;
+        hdr.dispose();
+        pmrem.dispose();
+
+        assetsLoaded = true;
+
+        spray.amount = 1;
+        for (var pfI = 0; pfI < 240; pfI++) {
+            sprayClock += 0.025;
+            updateWind(sprayClock);
+            emitDroplets(0.025);
+            emitMist(0.025);
+            updateDroplets(0.025);
+            updateMist(0.025);
+        }
+    });
+
+    var clock = new THREE.Clock();
+    var propElapsed = 0;  // smoothed propeller time accumulator
+    var fanElapsed  = 0;  // smoothed pump-fan time accumulator
+    var smoothDt    = 0.016; // exponential-moving-average dt
+    var _camFwd = new THREE.Vector3();
+    var readyFrames = 0;
+    var planeBox = null;
+    function keepCameraOutOfPlane() {
+        if (!planeBox) { planeBox = new THREE.Box3().setFromObject(plane); planeBox.expandByScalar(0.5); }
+        var p = camera.position;
+        if (!planeBox.containsPoint(p)) return;
+        var best = Infinity, axis = 'x', dir = 1;
+        ['x', 'y', 'z'].forEach(function (a) {
+            var dMin = p[a] - planeBox.min[a], dMax = planeBox.max[a] - p[a];
+            if (dMin < best) { best = dMin; axis = a; dir = -1; }
+            if (dMax < best) { best = dMax; axis = a; dir = 1; }
+        });
+        p[axis] = dir < 0 ? planeBox.min[axis] - 0.01 : planeBox.max[axis] + 0.01;
+    }
+    function clampCameraCollision() {
+        if (camera.position.y < 0.15) camera.position.y = 0.15;
+        if (!cameraColliders.length) return;
+        cameraDir.subVectors(controls.target, camera.position);
+        var dist = cameraDir.length();
+        if (dist < 0.4) return;
+        cameraDir.divideScalar(dist);
+        cameraRay.set(camera.position, cameraDir);
+        cameraRay.near = 0.05;
+        cameraRay.far = dist;
+        var hits = cameraRay.intersectObjects(cameraColliders, false);
+        if (hits.length && hits[0].distance < 0.3) {
+            camera.position.addScaledVector(cameraDir, -(0.3 - hits[0].distance));
+        }
+    }
+    function animate() {
+        requestAnimationFrame(animate);
+        var rawDt = clock.getDelta();
+        /* Smooth dt with a fast EMA so sudden frame spikes (GC, tab-switch, first
+           load) don't cause a visible rotation jump. Alpha=0.12 gives a ~8-frame
+           settling time — fast enough to feel responsive, slow enough to iron out
+           one-off hitches. */
+        smoothDt = smoothDt + 0.12 * (Math.min(rawDt, 0.05) - smoothDt);
+        var dt = smoothDt;
+        /* Accumulate a dedicated time for each spinning part and assign the angle
+           directly from that accumulated time.  This makes rotation perfectly
+           uniform: the angle is always exactly (speed × time), never the sum of
+           potentially uneven per-frame deltas. */
+        propElapsed += dt;
+        fanElapsed  += dt;
+        if (nodes.PROP_SPIN) nodes.PROP_SPIN.rotation.x = propElapsed * 40;
+        if (nodes.PUMP_FAN) nodes.PUMP_FAN.rotation.x  = fanElapsed  * -12;
+        sprayClock += dt;
+        updateWind(sprayClock);
+        updateSpray(dt);
+        emitDroplets(dt);
+        emitMist(dt);
+        updateDroplets(dt);
+        updateMist(dt);
+        var uScaleVal = renderer.domElement.height / (2 * Math.tan((camera.fov * Math.PI / 180) / 2));
+        dropMat.uniforms.uScale.value = uScaleVal;
+        mistMat.uniforms.uScale.value = uScaleVal;
+        mistMat.uniforms.uTime.value = sprayClock;
+        mistMat.uniforms.uUpY.value = Math.max(0.15, Math.cos(Math.asin(Math.min(1, Math.abs(camera.getWorldDirection(_camFwd).y)))));
+        if (coneMat) {
+            coneMat.uniforms.uTime.value += dt;
+            coneMat.uniforms.uAmount.value = spray.amount;
+            for (var scI = 0; scI < sprayCones.length; scI++) {
+                sprayCones[scI].scale.y = Math.max(0.001, spray.amount);
+            }
+        }
+        updateHUD(dt);
+        updateCamTween();
+        if (assetsLoaded && !window.__READY) {
+            readyFrames++;
+            if (readyFrames >= 4) {
+                window.__READY = true;
+                window.__ready = true;
+                hideLoader();
+            }
+        }
+        controls.update();
+        if (controls.target.y < 0.1) controls.target.y = 0.1;
+        clampCameraCollision();
+        if (assetsLoaded) keepCameraOutOfPlane();
+        if (clampCameraPlaceholder) clampCameraPlaceholder();
+        renderer.render(scene, camera);
+    }
+
+    window.addEventListener('keydown', function (e) {
+        if (e.key === 's' || e.key === 'S') setSpray(!spray.on);
+    });
+
+    var roFlow = document.getElementById('roFlow');
+    var roPressure = document.getElementById('roPressure');
+    var roOpen = document.getElementById('roOpen');
+    var roAperture = document.getElementById('roAperture');
+    var roEngine = document.getElementById('roEngine');
+    var roHopper = document.getElementById('roHopper');
+    var hopFill = document.getElementById('hopFill');
+    var hudTime = 0;
+    var hopper = 74.0;
+    var ORANGE = '#e9631b';
+    var TICK_OFF = '#b9b2a2';
+
+    var boomTicks = [];
+    (function buildBoomTicks() {
+        var svg = document.getElementById('boomSvg');
+        var ns = 'http://www.w3.org/2000/svg';
+        for (var i = 0; i < 26; i++) {
+            var x = i < 13 ? 18 + i * (90 / 12) : 128 + (i - 13) * (90 / 12);
+            var r = document.createElementNS(ns, 'rect');
+            r.setAttribute('x', x);
+            r.setAttribute('y', 33);
+            r.setAttribute('width', 4);
+            r.setAttribute('height', 10);
+            r.setAttribute('rx', 2);
+            r.setAttribute('fill', TICK_OFF);
+            svg.appendChild(r);
+            boomTicks.push(r);
+        }
+    })();
+
+    function updateHUD(dt) {
+        var a = spray.amount;
+        hudTime += dt;
+        roFlow.textContent = Math.round(142 * a);
+        roPressure.textContent = (2.8 * a).toFixed(2);
+        var open = Math.round(26 * a);
+        roOpen.textContent = open + '/26';
+        roAperture.textContent = Math.round(100 * a);
+        roEngine.textContent = Math.round(1851 + Math.sin(hudTime * 3.1) * 4 + Math.sin(hudTime * 7.3) * 2);
+        hopper = Math.max(0, hopper - 0.02 * dt * a);
+        roHopper.textContent = hopper.toFixed(1);
+        hopFill.style.width = hopper + '%';
+        for (var i = 0; i < boomTicks.length; i++) {
+            boomTicks[i].setAttribute('fill', i < open ? ORANGE : TICK_OFF);
+        }
+    }
+
+    function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+    var camTween = null;
+    function tweenCamera(posArr, tgtArr, dur) {
+        camTween = {
+            sPos: camera.position.clone(),
+            sTgt: controls.target.clone(),
+            ePos: new THREE.Vector3().fromArray(posArr),
+            eTgt: new THREE.Vector3().fromArray(tgtArr),
+            dur: dur || 1.2,
+            t0: performance.now()
+        };
+    }
+    function updateCamTween() {
+        if (!camTween) return;
+        var t = (performance.now() - camTween.t0) / 1000 / camTween.dur;
+        if (t >= 1) {
+            camera.position.copy(camTween.ePos);
+            controls.target.copy(camTween.eTgt);
+            camTween = null;
+        } else {
+            var e = easeInOutCubic(t);
+            camera.position.lerpVectors(camTween.sPos, camTween.ePos, e);
+            controls.target.lerpVectors(camTween.sTgt, camTween.eTgt, e);
+        }
+    }
+
+    var btnHero = document.getElementById('btnHero');
+    if (btnHero) btnHero.addEventListener('click', function () {
+        controls.autoRotate = false;
+        tweenCamera([9.1, 2.8, -9.5], [-0.19, 1.1, -0.19], 1.2);
+    });
+    var btnNozzles = document.getElementById('btnNozzles');
+    if (btnNozzles) btnNozzles.addEventListener('click', function () {
+        controls.autoRotate = false;
+        tweenCamera([3.3, 0.72, -3.2], [0.1, 0.65, -1.9], 1.2);
+    });
+    var btnOrbit = document.getElementById('btnOrbit');
+    if (btnOrbit) btnOrbit.addEventListener('click', function () {
+        controls.autoRotate = !controls.autoRotate;
+        controls.autoRotateSpeed = 1.4;
+    });
+
+    var camSelect = document.getElementById('camSelect');
+    if (camSelect) camSelect.addEventListener('change', function () {
+        var v = camSelect.value;
+        if (v === 'HERO') {
+            controls.autoRotate = false;
+            tweenCamera([9.1, 2.8, -9.5], [-0.19, 1.1, -0.19], 1.2);
+        } else if (v === 'NOZZLES') {
+            controls.autoRotate = false;
+            tweenCamera([3.3, 0.72, -3.2], [0.1, 0.65, -1.9], 1.2);
+        } else if (v === 'ORBIT') {
+            controls.autoRotate = !controls.autoRotate;
+            controls.autoRotateSpeed = 1.4;
+        }
+        camSelect.value = '';
+    });
+
+    var spraySwitchEl = document.getElementById('spraySwitch');
+    if (spraySwitchEl) spraySwitchEl.addEventListener('click', function () {
+        setSpray(!spray.on);
+    });
+    renderer.domElement.addEventListener('pointerdown', function () {
+        camTween = null;
+        controls.autoRotate = false;
+    });
+    setSpray(spray.on);
+    animate();
+
+    window.addEventListener('resize', function () {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    window.__dbg = {
+        scene: scene,
+        camera: camera,
+        controls: controls,
+        spray: spray,
+        nodes: nodes,
+        setSpray: setSpray,
+        getParticleCount: function () {
+            var count = 0;
+            for (var di = 0; di < DMAX; di++) { if (dLife[di] > 0) count++; }
+            for (var mi = 0; mi < MAXP; mi++) { if (mistLife[mi] > 0) count++; }
+            for (var ci = 0; ci < sprayCones.length; ci++) {
+                if (sprayCones[ci].visible && sprayCones[ci].scale.y > 0.01) count++;
+            }
+            return count;
+        }
+    };
+})();
+</script>
+</body>
+</html>

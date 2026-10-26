@@ -1,0 +1,12 @@
+{
+  "name": "old-oak-treehouse",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The Old Oak — inline Three.js r159 treehouse builder. Tests use Playwright 1.55.0 with SwiftShader.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.0"
+  }
+}

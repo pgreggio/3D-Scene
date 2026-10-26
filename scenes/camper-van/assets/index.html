@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evening at Salt Cove</title>
+<meta name="color-scheme" content="dark">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,400&family=JetBrains+Mono:wght@400;500&family=Karla:wght@400;600&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --ink: #f5ead7;
+        --peach: #ffd7a8;
+        --amber: #f4a660;
+        --muted: #c2b4a3;
+        --soft: #b9b2a8;
+        --button-ink: #ffe2c0;
+        --panel: rgba(14, 12, 12, 0.5);
+        --edge: rgba(255, 236, 215, 0.1);
+        --rule: rgba(255, 236, 215, 0.12);
+        --serif: 'Fraunces', Georgia, serif;
+        --sans: 'Karla', 'Segoe UI', Arial, sans-serif;
+        --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+        width: 100%; height: 100%; overflow: hidden;
+        background: #120e0c; color: var(--ink); font-family: var(--sans);
+    }
+    #stage { position: fixed; inset: 0; }
+    #stage canvas {
+        display: block; width: 100%; height: 100%;
+        touch-action: none; cursor: grab;
+    }
+    #stage canvas:active { cursor: grabbing; }
+    .glass {
+        background: var(--panel); border: 1px solid var(--edge);
+        border-radius: 14px; backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+    .glyph { width: 14px; height: 14px; flex: none; stroke-width: 1.75; }
+
+    #intro {
+        position: fixed; top: 30px; left: 32px; width: 440px;
+        padding: 22px 24px 24px;
+    }
+    #intro .eyebrow {
+        display: flex; align-items: center; gap: 9px;
+        font: 500 11px/1 var(--mono); letter-spacing: 0.22em;
+        text-transform: uppercase; color: var(--amber);
+    }
+    #intro h1 {
+        margin: 13px 0 10px; font: 600 38px/1.08 var(--serif);
+        letter-spacing: -0.01em; color: var(--ink);
+    }
+    #intro h1 em { font-weight: 400; font-style: italic; color: var(--peach); }
+    #intro p { font-size: 15px; line-height: 1.5; color: var(--soft); }
+    #hint {
+        position: fixed; left: 32px; bottom: 34px; height: 38px; padding: 0 16px;
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        font: 400 11px/1 var(--mono); letter-spacing: 0.16em;
+        text-transform: uppercase; color: #b8aa99; white-space: nowrap;
+    }
+
+    #dock {
+        position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+        padding: 6px; display: flex; gap: 6px;
+    }
+    #dock .tool {
+        height: 42px; padding: 0 18px;
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        border: 1px solid transparent; border-radius: 10px; background: transparent;
+        color: var(--button-ink); font: 600 15px/1 var(--sans);
+        white-space: nowrap; cursor: pointer;
+        transition: background 0.2s, border-color 0.2s;
+    }
+    #dock .tool svg { width: 16px; height: 16px; }
+    #dock .tool:hover { background: rgba(255, 236, 215, 0.06); }
+    #dock .tool:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+    #dock .tool.on {
+        border-color: rgba(244, 166, 96, 0.55); background: rgba(244, 166, 96, 0.1);
+    }
+
+    #conditions {
+        position: fixed; right: 32px; bottom: 28px; width: 268px;
+        padding: 18px 18px 6px;
+    }
+    #conditions header {
+        font: 400 11px/1 var(--mono); letter-spacing: 0.14em;
+        text-transform: uppercase; color: var(--muted);
+    }
+    #conditions header time { font-size: 12px; letter-spacing: 0.06em; color: var(--ink); }
+    #condToggle {
+        display: flex; flex-direction: row; justify-content: space-between; align-items: baseline;
+        width: 100%; padding: 0; border: 0; background: none;
+        color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit;
+        cursor: default;
+    }
+    #condToggle:focus-visible { outline: 2px solid var(--amber); outline-offset: 4px; }
+    #conditions .chevron { display: none; }
+    #conditions svg#sunpath {
+        display: block; width: 100%; height: 64px; margin: 10px 0 4px;
+    }
+    #conditions dl {
+        display: grid; grid-template-columns: 16px 1fr auto; column-gap: 14px;
+    }
+    #conditions dt { display: contents; }
+    #conditions dd {
+        padding: 11px 0; border-top: 1px solid var(--rule);
+        font: 400 14px/1.2 var(--mono); color: var(--ink); text-align: right;
+    }
+    #conditions .cell {
+        padding: 11px 0; border-top: 1px solid var(--rule);
+        display: flex; align-items: center;
+    }
+    #conditions dt span { font-size: 15px; color: var(--muted); }
+    #conditions dt .glyph { width: 16px; height: 16px; color: var(--amber); justify-content: center; }
+
+    #loader {
+        position: fixed; inset: 0; z-index: 5;
+        display: grid; place-items: center;
+        background: #120e0c; opacity: 1; transition: opacity 0.8s;
+    }
+    #loader.done { opacity: 0; pointer-events: none; }
+    #loader > div {
+        width: 220px; text-align: center;
+        font: 400 11px/1 var(--mono); letter-spacing: 0.22em;
+        text-transform: uppercase; color: var(--muted);
+    }
+    #loader i {
+        display: block; height: 2px; margin-top: 14px;
+        background: rgba(255, 236, 215, 0.12);
+    }
+    #loader b {
+        display: block; height: 100%; width: 0;
+        background: var(--amber); transition: width 0.3s;
+    }
+
+    @media (max-width: 1180px) {
+        #hint { display: none; }
+        #conditions { top: 30px; bottom: auto; }
+    }
+    @media (max-width: 860px) {
+        #conditions { top: 0; bottom: auto; width: auto; max-width: calc(100vw - 32px); padding: 0; }
+        #condToggle {
+            justify-content: flex-start; align-items: center;
+            gap: 12px; padding: 12px 14px; cursor: pointer;
+        }
+        #conditions .chevron { display: block; transition: transform 0.2s; }
+        #condBody { display: none; padding: 0 16px 6px; }
+        #conditions.open { width: 268px; }
+        #conditions.open #condBody { display: block; }
+        #conditions.open .chevron { transform: rotate(180deg); }
+    }
+    @media (max-width: 560px) {
+        #intro { top: 16px; left: 16px; width: calc(100vw - 32px); padding: 16px 18px; }
+        #intro h1 { margin: 10px 0 6px; font-size: 28px; }
+        #intro p { font-size: 13px; }
+        #dock { bottom: 16px; }
+        #conditions { right: 16px; }
+    }
+    @media (max-width: 420px) {
+        #dock .tool { padding: 0 12px; gap: 8px; font-size: 13px; }
+    }
+    @media (max-width: 350px) {
+        #dock .tool span { display: none; }
+    }
+    @media (max-height: 560px) {
+        #intro p { display: none; }
+    }
+</style>
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+}
+</script>
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<div id="stage"></div>
+<section id="intro" class="glass">
+    <div class="eyebrow">
+        <i data-lucide="sunset" class="glyph"></i>
+        <span>Salt Cove &middot; Pitch 07</span>
+    </div>
+    <h1>Evening at <em>Salt Cove</em></h1>
+    <p>The van is parked on the dune line with the side door open and the lantern lit on the camp table.</p>
+</section>
+<div id="hint" class="glass">
+    <i data-lucide="mouse" class="glyph"></i>
+    <span>Drag to look around &middot; Scroll to zoom</span>
+</div>
+<nav id="dock" class="glass" aria-label="Scene controls">
+    <button type="button" class="tool on" id="btnCamp" aria-label="Camp view">
+        <i data-lucide="tent" class="glyph"></i>
+        <span>Camp view</span>
+    </button>
+    <button type="button" class="tool" id="btnOrbit" aria-label="Orbit" aria-pressed="false">
+        <i data-lucide="rotate-cw" class="glyph"></i>
+        <span>Orbit</span>
+    </button>
+    <button type="button" class="tool on" id="btnLantern" aria-label="Lantern" aria-pressed="true">
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="9" y1="2" x2="15" y2="2"></line>
+            <path d="M12 2v3"></path>
+            <rect x="8" y="5" width="8" height="3" rx="1"></rect>
+            <rect x="7" y="8" width="10" height="11" rx="3"></rect>
+            <line x1="12" y1="11" x2="12" y2="16"></line>
+            <line x1="7" y1="21" x2="17" y2="21"></line>
+        </svg>
+        <span>Lantern</span>
+    </button>
+</nav>
+<aside id="conditions" class="glass" aria-label="Conditions">
+    <header>
+        <button type="button" id="condToggle" aria-expanded="true" aria-controls="condBody">
+            <span>Conditions</span>
+            <time>18:27</time>
+            <i data-lucide="chevron-down" class="glyph chevron"></i>
+        </button>
+    </header>
+    <div id="condBody">
+    <svg id="sunpath" viewBox="0 0 220 64" aria-hidden="true">
+        <path d="M8 56 A102 48 0 0 1 212 56" fill="none" stroke="rgba(255,236,215,0.35)" stroke-width="1.2" stroke-dasharray="3 4"></path>
+        <line x1="4" y1="56" x2="216" y2="56" stroke="rgba(255,236,215,0.3)" stroke-width="1"></line>
+        <circle id="sunGlow" r="11" fill="#f4a660" fill-opacity="0.22"></circle>
+        <circle id="sunDot" r="6" fill="#f4a660"></circle>
+    </svg>
+    <dl>
+        <dt><span class="cell"><i data-lucide="sunset" class="glyph"></i></span><span class="cell">Sunset</span></dt>
+        <dd>18:41</dd>
+        <dt><span class="cell"><i data-lucide="thermometer" class="glyph"></i></span><span class="cell">Air</span></dt>
+        <dd>23 &deg;C</dd>
+        <dt><span class="cell"><i data-lucide="wind" class="glyph"></i></span><span class="cell">Wind</span></dt>
+        <dd>9 km/h SW</dd>
+        <dt><span class="cell"><i data-lucide="waves" class="glyph"></i></span><span class="cell">Tide</span></dt>
+        <dd>Low, rising</dd>
+    </dl>
+    </div>
+</aside>
+<div id="loader">
+    <div>Setting up camp
+        <i><b id="loadBar"></b></i>
+    </div>
+</div>
+<script src="assets/camper_van_meshy_v2.glb.js"></script>
+<script src="assets/aerial_beach_01_diff_2k.jpg.js"></script>
+<script src="assets/aerial_beach_01_nor_gl_2k.jpg.js"></script>
+<script src="assets/aerial_beach_01_rough_2k.jpg.js"></script>
+<script src="assets/damp_beach_sand_diff_2k.jpg.js"></script>
+<script src="assets/damp_beach_sand_nor_gl_2k.jpg.js"></script>
+<script src="assets/damp_beach_sand_rough_2k.jpg.js"></script>
+<script src="assets/sand_marks_tracks_footprints.png.js"></script>
+<script src="model/ots02_asset_camper_beach.glb.part1.js"></script>
+<script src="model/ots02_asset_camper_beach.glb.part2.js"></script>
+<script src="model/kloppenheim_06_puresky_4k.hdr.js"></script>
+<script src="model/sand_noise_near.png.js"></script>
+<script src="model/sand_noise_far.png.js"></script>
+<script src="model/sea_noise.png.js"></script>
+<script src="model/agx_medium_high_contrast.lut.js"></script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
+
+if (window.lucide) window.lucide.createIcons();
+
+// ---------- Constants ----------
+// The scene was authored in Blender in metres with z up; three is y up.
+function fromBlender(x, y, z) {
+    return new THREE.Vector3(x, z, -y);
+}
+const HOME_EYE = new THREE.Vector3();
+const HOME_TARGET = new THREE.Vector3();
+// Source camera: 32.97 mm lens on a 24 mm vertical sensor.
+const BASE_FOV = 40;
+// The source's -0.05 stop as a multiplier.
+const EXPOSURE = Math.pow(2, -0.05);
+// The source world rotates its sky texture this many radians about vertical.
+const SKY_TURN = 0.45767;
+
+// ---------- Renderer ----------
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+stage.appendChild(renderer.domElement);
+
+// The finishing pass applies exposure and the view transform, so the renderer
+// hands it untouched linear values.
+renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+renderer.toneMapping = THREE.NoToneMapping;
+
+// Nothing in the scene moves, so the shadow maps are drawn once when everything has loaded.
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false;
+renderer.localClippingEnabled = true;
+
+const scene = new THREE.Scene();
+// Near 0.5 keeps the depth buffer fine enough to separate the sea from the
+// sand 6 cm under it at 200 m.
+const camera = new THREE.PerspectiveCamera(BASE_FOV, window.innerWidth / window.innerHeight, 0.5, 8000);
+
+// ---------- Asset access ----------
+const loadBar = document.getElementById('loadBar');
+const pending = [];
+let settled = 0;
+function track(promise) {
+    pending.push(promise);
+    promise.then(() => {
+        settled += 1;
+        loadBar.style.width = Math.round(100 * settled / pending.length) + '%';
+    });
+    return promise;
+}
+
+// Decode the base64 payload after the first comma into bytes.
+function assetBytes(name) {
+    const data = window.ASSETS[name];
+    const b64 = data.slice(data.indexOf(',') + 1);
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+}
+
+function imageTexture(name, { color = false, repeat = true } = {}) {
+    const tex = new THREE.Texture();
+    tex.colorSpace = color ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+    tex.wrapS = repeat ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
+    tex.wrapT = repeat ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
+    tex.anisotropy = 8;
+    track(new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            tex.image = img;
+            tex.needsUpdate = true;
+            resolve(tex);
+        };
+        img.onerror = () => reject(new Error('imageTexture failed to load ' + name));
+        // A relative path would load but then throw a SecurityError when
+        // uploaded to the GPU, so only the data URI is used.
+        img.src = window.ASSETS[name];
+    }));
+    return tex;
+}
+
+function parseGLB(name) {
+    return track(new Promise((resolve, reject) => {
+        new GLTFLoader().parse(assetBytes(name).buffer, '', resolve, reject);
+    }));
+}
+
+// ---------- Sky ----------
+const skyData = new RGBELoader().setDataType(THREE.HalfFloatType)
+    .parse(assetBytes('kloppenheim_06_puresky_4k.hdr').buffer);
+const skyTexture = new THREE.DataTexture(skyData.data, skyData.width, skyData.height,
+    THREE.RGBAFormat, THREE.HalfFloatType);
+skyTexture.colorSpace = THREE.LinearSRGBColorSpace;
+skyTexture.wrapS = THREE.RepeatWrapping;
+skyTexture.minFilter = THREE.LinearFilter;
+skyTexture.magFilter = THREE.LinearFilter;
+skyTexture.generateMipmaps = false;
+skyTexture.needsUpdate = true;
+
+const SKY_VERT = `
+varying vec3 vDir;
+void main() {
+    vDir = position;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+const SKY_FRAG = `
+uniform sampler2D hdri;
+uniform float spin;
+uniform float cameraRays;
+uniform float mirrorBelow;
+varying vec3 vDir;
+void main() {
+    vec3 d = normalize(vDir);
+    vec3 b = vec3(d.x, -d.z, d.y);
+    bool below = b.z < 0.0;
+    if (mirrorBelow > 0.5) b.z = abs(b.z);
+    float c = cos(spin);
+    float s = sin(spin);
+    vec3 l = vec3(c * b.x - s * b.y, s * b.x + c * b.y, b.z);
+    float u = 0.5 - atan(l.y, l.x) / 6.28318531;
+    float v = 0.5 + asin(clamp(l.z, -1.0, 1.0)) / 3.14159265;
+    vec4 hdr = texture2D(hdri, vec2(u, 1.0 - v));
+    float lum = dot(hdr.rgb, vec3(0.2126, 0.7152, 0.0722));
+    vec3 tint = mix(vec3(1.0, 0.46, 0.18), vec3(0.24, 0.34, 0.6), smoothstep(0.0, 0.16, b.z));
+    float fall = mix(1.0, 0.36, smoothstep(0.0, 0.26, b.z));
+    vec3 col = lum * tint * fall;
+    if (cameraRays > 0.5) {
+        col = min(col, vec3(6.0)) * 1.1;
+    } else if (below && mirrorBelow < 0.5) {
+        col = vec3(0.057, 0.031, 0.024);
+    }
+    gl_FragColor = vec4(col, 1.0);
+}
+`;
+
+function skyMaterial(cameraRays, mirrorBelow = 0) {
+    return new THREE.ShaderMaterial({
+        vertexShader: SKY_VERT,
+        fragmentShader: SKY_FRAG,
+        uniforms: {
+            hdri: { value: skyTexture },
+            spin: { value: SKY_TURN },
+            cameraRays: { value: cameraRays },
+            mirrorBelow: { value: mirrorBelow }
+        },
+        side: THREE.BackSide,
+        depthWrite: false
+    });
+}
+
+// The camera's far plane of 8000 always contains this dome.
+const skyDome = new THREE.Mesh(new THREE.SphereGeometry(4000, 64, 32), skyMaterial(1));
+skyDome.renderOrder = -1;
+scene.add(skyDome);
+
+// Image-based lighting from the same sky, so the camp is lit by the sunset.
+const envScene = new THREE.Scene();
+envScene.add(new THREE.Mesh(new THREE.SphereGeometry(100, 64, 32), skyMaterial(0)));
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(envScene, 0, 0.1, 1000).texture;
+
+// Open water reflects sky in every direction, so the sea gets its own
+// environment with the sun disc mirrored into it.
+const seaEnvScene = new THREE.Scene();
+seaEnvScene.add(new THREE.Mesh(new THREE.SphereGeometry(100, 64, 32), skyMaterial(0, 1)));
+const reflectedSun = new THREE.Mesh(
+    new THREE.SphereGeometry(90 * 26 / 1800, 24, 12),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(40, 32, 22) })
+);
+reflectedSun.position.copy(fromBlender(-0.3979, 0.9159, 0.0523)).multiplyScalar(90);
+seaEnvScene.add(reflectedSun);
+const seaEnvironment = pmrem.fromScene(seaEnvScene, 0, 0.1, 1000).texture;
+
+// ---------- Lights ----------
+// Blender powers are in watts, and a point or spot light's intensity is P / 4pi.
+// The sun sits 3 degrees above the sea horizon, behind the van as seen from
+// the opening view. sunDir is the direction the light travels.
+const sunDir = fromBlender(0.3979, -0.9159, -0.0523).normalize();
+const sun = new THREE.DirectionalLight(new THREE.Color(1, 0.42, 0.16), 4.8);
+sun.position.copy(sunDir).multiplyScalar(-80);
+sun.target.position.set(0, 0, 0);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 1024);
+// The low sun needs a wide, short shadow box.
+sun.shadow.camera.left = -14;
+sun.shadow.camera.right = 14;
+sun.shadow.camera.top = 4;
+sun.shadow.camera.bottom = -4;
+sun.shadow.camera.near = 20;
+sun.shadow.camera.far = 140;
+sun.shadow.bias = -0.0003;
+sun.shadow.normalBias = 0.02;
+scene.add(sun);
+scene.add(sun.target);
+
+// Bounced sunset light standing in for the source's 3 by 1.4 m area lamp.
+const fill = new THREE.DirectionalLight(new THREE.Color(1, 0.72, 0.52), 1.4);
+fill.position.copy(fromBlender(4.6, -5.6, 1.5));
+fill.target.position.copy(fill.position).add(fromBlender(-0.6268, 0.7748, -0.25));
+scene.add(fill);
+scene.add(fill.target);
+
+// The cabin's warm ceiling light; its 2 m reach keeps it inside the van.
+const cabinLight = new THREE.PointLight(new THREE.Color(1, 0.64, 0.38), 18 / (4 * Math.PI), 2.0, 2);
+cabinLight.position.copy(fromBlender(0.15, -0.05, 1.58));
+scene.add(cabinLight);
+
+// The lantern on the table; the 4 m reach ends the light at the rug.
+const LANTERN_POWER = 60 / (4 * Math.PI);
+const lanternLight = new THREE.PointLight(new THREE.Color(1, 0.56, 0.26), LANTERN_POWER, 4, 2);
+lanternLight.position.copy(fromBlender(0.116, -2.2097, 0.555));
+lanternLight.castShadow = true;
+lanternLight.shadow.mapSize.set(512, 512);
+lanternLight.shadow.camera.near = 0.02;
+lanternLight.shadow.camera.far = 8;
+lanternLight.shadow.bias = -0.002;
+// The layer was meant to leave the thermos out of the lantern's shadows, but
+// three draws shadow casters by the viewing camera's layers, so every
+// castShadow mesh casts for the lantern.
+lanternLight.shadow.camera.layers.set(2);
+scene.add(lanternLight);
+
+// The rug stays even under the table: a shadow-only plate the size of the top
+// blocks the lantern's light from falling in bright bars between the slats.
+const tableShade = new THREE.Mesh(
+    new THREE.BoxGeometry(0.6, 0.01, 0.58),
+    new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false })
+);
+tableShade.position.set(0.112, 0.435, 2.149);
+tableShade.castShadow = true;
+scene.add(tableShade);
+
+// Two string-light fills draped across the camp.
+for (const [x, y, z, watts] of [[-1, -1.2, 1.8, 4], [-2.8, -2.2, 1.75, 3]]) {
+    const s = new THREE.PointLight(new THREE.Color(1, 0.62, 0.32), watts / (4 * Math.PI), 0, 2);
+    s.position.copy(fromBlender(x, y, z));
+    scene.add(s);
+}
+
+// ---------- Painted and graded materials ----------
+function WORLD_POS_VERT(src) {
+    return src
+        .replace('#include <common>', '#include <common>\nvarying vec3 vWorld;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+}
+
+function headlandMaterial() {
+    const mat = new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        roughness: 0.95,
+        metalness: 0
+    });
+    mat.onBeforeCompile = (shader) => {
+        shader.vertexShader = WORLD_POS_VERT(shader.vertexShader);
+        shader.fragmentShader = shader.fragmentShader
+            .replace('#include <common>', '#include <common>\nvarying vec3 vWorld;')
+            .replace('#include <opaque_fragment>', `
+float haze = 0.75 * smoothstep(120.0, 520.0, distance(vWorld, cameraPosition));
+outgoingLight = mix(outgoingLight, vec3(0.55, 0.36, 0.26) * 0.6, haze);
+#include <opaque_fragment>`);
+    };
+    return mat;
+}
+
+function doorPaintMaterial() {
+    const mat = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff,
+        roughness: 0.32,
+        metalness: 0,
+        clearcoat: 1,
+        clearcoatRoughness: 0.05
+    });
+    mat.onBeforeCompile = (shader) => {
+        shader.vertexShader = WORLD_POS_VERT(shader.vertexShader);
+        shader.fragmentShader = shader.fragmentShader
+            .replace('#include <common>', `#include <common>
+varying vec3 vWorld;
+float grime() {
+    return 0.45 * (1.0 - smoothstep(0.62, 0.95, vWorld.y + 0.125));
+}
+float trim() {
+    return 1.0 - smoothstep(0.01, 0.014, abs(vWorld.y - 1.26));
+}`)
+            .replace('#include <map_fragment>', `
+vec3 paint = mix(vec3(0.086, 0.23, 0.178), vec3(0.8, 0.72, 0.64), smoothstep(1.257, 1.263, vWorld.y));
+paint = mix(paint, vec3(0.42, 0.33, 0.23), grime());
+diffuseColor.rgb = mix(paint, vec3(0.62, 0.63, 0.64), trim());`)
+            .replace('#include <roughnessmap_fragment>', `float roughnessFactor = mix(0.32, 0.8, grime());`)
+            .replace('#include <metalnessmap_fragment>', `float metalnessFactor = trim();`)
+            .replace('#include <lights_physical_fragment>', `#include <lights_physical_fragment>
+material.clearcoat = 0.85 - grime();`);
+    };
+    return mat;
+}
+
+function gradeVan(source) {
+    const mat = new THREE.MeshPhysicalMaterial({
+        map: source.map,
+        normalMap: source.normalMap,
+        normalScale: source.normalScale,
+        roughnessMap: source.roughnessMap,
+        metalnessMap: source.metalnessMap,
+        roughness: source.roughness,
+        metalness: source.metalness,
+        side: THREE.DoubleSide,
+        clearcoat: 1,
+        clearcoatRoughness: 0.06
+    });
+    mat.onBeforeCompile = (shader) => {
+        shader.vertexShader = WORLD_POS_VERT(shader.vertexShader);
+        shader.fragmentShader = shader.fragmentShader
+            .replace('#include <common>', `#include <common>
+varying vec3 vWorld;
+vec3 vanGrade(vec3 c) {
+    float hi = max(max(c.r, c.g), c.b);
+    float lo = min(min(c.r, c.g), c.b);
+    float sat = hi > 0.0 ? (hi - lo) / hi : 0.0;
+    vec3 hue = hi > lo ? (c - lo) / (hi - lo) : vec3(0.0);
+    float newSat = min(sat * 0.95, 1.0);
+    float newHi = hi * 1.35;
+    return newHi * (1.0 - newSat + newSat * hue);
+}`)
+            .replace('#include <map_fragment>', `#include <map_fragment>
+diffuseColor.rgb = vanGrade(diffuseColor.rgb);
+float coatMask = 0.8 * max(
+    smoothstep(0.05, 0.12, dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722))),
+    smoothstep(0.95, 1.1, vWorld.y)
+);`)
+            .replace('#include <lights_physical_fragment>', `#include <lights_physical_fragment>
+material.clearcoat = coatMask;`)
+            .replace('#include <metalnessmap_fragment>', `#include <metalnessmap_fragment>
+if (vWorld.x > 2.24 && vWorld.x < 2.296 && vWorld.y > 0.79 && vWorld.y < 0.875 && abs(vWorld.z) < 0.46) metalnessFactor = 0.0;`);
+    };
+    return mat;
+}
+
+// ---------- Sand ----------
+const sandMaps = {
+    near: imageTexture('sand_noise_near.png', { repeat: false }),
+    far: imageTexture('sand_noise_far.png', { repeat: false }),
+    aerialColor: imageTexture('aerial_beach_01_diff_2k.jpg', { color: true }),
+    aerialNormal: imageTexture('aerial_beach_01_nor_gl_2k.jpg'),
+    aerialRough: imageTexture('aerial_beach_01_rough_2k.jpg'),
+    dampColor: imageTexture('damp_beach_sand_diff_2k.jpg', { color: true }),
+    dampNormal: imageTexture('damp_beach_sand_nor_gl_2k.jpg'),
+    dampRough: imageTexture('damp_beach_sand_rough_2k.jpg'),
+    marks: imageTexture('sand_marks_tracks_footprints.png', { repeat: false }),
+    lace: imageTexture('sea_noise.png')
+};
+const clock = { time: { value: 0 } };
+
+const SAND_FRAG_HEAD = `
+varying vec3 vWorld;
+uniform sampler2D nearNoise;
+uniform sampler2D farNoise;
+uniform sampler2D aerialColor;
+uniform sampler2D aerialNormal;
+uniform sampler2D aerialRough;
+uniform sampler2D dampColor;
+uniform sampler2D dampNormal;
+uniform sampler2D dampRough;
+uniform sampler2D marks;
+uniform sampler2D lace;
+uniform float time;
+uniform sampler2D contactMap;
+uniform vec3 contactFrame;
+float contactShade() {
+    vec2 uv = vec2(vWorld.x - contactFrame.x, contactFrame.y - vWorld.z) / contactFrame.z + 0.5;
+    if (any(greaterThan(abs(uv - 0.5), vec2(0.5)))) return 1.0;
+    float hidden = 0.0;
+    for (int i = 0; i < 8; i++) {
+        float a = float(i) * 0.7853982;
+        vec2 dir = vec2(cos(a), sin(a)) / contactFrame.z;
+        float horizon = 0.0;
+        for (int k = 0; k < 3; k++) {
+            float s = k == 0 ? 0.15 : (k == 1 ? 0.35 : 0.8);
+            float h = 12.0 - 14.0 * texture2D(contactMap, uv + dir * s).r - vWorld.y;
+            float t = max(h, 0.0) / s;
+            horizon = max(horizon, t * t / (1.0 + t * t) * (1.0 - s * s));
+        }
+        hidden += horizon;
+    }
+    return 1.0 - hidden / 8.0;
+}
+vec3 sandPlanar(vec3 n, vec3 tn, float strength) {
+    vec3 t = normalize(vec3(1, 0, 0) - n * n.x);
+    vec3 b = cross(n, t);
+    vec3 bent = normalize(t * tn.x + b * tn.y + n * tn.z);
+    return normalize(mix(n, bent, strength));
+}
+vec3 sandColor;
+float sandRough;
+vec3 sandNormal;
+float sandOcclusion() {
+    vec2 uv = (vec2(vWorld.x, -vWorld.z) - vec2(0.0, -1.0)) / 96.0 + 0.5;
+    if (abs(uv.x - 0.5) < 0.5 && abs(uv.y - 0.5) < 0.5) {
+        return texture2D(nearNoise, uv).b;
+    }
+    return 1.0;
+}
+void sandSurface(vec3 geoN) {
+    vec3 P = vec3(vWorld.x, -vWorld.z, vWorld.y);
+    vec2 nearUv = (P.xy - vec2(0.0, -1.0)) / 96.0 + 0.5;
+    vec2 farUv = P.xy / 420.0 + 0.5;
+    vec4 nearN = texture2D(nearNoise, nearUv);
+    vec4 farN = texture2D(farNoise, farUv);
+    bool inside = abs(nearUv.x - 0.5) < 0.5 && abs(nearUv.y - 0.5) < 0.5;
+    float n06 = inside ? nearN.r : 0.5;
+    float n26 = inside ? nearN.g : 0.5;
+    float n025 = farN.b;
+    float n005 = farN.r;
+    float n008 = farN.g;
+
+    float along = -0.737 * P.x + 0.676 * P.y;
+    float across = 0.676 * P.x + 0.737 * P.y;
+    float shore = along - (n005 * 1.6 + 20.2);
+    float wet = smoothstep(-5.0, -0.1, n06 + shore);
+    float swash = shore - 0.55 * sin(across * 0.045 + time * 0.55);
+    float band = smoothstep(-1.6, -0.15, swash) * (1.0 - smoothstep(-0.15, 0.35, swash));
+    vec2 laceUv = P.xy / 4.0;
+    float laceN = 0.5 * (
+        texture2D(lace, laceUv + time * vec2(0.031, 0.017)).b +
+        texture2D(lace, laceUv * 1.37 - time * vec2(0.022, 0.029)).b
+    );
+    float foam = band * smoothstep(0.45, 0.62, laceN);
+    float wrack = (1.0 - smoothstep(0.05, 0.45, abs(n025 + shore + 6.2 - 0.5))) * smoothstep(0.5, 0.62, n26);
+    float tone = mix(0.88, 1.08, clamp((n008 - 0.3) / 0.4, 0.0, 1.0));
+
+    vec2 aerialUv = P.xy * 0.45455;
+    vec2 dampUv = P.xy * 0.5 + vec2(0.37, 0.11);
+    vec3 dry = texture2D(aerialColor, aerialUv).rgb * vec3(1.24, 0.9, 0.62) * tone;
+    vec3 damp = texture2D(dampColor, dampUv).rgb * vec3(0.82, 0.72, 0.6);
+    vec3 col = mix(dry, damp, wet);
+    col = mix(col, vec3(0.05, 0.035, 0.02), wrack);
+
+    vec2 marksUv = P.xy * 0.02778 + vec2(0.83333, 0.66667);
+    vec4 mk = texture2D(marks, marksUv);
+    if (marksUv.x < 0.0 || marksUv.x > 1.0 || marksUv.y < 0.0 || marksUv.y > 1.0) mk = vec4(0.0);
+    col *= (1.0 - 0.17 * mk.r) * (1.0 - 0.13 * mk.g);
+    col *= mix(vec3(1.0), vec3(mk.b), mk.a);
+    sandColor = mix(col, vec3(0.86, 0.85, 0.82), foam);
+
+    float rough = mix(texture2D(aerialRough, aerialUv).r, texture2D(dampRough, dampUv).r * 0.45, wet);
+    sandRough = mix(rough, 0.65, foam);
+
+    vec3 nDry = sandPlanar(geoN, texture2D(aerialNormal, aerialUv).rgb * 2.0 - 1.0, 1.3);
+    vec3 nDamp = sandPlanar(geoN, texture2D(dampNormal, dampUv).rgb * 2.0 - 1.0, 0.6);
+    vec3 n = normalize(mix(nDry, nDamp, wet));
+
+    float px = 1.0 / 2048.0;
+    float h0 = mk.r + mk.g;
+    vec4 markX = texture2D(marks, marksUv + vec2(px, 0.0));
+    vec4 markY = texture2D(marks, marksUv + vec2(0.0, px));
+    vec2 slope = vec2(markX.r + markX.g - h0, markY.r + markY.g - h0) / (px / 0.02778);
+    if (mk.a == 0.0) slope = vec2(0.0);
+    vec3 t = normalize(vec3(1, 0, 0) - n * n.x);
+    vec3 b = cross(n, t);
+    sandNormal = normalize(n - 0.35 * 0.01 * (t * slope.x + b * slope.y));
+}
+`;
+
+function sandMaterial() {
+    const mat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 1,
+        metalness: 0
+    });
+    mat.onBeforeCompile = (shader) => {
+        Object.assign(shader.uniforms, {
+            nearNoise: { value: sandMaps.near },
+            farNoise: { value: sandMaps.far },
+            aerialColor: { value: sandMaps.aerialColor },
+            aerialNormal: { value: sandMaps.aerialNormal },
+            aerialRough: { value: sandMaps.aerialRough },
+            dampColor: { value: sandMaps.dampColor },
+            dampNormal: { value: sandMaps.dampNormal },
+            dampRough: { value: sandMaps.dampRough },
+            marks: { value: sandMaps.marks },
+            lace: { value: sandMaps.lace },
+            contactMap: { value: contactDepth },
+            contactFrame: { value: new THREE.Vector3(0, 1, CONTACT_SPAN) }
+        });
+        shader.uniforms.time = clock.time;
+        shader.vertexShader = WORLD_POS_VERT(shader.vertexShader);
+        shader.vertexShader = shader.vertexShader
+            .replace('#include <common>', '#include <common>\nvarying vec3 vGroundNormal;')
+            .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nvGroundNormal = normalize(mat3(modelMatrix) * objectNormal);');
+        shader.fragmentShader = shader.fragmentShader
+            .replace('#include <common>', `#include <common>
+varying vec3 vGroundNormal;
+${SAND_FRAG_HEAD}`)
+            .replace('#include <map_fragment>', `sandSurface(normalize(vGroundNormal));
+diffuseColor.rgb = sandColor;`)
+            .replace('#include <roughnessmap_fragment>', `float roughnessFactor = sandRough;`)
+            .replace('#include <normal_fragment_maps>', `normal = normalize((viewMatrix * vec4(sandNormal, 0.0)).xyz);`)
+            .replace('#include <aomap_fragment>', `float contact = contactShade();
+float sandAO = sandOcclusion() * contact;
+reflectedLight.indirectDiffuse *= sandAO;
+reflectedLight.indirectSpecular *= sandAO;
+reflectedLight.directDiffuse *= mix(1.0, contact, 0.7);
+reflectedLight.directSpecular *= contact;`)
+            .replace('#include <lights_fragment_begin>', (() => {
+                const loops = THREE.ShaderChunk.lights_fragment_begin;
+                const call = 'RE_Direct( directLight, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );';
+                const at = loops.indexOf(call, loops.indexOf('NUM_DIR_LIGHTS > 0'));
+                return 'vec3 specBefore = vec3(0.0);\n' +
+                    loops.slice(0, at) +
+                    'specBefore = reflectedLight.directSpecular;\n' +
+                    call + '\nif ( UNROLLED_LOOP_INDEX == 1 ) reflectedLight.directSpecular = specBefore;' +
+                    loops.slice(at + call.length);
+            })());
+    };
+    return mat;
+}
+
+// ---------- Sea ----------
+const SEA_FRAG_HEAD = `
+varying vec3 vWorld;
+uniform sampler2D farNoise;
+uniform sampler2D waves;
+uniform float time;
+vec3 seaColor;
+float seaRough;
+float seaAlpha;
+vec3 seaNormal;
+void seaSurface() {
+    vec2 P = vec2(vWorld.x, -vWorld.z);
+    float along = -0.737 * P.x + 0.676 * P.y;
+    float out_ = along - 21.0;
+    float n005 = texture2D(farNoise, P / 420.0 + 0.5).r;
+    vec3 water = mix(vec3(0.16, 0.22, 0.2), vec3(0.01, 0.04, 0.055), smoothstep(0.0, 9.0, out_));
+    float crest = smoothstep(0.93, 0.995, sin((along - time * 1.3) * 0.75 + n005 * 4.0));
+    float lines = crest * (1.0 - smoothstep(4.0, 19.0, out_)) + (1.0 - smoothstep(0.0, 1.4, out_));
+    vec2 dA = time * vec2(0.012, 0.008);
+    vec2 wa = 0.5 * (texture2D(waves, P / 9.0 + dA).rg + texture2D(waves, P / 9.0 - dA + 0.37).rg);
+    vec2 dB = time * vec2(0.021, 0.015);
+    vec2 wb = 0.5 * (texture2D(waves, P / 2.3 + dB).rg + texture2D(waves, P / 2.3 - dB + 0.61).rg);
+    float lace = texture2D(waves, P / 5.0 + time * vec2(0.015, -0.01)).b;
+    float foam = clamp(lines * smoothstep(0.42, 0.62, lace), 0.0, 1.0);
+    seaColor = mix(water, vec3(0.82, 0.82, 0.8), foam);
+    float d = distance(vWorld, cameraPosition);
+    float far_ = smoothstep(20.0, 400.0, d);
+    seaRough = mix(mix(0.07, 0.12, far_), 0.6, foam);
+    seaAlpha = smoothstep(-0.25, 0.9, out_);
+    float broad = 1.0 - smoothstep(60.0, 220.0, d);
+    vec2 tilt = (wa * 2.0 - 1.0) * 0.6 * broad + (wb * 2.0 - 1.0) * 0.4;
+    float calm = 1.0 - far_;
+    seaNormal = normalize(vec3(tilt.x * 0.12 * calm, 1.0, tilt.y * 0.12 * calm));
+}
+`;
+
+function seaMaterial() {
+    const mat = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff,
+        roughness: 0.07,
+        metalness: 0,
+        ior: 1.333,
+        transparent: true,
+        depthWrite: false,
+        envMap: seaEnvironment
+    });
+    mat.onBeforeCompile = (shader) => {
+        Object.assign(shader.uniforms, {
+            farNoise: { value: sandMaps.far },
+            waves: { value: sandMaps.lace },
+            reflMap: { value: reflTarget.texture },
+            reflMatrix: { value: reflMatrix }
+        });
+        shader.uniforms.time = clock.time;
+        shader.vertexShader = WORLD_POS_VERT(shader.vertexShader);
+        shader.vertexShader = shader.vertexShader
+            .replace('#include <common>', '#include <common>\nuniform mat4 reflMatrix;\nvarying vec4 vRefl;')
+            .replace('#include <project_vertex>', '#include <project_vertex>\nvRefl = reflMatrix * vec4(vWorld, 1.0);');
+        shader.fragmentShader = shader.fragmentShader
+            .replace('#include <common>', `#include <common>
+uniform sampler2D reflMap;
+varying vec4 vRefl;
+${SEA_FRAG_HEAD}`)
+            .replace('#include <map_fragment>', `seaSurface();
+diffuseColor.rgb = seaColor;
+diffuseColor.a = seaAlpha;`)
+            .replace('#include <roughnessmap_fragment>', `float roughnessFactor = seaRough;`)
+            .replace('#include <normal_fragment_maps>', `normal = normalize((viewMatrix * vec4(seaNormal, 0.0)).xyz);`)
+            .replace('#include <lights_fragment_begin>', `float seaRoughIBL = material.roughness;
+material.roughness = sqrt(material.roughness * material.roughness + 0.0144);
+#include <lights_fragment_begin>
+material.roughness = seaRoughIBL;`)
+            .replace('#include <opaque_fragment>', `vec4 reflCoord = vRefl;
+reflCoord.x += seaNormal.x * 0.15 * reflCoord.w;
+reflCoord.y += seaNormal.z * 0.15 * reflCoord.w;
+vec2 reflUv = reflCoord.xy / reflCoord.w;
+vec2 size = vec2(textureSize(reflMap, 0));
+reflUv.y -= 4.0 / size.y;
+vec2 r = vec2(0.011 * size.y / size.x, 0.011);
+vec4 refl = (
+    texture2D(reflMap, reflUv + r * vec2(0.0, 0.0)) +
+    texture2D(reflMap, reflUv + r * vec2(1.0, 0.0)) +
+    texture2D(reflMap, reflUv + r * vec2(-1.0, 0.0)) +
+    texture2D(reflMap, reflUv + r * vec2(0.5, 0.0)) +
+    texture2D(reflMap, reflUv + r * vec2(-0.5, 0.0)) +
+    texture2D(reflMap, reflUv + r * vec2(0.0, -0.5)) +
+    texture2D(reflMap, reflUv + r * vec2(0.0, -1.0)) +
+    texture2D(reflMap, reflUv + r * vec2(0.7, -0.7)) +
+    texture2D(reflMap, reflUv + r * vec2(-0.7, -0.7))
+) / 9.0;
+vec3 mirrored = refl.rgb / max(refl.a, 0.001);
+vec3 flatSky = getIBLRadiance(geometryViewDir, normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz), material.roughness);
+mirrored *= clamp(radiance / max(flatSky, vec3(0.0001)), 0.0, 3.0);
+vec3 skyWeight = reflectedLight.indirectSpecular / max(radiance, vec3(0.0001));
+outgoingLight += (mirrored - radiance) * skyWeight * refl.a;
+outgoingLight -= reflectedLight.directSpecular * refl.a;
+#include <opaque_fragment>`);
+    };
+    return mat;
+}
+
+// ---------- Headland reflection ----------
+const SEA_LEVEL = -0.3;
+const MIRROR_LAYER = 3;
+const reflTarget = new THREE.WebGLRenderTarget(1, 1);
+const reflCamera = new THREE.PerspectiveCamera();
+reflCamera.layers.set(MIRROR_LAYER);
+const reflMatrix = new THREE.Matrix4();
+const reflDir = new THREE.Vector3();
+const reflAim = new THREE.Vector3();
+const reflClear = new THREE.Color();
+const mirrorRock = new THREE.MeshBasicMaterial({
+    color: new THREE.Color(0.11, 0.075, 0.05),
+    side: THREE.DoubleSide,
+    clippingPlanes: [new THREE.Plane(new THREE.Vector3(0, 1, 0), 0.3)]
+});
+
+const BIAS_MATRIX = new THREE.Matrix4().set(
+    0.5, 0, 0, 0.5,
+    0, 0.5, 0, 0.5,
+    0, 0, 0.5, 0.5,
+    0, 0, 0, 1
+);
+function renderReflection() {
+    reflCamera.position.set(camera.position.x, 2 * SEA_LEVEL - camera.position.y, camera.position.z);
+    camera.getWorldDirection(reflDir);
+    reflDir.y = -reflDir.y;
+    reflCamera.up.set(0, -1, 0);
+    reflAim.copy(reflCamera.position).add(reflDir);
+    reflCamera.lookAt(reflAim);
+    reflCamera.updateMatrixWorld(true);
+    reflCamera.projectionMatrix.copy(camera.projectionMatrix);
+
+    reflMatrix.copy(BIAS_MATRIX).multiply(reflCamera.projectionMatrix).multiply(reflCamera.matrixWorldInverse);
+
+    const prevTarget = renderer.getRenderTarget();
+    const prevClear = renderer.getClearColor(reflClear);
+    const prevAlpha = renderer.getClearAlpha();
+    renderer.setRenderTarget(reflTarget);
+    renderer.setClearColor(0x000000, 0);
+    renderer.clear();
+    scene.overrideMaterial = mirrorRock;
+    renderer.render(scene, reflCamera);
+    scene.overrideMaterial = null;
+    renderer.setClearColor(prevClear, prevAlpha);
+    renderer.setRenderTarget(prevTarget);
+}
+
+// ---------- Terrain height ----------
+const ground = { heights: null, size: 421, half: 210 };
+function indexGround(mesh) {
+    const pos = mesh.geometry.attributes.position;
+    const heights = new Float32Array(ground.size * ground.size);
+    for (let i = 0; i < pos.count; i++) {
+        const ix = Math.round(pos.getX(i) + ground.half);
+        const iy = Math.round(-pos.getZ(i) + ground.half);
+        heights[iy * ground.size + ix] = pos.getY(i);
+    }
+    ground.heights = heights;
+}
+function groundHeight(x, z) {
+    if (!ground.heights) return 0;
+    const gx = Math.min(Math.max(x + ground.half, 0), ground.size - 1.001);
+    const gy = Math.min(Math.max(-z + ground.half, 0), ground.size - 1.001);
+    const ix = Math.floor(gx);
+    const iy = Math.floor(gy);
+    const fx = gx - ix;
+    const fy = gy - iy;
+    const h = ground.heights;
+    const h00 = h[iy * ground.size + ix];
+    const h10 = h[iy * ground.size + ix + 1];
+    const h01 = h[(iy + 1) * ground.size + ix];
+    const h11 = h[(iy + 1) * ground.size + ix + 1];
+    const top = h00 + (h10 - h00) * fx;
+    const bottom = h01 + (h11 - h01) * fx;
+    return top + (bottom - top) * fy;
+}
+
+// ---------- Contact shadows ----------
+const CONTACT_SPAN = 40;
+const contactDepth = new THREE.DepthTexture(2048, 2048, THREE.FloatType);
+const contactTarget = new THREE.WebGLRenderTarget(2048, 2048, { depthTexture: contactDepth, depthBuffer: true });
+const contactCamera = new THREE.OrthographicCamera(
+    -CONTACT_SPAN / 2, CONTACT_SPAN / 2, CONTACT_SPAN / 2, -CONTACT_SPAN / 2, 0, 14
+);
+contactCamera.position.set(0, 12, 1);
+contactCamera.up.set(0, 0, -1);
+contactCamera.lookAt(0, 0, 1);
+const groundMeshes = [];
+function bakeContact() {
+    for (const mesh of groundMeshes) mesh.visible = false;
+    skyDome.visible = false;
+    const prevTarget = renderer.getRenderTarget();
+    renderer.setRenderTarget(contactTarget);
+    renderer.clear();
+    renderer.render(scene, contactCamera);
+    renderer.setRenderTarget(prevTarget);
+    skyDome.visible = true;
+    for (const mesh of groundMeshes) mesh.visible = true;
+}
+
+// ---------- The camp ----------
+const NO_CAST = [
+    'M_SAND', 'M_SEA', 'M_HEADLAND', 'M_SUN_DISC', 'Lantern_01_brass',
+    'Lantern_01_glass', 'M_FLAME', 'M_LED', 'M_BULB'
+];
+const NO_RECEIVE = ['M_SEA', 'M_HEADLAND', 'M_SUN_DISC', 'M_FLAME'];
+// Inside the van the sky is mostly hidden by the body, which an environment
+// map cannot know.
+const CABIN = ['M_INT_WOOD', 'M_INT_FLOOR', 'M_CUSHION_TEAL', 'M_MUG', 'M_RUBBER'];
+
+const parts = {};
+const flame = { material: null, strength: 60 };
+let headland = null;
+
+function dressCamp(root) {
+    root.traverse((obj) => {
+        parts[obj.name] = obj;
+        if (!obj.isMesh) return;
+        const mat = obj.material;
+        if (mat.name === 'grass_medium_02') {
+            mat.transparent = false;
+            mat.alphaTest = 0.5;
+            mat.depthWrite = true;
+        } else if (mat.name === 'Lantern_01_glass') {
+            mat.depthWrite = false;
+        } else if (mat.name === 'M_FLAME') {
+            flame.material = mat;
+            flame.strength = mat.emissiveIntensity;
+        } else if (mat.name === 'M_HEADLAND') {
+            obj.material = headlandMaterial();
+            headland = obj;
+            obj.layers.enable(MIRROR_LAYER);
+        } else if (mat.name === 'M_DOOR_PAINT') {
+            obj.material = doorPaintMaterial();
+        } else if (mat.name === 'M_SAND') {
+            obj.material = sandMaterial();
+            if (obj.name === 'SAND_TERRAIN') indexGround(obj);
+        } else if (mat.name === 'M_SEA') {
+            obj.material = seaMaterial();
+            obj.renderOrder = 1;
+        }
+        if (CABIN.includes(mat.name)) mat.envMapIntensity = 0.25;
+        if (mat.name === 'M_SAND' || mat.name === 'M_SEA' || mat.name === 'M_HEADLAND') {
+            groundMeshes.push(obj);
+        }
+        obj.castShadow = !NO_CAST.includes(mat.name);
+        obj.receiveShadow = !NO_RECEIVE.includes(mat.name);
+        if (obj.castShadow && mat.name !== 'modified_thermos') obj.layers.enable(2);
+    });
+    if (headland) {
+        const under = headland.clone();
+        under.name = 'HEADLAND_UNDER';
+        under.position.y -= 2.2;
+        under.castShadow = false;
+        under.receiveShadow = false;
+        headland.parent.add(under);
+        groundMeshes.push(under);
+    }
+}
+
+let van = null;
+const campReady = Promise.all([
+    parseGLB('camper_van_meshy_v2.glb'),
+    parseGLB('ots02_asset_camper_beach.glb')
+]).then(([vanGltf, campGltf]) => {
+    van = vanGltf.scene;
+    van.name = 'VAN';
+    van.traverse((obj) => {
+        if (obj.isMesh) {
+            obj.material = gradeVan(obj.material);
+            obj.castShadow = true;
+            obj.receiveShadow = true;
+            obj.layers.enable(2);
+        }
+    });
+    dressCamp(campGltf.scene);
+    scene.add(campGltf.scene);
+    // Paint both van doors the body's green and open the far door.
+    const nearHinge = parts.DOOR_HINGE;
+    const farHinge = parts.DOOR_HINGE_FAR;
+    const nq = nearHinge.quaternion;
+    farHinge.quaternion.set(-nq.x, -nq.y, nq.z, nq.w);
+    farHinge.scale.set(1, 1.012, -1);
+    farHinge.position.x = nearHinge.position.x;
+    farHinge.position.z = -nearHinge.position.z;
+    nearHinge.scale.y = 1.012;
+    nearHinge.position.y += 0.033;
+    farHinge.position.y += 0.033;
+    for (const plate of [parts.DOOR_HINGE_PLATE_0, parts.DOOR_HINGE_PLATE_1]) {
+        const far = plate.clone();
+        far.name = plate.name + '_FAR';
+        far.position.z = -plate.position.z;
+        plate.parent.add(far);
+    }
+    // The front bumper's uprights hang short of the nose; join each curl's end
+    // to the panel with a chrome stay like the rear bumper's, ending on a pad.
+    {
+        const bumperChrome = parts.DOOR_HINGE_PLATE_0.material;
+        const yAxis = new THREE.Vector3(0, 1, 0);
+        for (const side of [1, -1]) {
+            const noseNormal = new THREE.Vector3(0.985, -0.03, 0.17 * side).normalize();
+            const nosePoint = new THREE.Vector3(2.259, 0.86, 0.405 * side);
+            const pad = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.028, 0.028, 0.01, 24),
+                bumperChrome
+            );
+            pad.position.copy(nosePoint).addScaledVector(noseNormal, 0.007);
+            pad.quaternion.setFromUnitVectors(yAxis, noseNormal);
+            pad.castShadow = true;
+            pad.receiveShadow = true;
+            pad.layers.enable(2);
+            pad.name = side === 1 ? 'BUMPER_PAD' : 'BUMPER_PAD_FAR';
+            campGltf.scene.add(pad);
+            const a = nosePoint.clone().addScaledVector(noseNormal, 0.01);
+            const b = new THREE.Vector3(2.312, 0.86, 0.408 * side);
+            const dir = b.clone().sub(a);
+            const stay = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.015, 0.015, dir.length(), 16),
+                bumperChrome
+            );
+            stay.position.copy(a).add(b).multiplyScalar(0.5);
+            stay.quaternion.setFromUnitVectors(yAxis, dir.clone().normalize());
+            stay.castShadow = true;
+            stay.receiveShadow = true;
+            stay.layers.enable(2);
+            stay.name = side === 1 ? 'BUMPER_STAY' : 'BUMPER_STAY_FAR';
+            campGltf.scene.add(stay);
+        }
+    }
+    // VAN_MOUNT carries the van's position, rotation and scale.
+    parts.VAN_MOUNT.add(van);
+    HOME_EYE.copy(parts.CAM_HOME.position);
+    HOME_TARGET.copy(parts.CAM_HOME_TARGET.position);
+    scene.updateMatrixWorld(true);
+    van.traverse((obj) => {
+        if (obj.isMesh) {
+            const pos = obj.geometry.attributes.position;
+            for (let i = 0; i < pos.count; i += 41) {
+                vanSamples.push(new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i)).applyMatrix4(obj.matrixWorld));
+            }
+        }
+    });
+    frameVan();
+    camera.position.copy(homeEye());
+    controls.target.copy(HOME_TARGET);
+    controls.update();
+});
+
+// ---------- Post-processing ----------
+// Blender's own AgX Medium High Contrast view, baked into a 33^3 LUT with
+// display-ready sRGB values for inputs spaced over AgX's log2 range from
+// -12.47393 to 4.026069 stops.
+const lut = new THREE.Data3DTexture(
+    assetBytes('agx_medium_high_contrast.lut'), 33, 33, 33
+);
+lut.format = THREE.RGBAFormat;
+lut.type = THREE.UnsignedByteType;
+lut.minFilter = THREE.LinearFilter;
+lut.magFilter = THREE.LinearFilter;
+lut.wrapS = THREE.ClampToEdgeWrapping;
+lut.wrapT = THREE.ClampToEdgeWrapping;
+lut.wrapR = THREE.ClampToEdgeWrapping;
+lut.unpackAlignment = 1;
+lut.needsUpdate = true;
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+
+const QUAD_VERT = `
+varying vec2 vUv;
+void main() {
+    vUv = uv;
+    gl_Position = vec4(position.xy, 0.0, 1.0);
+}
+`;
+
+// A tent-filtered bloom that stays round however bright the source.
+class GlowPass extends Pass {
+    constructor(levels, threshold, cap, strength) {
+        super();
+        this.strength = strength;
+        this.levels = levels;
+        this.down = [];
+        this.up = [];
+        this.materials = [];
+        this.quad = new FullScreenQuad(null);
+        for (let i = 0; i < levels; i++) {
+            this.down.push(new THREE.WebGLRenderTarget(1, 1, {
+                type: THREE.HalfFloatType,
+                depthBuffer: false
+            }));
+            this.up.push(new THREE.WebGLRenderTarget(1, 1, {
+                type: THREE.HalfFloatType,
+                depthBuffer: false
+            }));
+        }
+        this.materials.prefilter = new THREE.ShaderMaterial({
+            vertexShader: QUAD_VERT,
+            fragmentShader: `
+uniform sampler2D src;
+uniform vec2 texel;
+uniform float threshold;
+uniform float cap;
+varying vec2 vUv;
+vec3 bright(vec2 o) {
+    vec3 c = min(texture2D(src, vUv + o * texel).rgb, vec3(cap));
+    float l = max(max(c.r, c.g), c.b);
+    return c * max(l - threshold, 0.0) / max(l, 1e-4);
+}
+void main() {
+    gl_FragColor = vec4(0.25 * (
+        bright(vec2(-0.5, -0.5)) + bright(vec2(0.5, 0.5)) +
+        bright(vec2(-0.5, 0.5)) + bright(vec2(0.5, -0.5))
+    ), 1.0);
+}
+`,
+            uniforms: {
+                src: { value: null },
+                texel: { value: new THREE.Vector2() },
+                threshold: { value: threshold },
+                cap: { value: cap }
+            }
+        });
+        this.materials.shrink = new THREE.ShaderMaterial({
+            vertexShader: QUAD_VERT,
+            fragmentShader: `
+uniform sampler2D src;
+uniform vec2 texel;
+varying vec2 vUv;
+void main() {
+    vec3 sum = 0.125 * texture2D(src, vUv).rgb;
+    sum += 0.03125 * (
+        texture2D(src, vUv + vec2(2.0, 2.0) * texel).rgb +
+        texture2D(src, vUv + vec2(-2.0, -2.0) * texel).rgb +
+        texture2D(src, vUv + vec2(-2.0, 2.0) * texel).rgb +
+        texture2D(src, vUv + vec2(2.0, -2.0) * texel).rgb
+    );
+    sum += 0.0625 * (
+        texture2D(src, vUv + vec2(0.0, 2.0) * texel).rgb +
+        texture2D(src, vUv + vec2(0.0, -2.0) * texel).rgb +
+        texture2D(src, vUv + vec2(2.0, 0.0) * texel).rgb +
+        texture2D(src, vUv + vec2(-2.0, 0.0) * texel).rgb
+    );
+    sum += 0.125 * (
+        texture2D(src, vUv + vec2(1.0, 1.0) * texel).rgb +
+        texture2D(src, vUv + vec2(-1.0, -1.0) * texel).rgb +
+        texture2D(src, vUv + vec2(-1.0, 1.0) * texel).rgb +
+        texture2D(src, vUv + vec2(1.0, -1.0) * texel).rgb
+    );
+    gl_FragColor = vec4(sum, 1.0);
+}
+`,
+            uniforms: {
+                src: { value: null },
+                texel: { value: new THREE.Vector2() }
+            }
+        });
+        this.materials.grow = new THREE.ShaderMaterial({
+            vertexShader: QUAD_VERT,
+            fragmentShader: `
+uniform sampler2D src;
+uniform sampler2D base;
+uniform vec2 texel;
+uniform float gain;
+varying vec2 vUv;
+void main() {
+    vec3 sum = (
+        4.0 * texture2D(src, vUv).rgb +
+        2.0 * (
+            texture2D(src, vUv + vec2(1.0, 0.0) * texel).rgb +
+            texture2D(src, vUv + vec2(-1.0, 0.0) * texel).rgb +
+            texture2D(src, vUv + vec2(0.0, 1.0) * texel).rgb +
+            texture2D(src, vUv + vec2(0.0, -1.0) * texel).rgb
+        ) +
+        (
+            texture2D(src, vUv + vec2(1.0, 1.0) * texel).rgb +
+            texture2D(src, vUv + vec2(-1.0, -1.0) * texel).rgb +
+            texture2D(src, vUv + vec2(-1.0, 1.0) * texel).rgb +
+            texture2D(src, vUv + vec2(1.0, -1.0) * texel).rgb
+        )
+    ) / 16.0;
+    gl_FragColor = vec4(sum * gain + texture2D(base, vUv).rgb, 1.0);
+}
+`,
+            uniforms: {
+                src: { value: null },
+                base: { value: null },
+                texel: { value: new THREE.Vector2() },
+                gain: { value: 1.0 }
+            }
+        });
+    }
+
+    setSize(w, h) {
+        for (let i = 0; i < this.levels; i++) {
+            w = Math.max(Math.round(w / 2), 1);
+            h = Math.max(Math.round(h / 2), 1);
+            this.down[i].setSize(w, h);
+            this.up[i].setSize(w, h);
+        }
+    }
+
+    draw(renderer, material, target) {
+        this.quad.material = material;
+        renderer.setRenderTarget(target);
+        this.quad.render(renderer);
+    }
+
+    render(renderer, writeBuffer, readBuffer) {
+        const m = this.materials;
+        m.prefilter.uniforms.src.value = readBuffer.texture;
+        m.prefilter.uniforms.texel.value.set(1 / readBuffer.width, 1 / readBuffer.height);
+        this.draw(renderer, m.prefilter, this.down[0]);
+
+        for (let i = 1; i < this.levels; i++) {
+            m.shrink.uniforms.src.value = this.down[i - 1].texture;
+            m.shrink.uniforms.texel.value.set(1 / this.down[i - 1].width, 1 / this.down[i - 1].height);
+            this.draw(renderer, m.shrink, this.down[i]);
+        }
+
+        let lower = this.down[this.levels - 1];
+        for (let i = this.levels - 2; i >= 0; i--) {
+            m.grow.uniforms.src.value = lower.texture;
+            m.grow.uniforms.base.value = this.down[i].texture;
+            m.grow.uniforms.gain.value = 1.0;
+            m.grow.uniforms.texel.value.set(1 / lower.width, 1 / lower.height);
+            this.draw(renderer, m.grow, this.up[i]);
+            lower = this.up[i];
+        }
+
+        m.grow.uniforms.src.value = lower.texture;
+        m.grow.uniforms.base.value = readBuffer.texture;
+        m.grow.uniforms.gain.value = this.strength / this.levels;
+        m.grow.uniforms.texel.value.set(1 / lower.width, 1 / lower.height);
+        this.draw(renderer, m.grow, this.renderToScreen ? null : writeBuffer);
+    }
+}
+
+const bloom = new GlowPass(9, 2.0, 10.0, 3.0);
+composer.addPass(bloom);
+
+const finish = new ShaderPass({
+    uniforms: {
+        tDiffuse: { value: null },
+        lut: { value: lut },
+        exposure: { value: EXPOSURE }
+    },
+    vertexShader: `
+varying vec2 vUv;
+void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`,
+    fragmentShader: `
+precision highp sampler3D;
+uniform sampler2D tDiffuse;
+uniform sampler3D lut;
+uniform float exposure;
+varying vec2 vUv;
+void main() {
+    vec3 c = texture2D(tDiffuse, vUv).rgb;
+    float e = length((vUv - 0.5) / vec2(0.625, 0.575));
+    c *= mix(1.0, 0.66, smoothstep(0.62, 1.38, e));
+    vec3 logc = clamp((log2(max(c * exposure, vec3(1e-10))) + 12.47393) / 16.5, 0.0, 1.0);
+    gl_FragColor = vec4(texture(lut, (logc * 32.0 + 0.5) / 33.0).rgb, 1.0);
+}
+`
+});
+composer.addPass(finish);
+
+// ---------- Camera controls ----------
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.enablePan = false;
+controls.rotateSpeed = 0.6;
+controls.zoomSpeed = 0.8;
+controls.minDistance = 5.5;
+controls.maxDistance = 18;
+controls.minPolarAngle = 0.2;
+controls.maxPolarAngle = 1.52;
+controls.autoRotateSpeed = 1.5;
+
+const view = { dolly: 1, shift: 0 };
+function homeEye() {
+    return HOME_TARGET.clone().add(HOME_EYE.clone().sub(HOME_TARGET).multiplyScalar(view.dolly));
+}
+
+function fitLens() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const aspect = width / height;
+    const want = Math.tan(BASE_FOV * Math.PI / 360) * Math.max(1, 0.889 / aspect);
+    const lens = Math.min(want, Math.tan(31 * Math.PI / 180));
+    view.dolly = want / lens;
+    camera.fov = 2 * Math.atan(lens) * 180 / Math.PI;
+    camera.aspect = aspect;
+    camera.updateProjectionMatrix();
+    controls.maxDistance = 18 * view.dolly;
+    renderer.setSize(width, height);
+    composer.setSize(width, height);
+    reflTarget.setSize(Math.round(width * renderer.getPixelRatio()), Math.round(height * renderer.getPixelRatio()));
+}
+fitLens();
+
+const vanSamples = [];
+const probe = new THREE.PerspectiveCamera();
+const PANELS = [
+    document.getElementById('intro'),
+    document.getElementById('hint'),
+    document.getElementById('dock'),
+    document.getElementById('conditions')
+];
+
+function vanOutline() {
+    probe.copy(camera);
+    probe.position.copy(homeEye());
+    probe.lookAt(HOME_TARGET);
+    probe.updateMatrixWorld(true);
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    let left = Infinity;
+    let right = -Infinity;
+    let top = Infinity;
+    let bottom = -Infinity;
+    const scratch = new THREE.Vector3();
+    for (const p of vanSamples) {
+        scratch.copy(p).project(probe);
+        const x = (scratch.x + 1) / 2 * width;
+        const y = (1 - scratch.y) / 2 * height;
+        if (x < left) left = x;
+        if (x > right) right = x;
+        if (y < top) top = y;
+        if (y > bottom) bottom = y;
+    }
+    return { left, right, top, bottom };
+}
+
+function frameVan() {
+    if (vanSamples.length === 0) return;
+    view.shift = 0;
+    camera.setViewOffset(window.innerWidth, window.innerHeight, 0, 0, window.innerWidth, window.innerHeight);
+    for (let pass = 0; pass < 4; pass++) {
+        const r = vanOutline();
+        const height = window.innerHeight;
+        let top = 12;
+        let bottom = height - 12;
+        for (const panel of PANELS) {
+            if (!panel) continue;
+            const b = panel.getBoundingClientRect();
+            if (b.width === 0 || b.right <= r.left || b.left >= r.right) continue;
+            if ((b.top + b.bottom) / 2 < height / 2) {
+                top = Math.max(top, b.bottom + 12);
+            } else {
+                bottom = Math.min(bottom, b.top - 12);
+            }
+        }
+        if (r.top >= top - 0.5 && r.bottom <= bottom + 0.5) break;
+        if (r.bottom - r.top > bottom - top) {
+            view.dolly *= (r.bottom - r.top) / Math.max(bottom - top, 40) * 1.02;
+            controls.maxDistance = 18 * view.dolly;
+            continue;
+        }
+        view.shift += (top + bottom) / 2 - (r.top + r.bottom) / 2;
+        camera.setViewOffset(window.innerWidth, window.innerHeight, 0, -view.shift, window.innerWidth, window.innerHeight);
+    }
+}
+
+function keepAboveGround() {
+    const minY = groundHeight(camera.position.x, camera.position.z) + 1.2;
+    if (camera.position.y < minY) camera.position.y = minY;
+}
+
+const conditionsEl = document.getElementById('conditions');
+const condToggle = document.getElementById('condToggle');
+const narrow = window.matchMedia('(max-width: 860px)');
+function foldConditions(open) {
+    conditionsEl.classList.toggle('open', open);
+    condToggle.setAttribute('aria-expanded', String(open || !narrow.matches));
+}
+function placeConditions() {
+    if (narrow.matches) {
+        const intro = document.getElementById('intro').getBoundingClientRect();
+        conditionsEl.style.top = Math.round(intro.bottom + 10) + 'px';
+    } else {
+        conditionsEl.style.top = '';
+        foldConditions(false);
+    }
+}
+condToggle.addEventListener('click', () => {
+    if (!narrow.matches) return;
+    foldConditions(!conditionsEl.classList.contains('open'));
+});
+placeConditions();
+
+function relayout() {
+    const wasHome = camera.position.distanceTo(homeEye()) < 0.01;
+    fitLens();
+    placeConditions();
+    frameVan();
+    if (wasHome) camera.position.copy(homeEye());
+}
+window.addEventListener('resize', relayout);
+if (document.fonts) document.fonts.ready.then(relayout);
+
+// Place the sun marker 80 percent of the way along its arc.
+{
+    const a = Math.PI * (1 - 0.8);
+    const x = 110 + 102 * Math.cos(a);
+    const y = 56 - 48 * Math.sin(a);
+    document.getElementById('sunDot').setAttribute('cx', x.toFixed(1));
+    document.getElementById('sunDot').setAttribute('cy', y.toFixed(1));
+    document.getElementById('sunGlow').setAttribute('cx', x.toFixed(1));
+    document.getElementById('sunGlow').setAttribute('cy', y.toFixed(1));
+}
+
+// ---------- Dock ----------
+const tween = { active: false, t: 0, duration: 1.4, fromEye: new THREE.Vector3(), fromTarget: new THREE.Vector3() };
+const btnCamp = document.getElementById('btnCamp');
+const btnOrbit = document.getElementById('btnOrbit');
+const btnLantern = document.getElementById('btnLantern');
+
+function setOrbit(on) {
+    controls.autoRotate = on;
+    btnOrbit.classList.toggle('on', on);
+    btnOrbit.setAttribute('aria-pressed', String(on));
+}
+function goHome() {
+    setOrbit(false);
+    tween.active = true;
+    tween.t = 0;
+    tween.fromEye.copy(camera.position);
+    tween.fromTarget.copy(controls.target);
+    btnCamp.classList.add('on');
+}
+btnCamp.addEventListener('click', goHome);
+btnOrbit.addEventListener('click', () => {
+    tween.active = false;
+    setOrbit(!controls.autoRotate);
+    btnCamp.classList.remove('on');
+});
+controls.addEventListener('start', () => {
+    tween.active = false;
+    btnCamp.classList.remove('on');
+    if (narrow.matches) foldConditions(false);
+});
+
+const lantern = { on: true, level: 1 };
+btnLantern.addEventListener('click', () => {
+    lantern.on = !lantern.on;
+    btnLantern.classList.toggle('on', lantern.on);
+    btnLantern.setAttribute('aria-pressed', String(lantern.on));
+});
+
+// ---------- Loop and readiness ----------
+const timer = new THREE.Clock();
+function frame() {
+    requestAnimationFrame(frame);
+    const dt = Math.min(timer.getDelta(), 0.1);
+    clock.time.value += dt;
+    if (tween.active) {
+        tween.t = Math.min(tween.t + dt / tween.duration, 1);
+        const t = tween.t;
+        const k = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        camera.position.lerpVectors(tween.fromEye, homeEye(), k);
+        controls.target.lerpVectors(tween.fromTarget, HOME_TARGET, k);
+        if (tween.t >= 1) tween.active = false;
+    }
+    controls.update(dt);
+    keepAboveGround();
+    const goal = lantern.on ? 1 : 0;
+    if (lantern.level !== goal) {
+        const step = dt / 0.4;
+        if (lantern.level < goal) lantern.level = Math.min(lantern.level + step, goal);
+        else lantern.level = Math.max(lantern.level - step, goal);
+    }
+    lanternLight.intensity = LANTERN_POWER * lantern.level;
+    if (flame.material) flame.material.emissiveIntensity = flame.strength * lantern.level;
+    renderReflection();
+    composer.render();
+}
+
+Promise.all([...pending, campReady])
+    .then(() => {
+        bakeContact();
+        renderer.shadowMap.needsUpdate = true;
+        renderReflection();
+        composer.render();
+        window.__camp = { THREE, scene, camera, renderer, controls, parts, sun, lanternLight, bloom, groundHeight, goHome, setOrbit, homeEye, contactTarget, contactCamera, bakeContact };
+        window.__ready = true;
+        document.getElementById('loader').classList.add('done');
+        requestAnimationFrame(frame);
+    })
+    .catch((err) => console.error(err));
+</script>
+</body>
+</html>

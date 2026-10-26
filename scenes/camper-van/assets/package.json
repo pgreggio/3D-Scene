@@ -1,0 +1,18 @@
+{
+  "name": "evening-at-salt-cove",
+  "private": true,
+  "scripts": {
+    "test": "jest --runInBand --passWithNoTests"
+  },
+  "devDependencies": {
+    "jest": "29.7.0",
+    "jpeg-js": "0.4.4"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "<rootDir>/tests/**/*.test.js"
+    ],
+    "testTimeout": 120000
+  }
+}

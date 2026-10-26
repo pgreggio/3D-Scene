@@ -1,0 +1,17 @@
+{
+  "name": "evening-board-tests",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test": "jest --runInBand"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "three": "^0.160.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "roots": ["<rootDir>/tests"],
+    "transform": {}
+  }
+}

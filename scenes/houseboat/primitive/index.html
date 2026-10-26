@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Willow — Houseboat Holiday Let</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif; background: #e9c79a; }
+    #app { position: fixed; inset: 0; }
+    canvas { display: block; }
+    #vignette {
+        position: fixed; inset: 0; pointer-events: none; z-index: 5;
+        background: radial-gradient(ellipse at 50% 55%, rgba(0,0,0,0) 55%, rgba(60,30,10,0.28) 100%);
+    }
+    #hud {
+        position: absolute; top: 16px; left: 16px; z-index: 10; max-width: 292px;
+        background: rgba(255, 247, 233, 0.90); color: #4a3220;
+        padding: 15px 18px 14px; border-radius: 14px;
+        backdrop-filter: blur(6px); border: 1px solid rgba(160, 110, 60, 0.28);
+        box-shadow: 0 10px 30px rgba(90, 50, 15, 0.22);
+    }
+    #hud .row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    #hud svg { flex: none; display: block; }
+    #hud h1 { font-size: 21px; letter-spacing: 0.2px; font-weight: 600; color: #6a3d1c; margin: 0; }
+    #hud .sub { font-size: 11px; letter-spacing: 1.6px; text-transform: uppercase; color: #a26a36; margin-bottom: 8px; }
+    #hud p { font-size: 13px; line-height: 1.5; color: #5a4230; }
+    #spots {
+        position: absolute; top: 16px; right: 16px; z-index: 10;
+        display: flex; flex-direction: column; gap: 8px;
+    }
+    #spots button {
+        font: 500 13px 'Segoe UI', Arial, sans-serif; color: #5a3a20;
+        background: rgba(255, 247, 233, 0.90); border: 1px solid rgba(160, 110, 60, 0.32);
+        border-radius: 22px; padding: 8px 14px 8px 12px; cursor: pointer;
+        display: flex; align-items: center; gap: 8px;
+        box-shadow: 0 4px 14px rgba(90, 50, 15, 0.15); transition: background .2s, color .2s;
+    }
+    #spots button svg { flex: none; }
+    #spots button:hover, #spots button.on { background: #fff3dc; color: #7a3f12; }
+    #hint {
+        position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 10;
+        color: #6b4a2c; font-size: 12px; letter-spacing: 0.6px;
+        background: rgba(255, 248, 234, 0.82); padding: 7px 16px; border-radius: 20px;
+        border: 1px solid rgba(160, 110, 60, 0.25); white-space: nowrap;
+    }
+    @media (max-width: 900px) {
+        #hud { top: 12px; left: 12px; max-width: min(270px, calc(100% - 24px)); padding: 12px 14px; }
+        #hud .row { gap: 8px; }
+        #hud svg { width: 22px; height: 22px; }
+        #hud h1 { font-size: 18px; }
+        #hud .sub { letter-spacing: 1.1px; }
+        #hud p { font-size: 12px; }
+        #spots {
+            top: auto; left: 10px; right: 10px; bottom: 84px;
+            width: auto; max-width: calc(100% - 20px);
+            transform: none; flex-direction: row; flex-wrap: wrap;
+            justify-content: center; gap: 6px;
+        }
+        #spots button { padding: 6px 10px; font-size: 12px; border-radius: 18px; gap: 6px; }
+        #hint {
+            bottom: 10px; max-width: calc(100% - 24px);
+            white-space: normal; text-align: center; line-height: 1.35;
+        }
+    }
+    @media (max-width: 420px) {
+        #hud { padding: 10px 12px; }
+        #hud p { font-size: 11px; }
+        #spots { gap: 5px; }
+        #spots button { padding: 5px 8px; font-size: 11px; }
+        #spots button svg { width: 12px; height: 12px; }
+    }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="vignette" data-role="shade"></div>
+<div id="hud">
+    <div class="row">
+        <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M3 17h20l-2.6 4.2H5.6z" fill="#8a5a30"/><rect x="7" y="10" width="11" height="7" rx="1" fill="#f3e2c2" stroke="#8a5a30"/><path d="M6 10h13" stroke="#8a5a30" stroke-width="1.6"/><path d="M8 7.5h9" stroke="#c9a06a" stroke-width="1.2"/><circle cx="21" cy="6" r="2.4" fill="#f0a24a"/></svg>
+        <h1>The Willow</h1>
+    </div>
+    <div class="sub">Houseboat · sleeps 4</div>
+    <p>Take a look around before you book. Spin the boat to see the roof terrace, the bow deck and the view from every window.</p>
+</div>
+<div id="spots">
+    <button data-k="tour" class="on"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M7 3.5v3.5l2.4 1.4" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>Slow tour</button>
+    <button data-k="terrace"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M1 11h12M2 11V6h10v5M2 6V4M12 6V4M5 11V8M9 11V8" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>Roof terrace</button>
+    <button data-k="bow"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M1 9h9l3-3M2 9l1.5 3h7L13 6" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>Bow deck</button>
+    <button data-k="windows"><svg width="14" height="14" viewBox="0 0 14 14"><rect x="2" y="2" width="10" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.2"/></svg>Window views</button>
+</div>
+<div id="hint">Drag to look around · Scroll to zoom</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/objects/Water.js"></script>
+<script>
+(function () {
+    let wl_container = document.getElementById('app');
+    let wl_renderer = new THREE.WebGLRenderer({ antialias: true });
+    wl_renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    wl_renderer.setSize(window.innerWidth, window.innerHeight);
+    wl_renderer.shadowMap.enabled = true;
+    wl_renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    wl_renderer.outputEncoding = THREE.sRGBEncoding;
+    wl_renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    wl_renderer.toneMappingExposure = 1.05;
+    wl_container.appendChild(wl_renderer.domElement);
+
+    let wl_scene = new THREE.Scene();
+    wl_scene.fog = new THREE.Fog(0xc4c8cc, 180, 600);
+
+    function wl_V(wl_x, wl_y, z) { return new THREE.Vector3(wl_x, z, -wl_y); }
+    let wl_SUN = wl_V(-0.75, -0.45, 0.26).normalize();
+
+    let wl_camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 3000);
+    let wl_TARGET = wl_V(0.2, 0.3, 1.9);
+    let wl_CAM0 = wl_V(15.5, -14.0, 6.6);
+    wl_camera.position.copy(wl_CAM0);
+
+    let wl_controls = new THREE.OrbitControls(wl_camera, wl_renderer.domElement);
+    wl_controls.target.set(wl_TARGET.x, wl_TARGET.y, wl_TARGET.z);
+    wl_controls.enableDamping = true;
+    wl_controls.dampingFactor = 0.06;
+    wl_controls.enablePan = true;
+    wl_controls.minDistance = 3;
+    wl_controls.maxDistance = 48;
+    wl_controls.maxPolarAngle = Math.PI * 0.49;
+
+    wl_scene.add(new THREE.HemisphereLight(0xdfe4ea, 0x6a6448, 0.6));
+    let wl_sun = new THREE.DirectionalLight(0xffd9a6, 2.3);
+    wl_sun.position.copy(wl_SUN.clone().multiplyScalar(40));
+    wl_sun.target.position.set(0, 0, 0);
+    wl_sun.castShadow = true;
+    wl_sun.shadow.mapSize.set(2048, 2048);
+    let wl_sc = wl_sun.shadow.camera;
+    wl_sc.left = -16; wl_sc.right = 16; wl_sc.top = 16; wl_sc.bottom = -16; wl_sc.near = 1; wl_sc.far = 100;
+    wl_sc.updateProjectionMatrix();
+    wl_sun.shadow.bias = -0.0004;
+    wl_sun.shadow.normalBias = 0.02;
+    wl_scene.add(wl_sun);
+    wl_scene.add(wl_sun.target);
+    function wl_treeLight(left, right, top, bottom) {
+        let wl_l = new THREE.DirectionalLight(0xffd9a6, 2.3);
+        wl_l.position.copy(wl_SUN.clone().multiplyScalar(140));
+        wl_l.target.position.set(0, 0, 0);
+        wl_l.castShadow = true;
+        wl_l.shadow.mapSize.set(2048, 2048);
+        let wl_c = wl_l.shadow.camera;
+        wl_c.left = left; wl_c.right = right; wl_c.top = top; wl_c.bottom = bottom; wl_c.near = 1; wl_c.far = 340;
+        wl_c.updateProjectionMatrix();
+        wl_l.shadow.bias = -0.0006;
+        wl_l.shadow.normalBias = 0.04;
+        wl_scene.add(wl_l);
+        wl_scene.add(wl_l.target);
+    }
+    wl_treeLight(-130, -37, 40, -30);
+    wl_treeLight(-37, -14, 40, 14);
+    wl_treeLight(-16, 40, 60, 10);
+    let wl_pierSun = new THREE.DirectionalLight(0xffd9a6, 2.3);
+    wl_pierSun.position.copy(wl_SUN.clone().multiplyScalar(40));
+    wl_pierSun.target.position.set(0, 0, 0);
+    wl_pierSun.castShadow = true;
+    wl_pierSun.shadow.mapSize.set(1024, 1024);
+    let wl_pc = wl_pierSun.shadow.camera;
+    wl_pc.left = -34; wl_pc.right = -16; wl_pc.top = 10; wl_pc.bottom = -6; wl_pc.near = 1; wl_pc.far = 100;
+    wl_pc.updateProjectionMatrix();
+    wl_pierSun.shadow.bias = -0.0004;
+    wl_pierSun.shadow.normalBias = 0.02;
+    wl_scene.add(wl_pierSun);
+    wl_scene.add(wl_pierSun.target);
+    let wl_treeCancel = new THREE.DirectionalLight(0xffd9a6, -9.2);
+    wl_treeCancel.position.copy(wl_SUN.clone().multiplyScalar(140));
+    wl_treeCancel.target.position.set(0, 0, 0);
+    wl_scene.add(wl_treeCancel);
+    wl_scene.add(wl_treeCancel.target);
+
+    function wl_hash(wl_x, wl_y, wl_s) { let wl_h = Math.sin(wl_x * 127.1 + wl_y * 311.7 + wl_s * 74.7) * 43758.5453; return wl_h - Math.floor(wl_h); }
+    function wl_vnoise(wl_x, wl_y, wl_s, wl_p) {
+        let wl_xi = Math.floor(wl_x), yi = Math.floor(wl_y), xf = wl_x - wl_xi, yf = wl_y - yi;
+        let wl_u = xf * xf * (3 - 2 * xf), wl_v = yf * yf * (3 - 2 * yf);
+        function wl_h(wl_a, wl_b) { return wl_hash(((wl_a % wl_p) + wl_p) % wl_p, ((wl_b % wl_p) + wl_p) % wl_p, wl_s); }
+        return (wl_h(wl_xi, yi) * (1 - wl_u) + wl_h(wl_xi + 1, yi) * wl_u) * (1 - wl_v) + (wl_h(wl_xi, yi + 1) * (1 - wl_u) + wl_h(wl_xi + 1, yi + 1) * wl_u) * wl_v;
+    }
+    function wl_fbm(wl_x, wl_y, wl_s, oct, wl_p) {
+        let wl_a = 0.5, tot = 0, nrm = 0, wl_f = 1;
+        for (let wl_i = 0; wl_i < oct; wl_i++) { tot += wl_a * wl_vnoise(wl_x * wl_f, wl_y * wl_f, wl_s + wl_i, wl_p * wl_f); nrm += wl_a; wl_a *= 0.5; wl_f *= 2; }
+        return tot / nrm;
+    }
+    function wl_dataTex(size, fn) {
+        let wl_data = new Uint8Array(size * size * 4);
+        for (let wl_y = 0; wl_y < size; wl_y++) for (let wl_x = 0; wl_x < size; wl_x++) {
+            let wl_col = fn(wl_x / size, wl_y / size), wl_i = (wl_y * size + wl_x) * 4, wl_k;
+            for (wl_k = 0; wl_k < 3; wl_k++) wl_data[wl_i + wl_k] = Math.max(0, Math.min(255, wl_col[wl_k]));
+            wl_data[wl_i + 3] = 255;
+        }
+        let wl_t = new THREE.DataTexture(wl_data, size, size, THREE.RGBAFormat);
+        wl_t.wrapS = wl_t.wrapT = THREE.RepeatWrapping;
+        wl_t.magFilter = THREE.LinearFilter;
+        wl_t.minFilter = THREE.LinearMipmapLinearFilter;
+        wl_t.generateMipmaps = true;
+        wl_t.flipY = false;
+        wl_t.anisotropy = 8;
+        wl_t.needsUpdate = true;
+        return wl_t;
+    }
+    function wl_mixc(wl_a, wl_b, wl_t) { return [wl_a[0] + (wl_b[0] - wl_a[0]) * wl_t, wl_a[1] + (wl_b[1] - wl_a[1]) * wl_t, wl_a[2] + (wl_b[2] - wl_a[2]) * wl_t]; }
+    function wl_hex(wl_h) { return [(wl_h >> 16) & 255, (wl_h >> 8) & 255, wl_h & 255]; }
+    function wl_planks(cA, cB, wl_n, seed, size) {
+        let wl_A = wl_hex(cA), B = wl_hex(cB);
+        return wl_dataTex(size || 256, function (wl_u, wl_v) {
+            let wl_row = Math.floor(wl_v * wl_n), fv = wl_v * wl_n - wl_row, tone = wl_hash(wl_row, 3, seed);
+            let wl_off = wl_hash(wl_row, 9, seed) * 8;
+            let wl_grain = wl_fbm(wl_u * 3 + wl_off, fv * 0.6 + wl_row * 3.1, seed, 4, 64);
+            let wl_streak = Math.sin((wl_u * 40 + wl_grain * 9 + wl_off)) * 0.5 + 0.5;
+            let wl_c = wl_mixc(wl_A, B, 0.25 + tone * 0.5 + (wl_grain - 0.5) * 0.7 + wl_streak * 0.08);
+            let wl_gap = fv < 0.04 || fv > 0.96 ? 0.45 : 1;
+            let wl_butt = Math.abs(((wl_u + wl_hash(wl_row, 1, seed)) * 2) % 1) < 0.008 ? 0.55 : 1;
+            let wl_k = wl_gap * wl_butt;
+            return [wl_c[0] * wl_k, wl_c[1] * wl_k, wl_c[2] * wl_k];
+        });
+    }
+    function wl_plaster(cA, cB, seed) {
+        let wl_A = wl_hex(cA), B = wl_hex(cB);
+        return wl_dataTex(128, function (wl_u, wl_v) {
+            let wl_n = wl_fbm(wl_u * 8, wl_v * 8, seed, 4, 8), wl_m = wl_fbm(wl_u * 2, wl_v * 2, seed + 7, 3, 2);
+            return wl_mixc(wl_A, B, Math.min(1, Math.max(0, (wl_n - 0.5) * 1.6 + wl_m * 0.5)));
+        });
+    }
+    function wl_brushed(cA, cB, seed) {
+        let wl_A = wl_hex(cA), B = wl_hex(cB);
+        return wl_dataTex(128, function (wl_u, wl_v) {
+            let wl_n = wl_fbm(wl_u * 2, wl_v * 60, seed, 3, 2) * 0.7 + wl_fbm(wl_u * 10, wl_v * 10, seed + 3, 3, 10) * 0.3;
+            return wl_mixc(wl_A, B, wl_n);
+        });
+    }
+    function wl_groundTex(seed) {
+        let wl_C = [wl_hex(0x5f5a24), wl_hex(0x7f7a44), wl_hex(0x948f6a), wl_hex(0x4b4a1c)];
+        return wl_dataTex(512, function (wl_u, wl_v) {
+            let wl_a = wl_fbm(wl_u * 2, wl_v * 2, seed, 3, 2), wl_b = wl_fbm(wl_u * 8, wl_v * 8, seed + 5, 3, 8);
+            let wl_c = wl_fbm(wl_u * 32, wl_v * 32, seed + 9, 2, 32), d = wl_fbm(wl_u * 96, wl_v * 96, seed + 11, 1, 96);
+            let wl_col = wl_mixc(wl_C[0], wl_C[1], wl_a);
+            wl_col = wl_mixc(wl_col, wl_C[2], Math.max(0, wl_b - 0.55) * 1.8);
+            wl_col = wl_mixc(wl_col, wl_C[3], Math.max(0, wl_c - 0.6) * 1.6);
+            let wl_k = 0.86 + d * 0.28;
+            return [wl_col[0] * wl_k, wl_col[1] * wl_k, wl_col[2] * wl_k];
+        });
+    }
+    function wl_sandTex(seed) {
+        return wl_dataTex(256, function (wl_u, wl_v) {
+            let wl_n = wl_fbm(wl_u * 16, wl_v * 16, seed, 4, 16), wl_w = wl_fbm(wl_u * 3, wl_v * 3, seed + 2, 3, 3);
+            let wl_wet = Math.max(0, 0.55 - wl_w) * 1.4;
+            return wl_mixc(wl_mixc(wl_hex(0x95876f), wl_hex(0x695a44), wl_n), wl_hex(0x4f4433), wl_wet);
+        });
+    }
+    function wl_barkTex(seed) {
+        return wl_dataTex(128, function (wl_u, wl_v) {
+            let wl_n = wl_fbm(wl_u * 10, wl_v * 2, seed, 4, 10);
+            let wl_r = Math.pow(Math.abs(Math.sin(wl_u * 30 + wl_n * 6)), 0.4);
+            return wl_mixc(wl_hex(0x605446), wl_hex(0xad9f92), wl_n * 0.6 + wl_r * 0.4);
+        });
+    }
+    function wl_ropeTex(seed) {
+        return wl_dataTex(64, function (wl_u, wl_v) {
+            let wl_s = Math.sin((wl_u * 6 + wl_v * 6) * Math.PI * 2) * 0.5 + 0.5;
+            return wl_mixc(wl_hex(0x4f432d), wl_hex(0x928263), wl_s * 0.7 + wl_fbm(wl_u * 20, wl_v * 20, seed, 2, 20) * 0.3);
+        });
+    }
+    function wl_leafTex(cA, cB, seed) {
+        return wl_dataTex(128, function (wl_u, wl_v) {
+            let wl_n = wl_fbm(wl_u * 6, wl_v * 6, seed, 4, 6), cell = wl_vnoise(wl_u * 24, wl_v * 24, seed + 4, 24);
+            return wl_mixc(wl_hex(cA), wl_hex(cB), wl_n * 0.7 + cell * 0.3);
+        });
+    }
+    function wl_waterNormal() {
+        let wl_waves = [];
+        for (let wl_i = 0; wl_i < 18; wl_i++) {
+            let wl_kx = Math.round(wl_hash(wl_i, 1, 4) * 16 - 8), ky = Math.round(wl_hash(wl_i, 2, 4) * 16 - 8);
+            if (wl_kx === 0 && ky === 0) continue;
+            wl_waves.push([wl_kx, ky, 1 / Math.pow(Math.hypot(wl_kx, ky), 1.3), wl_hash(wl_i, 3, 4) * 6.28]);
+        }
+        return wl_dataTex(256, function (wl_u, wl_v) {
+            let wl_dx = 0, dy = 0;
+            for (let wl_i = 0; wl_i < wl_waves.length; wl_i++) {
+                let wl_w = wl_waves[wl_i], ph = (wl_w[0] * wl_u + wl_w[1] * wl_v) * Math.PI * 2 + wl_w[3], wl_c = Math.cos(ph) * wl_w[2];
+                wl_dx += wl_c * wl_w[0]; dy += wl_c * wl_w[1];
+            }
+            let wl_nx = -wl_dx * 0.07, ny = -dy * 0.07, l = Math.sqrt(wl_nx * wl_nx + ny * ny + 1);
+            return [(wl_nx / l * 0.5 + 0.5) * 255, (ny / l * 0.5 + 0.5) * 255, (1 / l * 0.5 + 0.5) * 255];
+        });
+    }
+    function wl_std(map, rough, metal) {
+        let wl_m = new THREE.MeshStandardMaterial({ map: map, roughness: rough, metalness: metal || 0 });
+        if (map) {
+            map.encoding = THREE.sRGBEncoding;
+        }
+        return wl_m;
+    }
+    let wl_mats = {
+        pier: wl_std(wl_planks(0x4a2008, 0x87421b, 10, 2), 0.75),
+        pile: wl_std(wl_barkTex(11), 0.95),
+        rope: wl_std(wl_ropeTex(12), 0.95),
+        metal: wl_std(wl_brushed(0x1b1b18, 0x2c2c28, 7), 0.45, 0.7),
+        ground: wl_std(wl_groundTex(9), 1),
+        sand: wl_std(wl_sandTex(10), 0.95),
+        bark: wl_std(wl_plaster(0x5a4c40, 0x9a8d80, 25), 0.9),
+        leaf: wl_std(wl_leafTex(0x3f5a38, 0x7a9468, 26), 0.8),
+        trim: wl_std(wl_planks(0x43190d, 0x723a21, 4, 5), 0.65),
+        hull: wl_std(wl_planks(0x483321, 0x75604f, 7, 1), 0.8),
+        cabin: wl_std(wl_plaster(0xcdaf77, 0xe3c58d, 3), 0.9),
+        rail: wl_std(wl_brushed(0xcfcfca, 0xefefea, 6), 0.22, 0.65),
+        sofa: wl_std(wl_plaster(0x38281d, 0x6c5641, 22), 1),
+        sideTable: wl_std(wl_planks(0x4b3726, 0xa4764a, 3, 23, 128), 0.6),
+        rug: wl_std(wl_plaster(0x294d6b, 0x7395b0, 24), 1),
+        armchair: wl_std(wl_plaster(0x4a4540, 0xa6a4a2, 28), 1),
+        diningWood: wl_std(wl_planks(0x723d1f, 0x9f5f37, 4, 29, 128), 0.6),
+        chairWood: wl_std(wl_planks(0x1d120b, 0x3a2a1c, 4, 30, 128), 0.6),
+        chairGreen: wl_std(wl_plaster(0x2c3a2c, 0x4d5a47, 31), 1),
+        leafA: wl_std(wl_leafTex(0x414a27, 0x757d45, 13), 0.85),
+        leafB: wl_std(wl_leafTex(0x3a4322, 0x6c7440, 14), 0.85),
+        terracotta: wl_std(wl_plaster(0x7a543c, 0xb47955, 15), 0.85),
+        benchPaint: wl_std(wl_planks(0x311d19, 0x825a44, 5, 16, 128), 0.8),
+        tableWood: wl_std(wl_planks(0x63452c, 0xb87c49, 6, 17, 128), 0.7),
+        cushion: wl_std(wl_plaster(0x38281d, 0x6c5641, 18), 1)
+    };
+    wl_mats.glow = new THREE.MeshBasicMaterial({ color: 0xffc777 });
+    wl_mats.glass = new THREE.MeshPhysicalMaterial({ color: 0x9fb2b4, roughness: 0.03, metalness: 0.0, transparent: true, opacity: 0.22, envMapIntensity: 1.6, depthWrite: false });
+    wl_mats.doorGlass = new THREE.MeshPhysicalMaterial({ color: 0x6a7c80, roughness: 0.25, metalness: 0.0, envMapIntensity: 0.4, side: THREE.DoubleSide });
+    wl_mats.hull.side = THREE.DoubleSide;
+
+    let wl_sky = new THREE.Mesh(new THREE.SphereGeometry(1500, 48, 24), new THREE.ShaderMaterial({
+        side: THREE.BackSide,
+        depthWrite: false,
+        fog: false,
+        uniforms: { sunDir: { value: wl_SUN }, time: { value: 0 } },
+        vertexShader: [
+            'varying vec3 vSkyDir;',
+            'void main() {',
+            '  vSkyDir = normalize(position);',
+            '  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+            '}'
+        ].join('\n'),
+        fragmentShader: [
+            'uniform vec3 sunDir;',
+            'uniform float time;',
+            'varying vec3 vSkyDir;',
+            'float skyHash(vec2 p) {',
+            '  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);',
+            '}',
+            'float skyNoise(vec2 p) {',
+            '  vec2 cell = floor(p);',
+            '  vec2 fracp = fract(p);',
+            '  fracp = fracp * fracp * (3.0 - 2.0 * fracp);',
+            '  float a = mix(skyHash(cell), skyHash(cell + vec2(1.0, 0.0)), fracp.x);',
+            '  float b = mix(skyHash(cell + vec2(0.0, 1.0)), skyHash(cell + vec2(1.0, 1.0)), fracp.x);',
+            '  return mix(a, b, fracp.y);',
+            '}',
+            'float skyFbm(vec2 p) {',
+            '  float amp = 0.5;',
+            '  float sum = 0.0;',
+            '  for (int i = 0; i < 5; i++) {',
+            '    sum += amp * skyNoise(p);',
+            '    p *= 2.03;',
+            '    amp *= 0.5;',
+            '  }',
+            '  return sum;',
+            '}',
+            'void main() {',
+            '  vec3 dir = normalize(vSkyDir);',
+            '  float lift = max(dir.y, 0.0);',
+            '  vec3 horizon = vec3(0.78, 0.79, 0.81);',
+            '  vec3 zenith = vec3(0.50, 0.62, 0.76);',
+            '  vec3 skyCol = mix(horizon, zenith, pow(lift, 0.55));',
+            '  float sunAmt = max(dot(dir, sunDir), 0.0);',
+            '  skyCol += vec3(1.0, 0.76, 0.58) * pow(sunAmt, 5.0) * 0.45 * (1.0 - lift);',
+            '  skyCol += vec3(1.0, 0.92, 0.80) * smoothstep(0.9993, 0.9997, sunAmt) * 1.5;',
+            '  vec2 cloudUv = dir.xz / (dir.y + 0.12) * 1.4;',
+            '  cloudUv.x += time * 0.004;',
+            '  float clouds = skyFbm(cloudUv * 0.7) * 0.8 + skyFbm(cloudUv * 2.6) * 0.3;',
+            '  clouds = smoothstep(0.42, 0.80, clouds);',
+            '  vec3 puff = mix(vec3(0.82, 0.83, 0.86), vec3(1.0, 0.84, 0.72), pow(sunAmt, 2.0));',
+            '  float band = clouds * smoothstep(0.02, 0.18, dir.y) * 0.30;',
+            '  skyCol = mix(skyCol, puff, band);',
+            '  if (dir.y < 0.0) skyCol = horizon * 0.9;',
+            '  gl_FragColor = vec4(skyCol, 1.0);',
+            '}'
+        ].join('\n')
+    }));
+    wl_sky.name = 'sky';
+    wl_scene.add(wl_sky);
+    if (typeof wl_renderer.getContext === 'function') {
+        try {
+            let wl_pmrem = new THREE.PMREMGenerator(wl_renderer);
+            let wl_skyScene = new THREE.Scene();
+            wl_skyScene.add(wl_sky.clone());
+            wl_scene.environment = wl_pmrem.fromScene(wl_skyScene, 0.02).texture;
+            wl_pmrem.dispose();
+        } catch (err) {}
+    }
+
+    let wl_water;
+    if (typeof THREE.Water === 'function') {
+        wl_water = new THREE.Water(new THREE.PlaneGeometry(3000, 3000), {
+            textureWidth: 1024, textureHeight: 1024, waterNormals: wl_waterNormal(), sunDirection: wl_SUN.clone(),
+            sunColor: 0xffe2c4,
+            waterColor: 0x2a6a8c,
+            distortionScale: 0.7,
+            fog: true,
+            alpha: 1
+        });
+        wl_water.material.uniforms.size.value = 6.0;
+        wl_water.material.fragmentShader = wl_water.material.fragmentShader.replace('float rf0 = 0.3;', 'float rf0 = 0.06;');
+        wl_water.material.fragmentShader = wl_water.material.fragmentShader.replace('void main() {', [
+            'void main() {',
+            'float shoreY = -worldPosition.z;',
+            'float shoreX = worldPosition.x;',
+            'float hn = sin(shoreX * 0.045) * 1.6 + sin(shoreX * 0.11 + 1.3) * 0.8 + cos(shoreY * 0.09 + shoreX * 0.02) * 0.9 + sin(shoreX * 0.31 + shoreY * 0.27) * 0.25;',
+            'float t = clamp((shoreY - 26.0) / 14.0, 0.0, 1.0);',
+            'float gz = -0.6 + t * (2.3 + 0.45 * hn);',
+            'if (shoreY > 60.0) gz += (shoreY - 60.0) * 0.12;',
+            'if (shoreX > -180.0 && shoreX < 180.0 && shoreY > 26.0 && shoreY < 96.0 && gz + 0.04 > -0.01) discard;'
+        ].join('\n'));
+        wl_water.material.needsUpdate = true;
+    } else {
+        wl_water = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshStandardMaterial({ color: 0x2a6a8c, roughness: 0.2, metalness: 0.05 }));
+    }
+    wl_water.rotation.x = -Math.PI / 2;
+    wl_water.name = 'water';
+    wl_water.material.polygonOffset = true;
+    wl_water.material.polygonOffsetFactor = 0;
+    wl_water.material.polygonOffsetUnits = 1;
+    wl_scene.add(wl_water);
+
+    let wl_foamTex = wl_dataTex(128, function (wl_u, wl_v) {
+        let wl_r = Math.hypot(wl_u - 0.5, wl_v - 0.5) * 2, wl_n = wl_fbm(wl_u * 18, wl_v * 18, 21, 3, 18);
+        let wl_a = Math.max(0, 1 - wl_r) * (wl_n > 0.52 ? 1 : 0.15);
+        return [255 * wl_a, 255 * wl_a, 255 * wl_a];
+    });
+    let wl_foamMat = new THREE.MeshBasicMaterial({ color: 0xfff6e8, alphaMap: wl_foamTex, transparent: true, depthWrite: false, opacity: 0.75 });
+    let wl_foamGeo = new THREE.PlaneGeometry(13.6, 6.4);
+    wl_foamGeo.rotateX(-Math.PI / 2);
+    wl_foamGeo.translate(0, 0.012, 0);
+    wl_scene.add(new THREE.Mesh(wl_foamGeo, wl_foamMat));
+
+    function wl_worldUV(wl_g, tile) {
+        wl_g = wl_g.index ? wl_g.toNonIndexed() : wl_g;
+        wl_g.computeVertexNormals();
+        let wl_p = wl_g.attributes.position, nrm = wl_g.attributes.normal, uv = new Float32Array(wl_p.count * 2);
+        for (let wl_i = 0; wl_i < wl_p.count; wl_i++) {
+            let wl_ax = Math.abs(nrm.getX(wl_i)), ay = Math.abs(nrm.getY(wl_i)), az = Math.abs(nrm.getZ(wl_i)), wl_u, wl_v;
+            if (wl_ax >= ay && wl_ax >= az) { wl_u = wl_p.getZ(wl_i); wl_v = wl_p.getY(wl_i); }
+            else if (ay >= az) { wl_u = wl_p.getX(wl_i); wl_v = wl_p.getZ(wl_i); }
+            else { wl_u = wl_p.getX(wl_i); wl_v = wl_p.getY(wl_i); }
+            uv[wl_i * 2] = wl_u / tile; uv[wl_i * 2 + 1] = wl_v / tile;
+        }
+        wl_g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+        return wl_g;
+    }
+    let wl_env = new THREE.Group();
+    wl_env.name = 'environment';
+    wl_scene.add(wl_env);
+    function wl_eAdd(wl_g, mat, parent, tile, cast) {
+        let wl_m = new THREE.Mesh(wl_worldUV(wl_g, tile || 1.5), mat);
+        wl_m.castShadow = cast !== false;
+        wl_m.receiveShadow = true;
+        (parent || wl_env).add(wl_m);
+        return wl_m;
+    }
+    function wl_eBox(x0, x1, y0, y1, z0, z1, mat, parent, tile) {
+        let wl_g = new THREE.BoxGeometry(x1 - x0, z1 - z0, y1 - y0);
+        let wl_c = wl_V((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+        wl_g.translate(wl_c.x, wl_c.y, wl_c.z);
+        return wl_eAdd(wl_g, mat, parent, tile);
+    }
+    function wl_eCyl(wl_a, wl_b, wl_r, mat, parent, seg, tile, r2) {
+        let wl_A = wl_V(wl_a[0], wl_a[1], wl_a[2]), B = wl_V(wl_b[0], wl_b[1], wl_b[2]), d = B.clone().sub(wl_A);
+        let wl_len = Math.max(d.length(), 0.001);
+        let wl_g = new THREE.CylinderGeometry(r2 !== undefined ? r2 : wl_r, wl_r, wl_len, seg || 12);
+        let wl_q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.multiplyScalar(1 / wl_len));
+        wl_g.applyMatrix4(new THREE.Matrix4().compose(wl_A.clone().add(B).multiplyScalar(0.5), wl_q, new THREE.Vector3(1, 1, 1)));
+        return wl_eAdd(wl_g, mat, parent, tile || 0.5);
+    }
+    function wl_eSphere(wl_c, wl_r, mat, parent, sy, seg) {
+        let wl_g = new THREE.SphereGeometry(wl_r, seg || 14, 10);
+        wl_g.scale(1, sy || 1, 1);
+        let wl_p = wl_V(wl_c[0], wl_c[1], wl_c[2]);
+        wl_g.translate(wl_p.x, wl_p.y, wl_p.z);
+        return wl_eAdd(wl_g, mat, parent, 0.6);
+    }
+
+    let wl_pierW = 2.5, pierZD = 0.85, JZ = 0.55, JY0 = wl_pierW + 0.5, JY1 = wl_pierW + 2.1, PR = 0.11;
+    let wl_walkEnd = 33;
+    wl_eBox(-6.0, 3.0, JY0, JY1, JZ - 0.10, JZ, wl_mats.pier, wl_env, 2);
+    wl_eBox(-1.9, -0.6, JY1, wl_walkEnd, JZ - 0.10, JZ, wl_mats.pier, wl_env, 2);
+    let wl_postIn = JY0 - PR - 0.006, postOut = JY1 + PR + 0.006;
+    [-5.8, -3.2, -0.25, 2.8].forEach(function (wl_x) {
+        [wl_postIn, postOut].forEach(function (wl_y) { wl_eCyl([wl_x, wl_y, -1.2], [wl_x, wl_y, JZ + 0.55], PR, wl_mats.pile, wl_env, 12, 1); });
+        wl_eBox(wl_x - 0.07, wl_x + 0.07, wl_postIn + 0.03, postOut - 0.03, JZ - 0.26, JZ - 0.08, wl_mats.pile, wl_env, 1);
+    });
+    let wl_walkL = -1.9 - PR - 0.006, walkR = -0.6 + PR + 0.006;
+    for (let wl_py = JY1 + 1.8; wl_py < wl_walkEnd - 0.6; wl_py += 3.1) {
+        [wl_walkL, walkR].forEach(function (wl_x) {
+            let wl_bed = Math.min(-2.2, wl_gz(wl_x, wl_py) - 0.85);
+            wl_eCyl([wl_x, wl_py, wl_bed], [wl_x, wl_py, JZ + 0.38], PR, wl_mats.pile, wl_env, 12, 1);
+        });
+        wl_eBox(wl_walkL + 0.03, walkR - 0.03, wl_py - 0.07, wl_py + 0.07, JZ - 0.26, JZ - 0.08, wl_mats.pile, wl_env, 1);
+    }
+    [[-4.5, -3.2], [1.6, 2.8]].forEach(function (rp) {
+        let wl_bx = rp[0], px = rp[1], tie = JZ + 0.42;
+        wl_eBox(wl_bx + 0.08, wl_bx + 0.32, wl_pierW - 0.04, wl_pierW + 0.02, pierZD + 0.12, pierZD + 0.15, wl_mats.metal);
+        wl_eCyl([wl_bx + 0.05, wl_pierW - 0.01, pierZD + 0.19], [wl_bx + 0.35, wl_pierW - 0.01, pierZD + 0.19], 0.02, wl_mats.metal, wl_env, 8, 0.2);
+        wl_eBox(wl_bx + 0.17, wl_bx + 0.23, wl_pierW - 0.03, wl_pierW + 0.01, pierZD + 0.15, pierZD + 0.18, wl_mats.metal);
+        wl_eCyl([wl_bx + 0.2, wl_pierW - 0.01, pierZD + 0.17], [px, wl_postIn + PR * 0.2, tie], 0.018, wl_mats.rope, wl_env, 8, 0.12);
+        let wl_lash = new THREE.TorusGeometry(PR + 0.02, 0.01, 8, 20);
+        wl_lash.rotateX(Math.PI / 2);
+        wl_lash.translate(px, tie, -wl_postIn);
+        wl_eAdd(wl_lash, wl_mats.rope, wl_env, 0.3);
+    });
+    let wl_lanterns = [];
+    let wl_pierLight = wl_lantern(-0.95, JY1 - 0.3, JZ, wl_env);
+
+    function wl_hn(wl_x, wl_y) { return Math.sin(wl_x * 0.045) * 1.6 + Math.sin(wl_x * 0.11 + 1.3) * 0.8 + Math.cos(wl_y * 0.09 + wl_x * 0.02) * 0.9 + Math.sin(wl_x * 0.31 + wl_y * 0.27) * 0.25; }
+    function wl_gz(wl_x, wl_y) { let wl_t = Math.min(Math.max((wl_y - 26) / 14, 0), 1); return -0.6 + wl_t * (1.4 + 0.9 * wl_hn(wl_x, wl_y) * 0.5 + 0.9) + Math.max(0, wl_y - 60) * 0.12; }
+    function wl_strip(x0, x1, ys, nx, mat, lift, tile) {
+        let wl_pos = [], idx = [], ny = ys.length - 1;
+        ys.forEach(function (y) {
+            for (let wl_i = 0; wl_i <= nx; wl_i++) {
+                let x = x0 + (x1 - x0) * wl_i / nx, wl_v = wl_V(x, y, wl_gz(x, y) + lift);
+                wl_pos.push(wl_v.x, wl_v.y, wl_v.z);
+            }
+        });
+        for (let wl_j = 0; wl_j < ny; wl_j++) for (let wl_i = 0; wl_i < nx; wl_i++) {
+            let wl_a = wl_j * (nx + 1) + wl_i;
+            idx.push(wl_a, wl_a + 1, wl_a + nx + 1, wl_a + 1, wl_a + nx + 2, wl_a + nx + 1);
+        }
+        let wl_g = new THREE.BufferGeometry();
+        wl_g.setAttribute('position', new THREE.Float32BufferAttribute(wl_pos, 3));
+        wl_g.setIndex(idx);
+        let wl_m = wl_eAdd(wl_g, mat, wl_env, tile, false);
+        wl_m.receiveShadow = true;
+        return wl_m;
+    }
+    let wl_gys = [];
+    for (let wl_j = 0; wl_j <= 40; wl_j++) wl_gys.push(30 + 65 * wl_j / 40);
+    let wl_shore = wl_strip(-180, 180, wl_gys, 120, wl_mats.ground, 0, 4);
+    wl_shore.name = 'shore';
+    wl_strip(-180, 180, [26, 30, 34], 120, wl_mats.sand, 0.04, 3);
+    (function wl_shoreFoam() {
+        let wl_tex = wl_dataTex(256, function (wl_u, wl_v) {
+            let wl_edge = Math.sin(wl_v * Math.PI), wl_n = wl_fbm(wl_u * 24, wl_v * 4, 41, 4, 24);
+            let wl_a = Math.max(0, wl_edge * 1.4 - 0.4) * (0.45 + wl_n * 0.8);
+            wl_a = Math.min(1, wl_a);
+            return [255 * wl_a, 255 * wl_a, 255 * wl_a];
+        });
+        function wl_meshH(wl_x, wl_y, rows, lift) {
+            let wl_h = function (wl_yy) { return wl_gz(wl_x, wl_yy) + lift; };
+            if (wl_y <= rows[0]) return wl_h(rows[0]);
+            if (wl_y >= rows[rows.length - 1]) return wl_h(rows[rows.length - 1]);
+            let wl_i = 0;
+            while (rows[wl_i + 1] < wl_y) wl_i++;
+            let y0 = rows[wl_i], y1 = rows[wl_i + 1], wl_t = (wl_y - y0) / (y1 - y0);
+            return (1 - wl_t) * wl_h(y0) + wl_t * wl_h(y1);
+        }
+        let wl_pos = [], uv = [], idx = [], wl_nx = 240, wdt = 0.7;
+        for (let wl_i = 0; wl_i <= wl_nx; wl_i++) {
+            let wl_x = -180 + 360 * wl_i / wl_nx, lo = 24, hi = 40;
+            for (let wl_k = 0; wl_k < 30; wl_k++) { let wl_mid = (lo + hi) / 2; if (wl_gz(wl_x, wl_mid) + 0.04 < 0) lo = wl_mid; else hi = wl_mid; }
+            [lo - wdt * 0.65, lo + wdt * 0.35].forEach(function (wl_y, wl_s) {
+                let wl_surf = wl_meshH(wl_x, wl_y, [26, 30, 34], 0.04);
+                if (wl_y >= 30) wl_surf = Math.max(wl_surf, wl_meshH(wl_x, wl_y, wl_gys, 0));
+                let wl_p = wl_V(wl_x, wl_y, Math.max(0, wl_surf) + 0.012);
+                wl_pos.push(wl_p.x, wl_p.y, wl_p.z);
+                uv.push(wl_x / 6, wl_s);
+            });
+        }
+        for (let wl_i2 = 0; wl_i2 < wl_nx; wl_i2++) { let wl_a = wl_i2 * 2; idx.push(wl_a, wl_a + 2, wl_a + 1, wl_a + 1, wl_a + 2, wl_a + 3); }
+        let wl_g = new THREE.BufferGeometry();
+        wl_g.setAttribute('position', new THREE.Float32BufferAttribute(wl_pos, 3));
+        wl_g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+        wl_g.setIndex(idx);
+        let wl_m = new THREE.Mesh(wl_g, new THREE.MeshBasicMaterial({ color: 0xf3eee4, alphaMap: wl_tex, transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: true }));
+        wl_env.add(wl_m);
+    })();
+    (function wl_hills() {
+        let wl_n = 96, wl_pos = [], idx = [];
+        for (let wl_i = 0; wl_i < wl_n; wl_i++) {
+            let wl_a = wl_i / wl_n * Math.PI * 2, wl_h = 7 + 4 * Math.sin(wl_a * 3 + 0.7) + 2.5 * Math.sin(wl_a * 7 + 2.1) + 1.2 * Math.sin(wl_a * 13);
+            [[380, -1], [430, wl_h], [500, wl_h * 1.7 + 4]].forEach(function (rz) { let wl_v = wl_V(rz[0] * Math.cos(wl_a), rz[0] * Math.sin(wl_a), rz[1]); wl_pos.push(wl_v.x, wl_v.y, wl_v.z); });
+        }
+        for (let wl_i2 = 0; wl_i2 < wl_n; wl_i2++) { let wl_j2 = (wl_i2 + 1) % wl_n; for (let wl_k2 = 0; wl_k2 < 2; wl_k2++) idx.push(wl_i2 * 3 + wl_k2, wl_j2 * 3 + wl_k2, wl_j2 * 3 + wl_k2 + 1, wl_i2 * 3 + wl_k2, wl_j2 * 3 + wl_k2 + 1, wl_i2 * 3 + wl_k2 + 1); }
+        let wl_g = new THREE.BufferGeometry();
+        wl_g.setAttribute('position', new THREE.Float32BufferAttribute(wl_pos, 3));
+        wl_g.setIndex(idx);
+        let wl_m = wl_eAdd(wl_g, wl_mats.ground, wl_env, 25);
+        wl_m.castShadow = false;
+        wl_m.material = wl_mats.ground.clone();
+        wl_m.material.side = THREE.DoubleSide;
+    })();
+
+    let wl_rnd = (function () { let wl_s = 11; return function () { wl_s = (wl_s * 16807) % 2147483647; return wl_s / 2147483647; }; })();
+    let wl_clumpGeo = (function () {
+        let wl_g = new THREE.IcosahedronGeometry(1, 2), wl_p = wl_g.attributes.position;
+        for (let wl_i = 0; wl_i < wl_p.count; wl_i++) {
+            let wl_x = wl_p.getX(wl_i), wl_y = wl_p.getY(wl_i), z = wl_p.getZ(wl_i), wl_k = 0.72 + 0.5 * wl_fbm(wl_x * 1.7 + 3, wl_y * 1.7 + z * 1.3, 31, 3, 64);
+            wl_p.setXYZ(wl_i, wl_x * wl_k, wl_y * wl_k * 0.8, z * wl_k);
+        }
+        wl_g.computeVertexNormals();
+        return wl_g;
+    })();
+    let wl_clumps = [];
+    function wl_slimTree(wl_x, wl_y, z, wl_s) {
+        let wl_H = 8 * wl_s, lean = [(wl_rnd() - 0.5) * 0.5 * wl_s, (wl_rnd() - 0.5) * 0.5 * wl_s];
+        let wl_top = [wl_x + lean[0], wl_y + lean[1], z + wl_H * 0.62];
+        wl_eCyl([wl_x, wl_y, z], wl_top, 0.13 * wl_s, wl_mats.bark, wl_env, 9, 1, 0.07 * wl_s);
+        for (let wl_b = 0; wl_b < 6; wl_b++) {
+            let wl_a = wl_b / 6 * 6.28 + wl_rnd() * 0.8, wl_r = (1.2 + wl_rnd() * 1.4) * wl_s, wl_f = 0.45 + wl_rnd() * 0.45;
+            let wl_p0 = [wl_x + lean[0] * wl_f, wl_y + lean[1] * wl_f, z + wl_H * 0.62 * wl_f];
+            let wl_p1 = [wl_p0[0] + Math.cos(wl_a) * wl_r, wl_p0[1] + Math.sin(wl_a) * wl_r, Math.min(z + wl_H * 0.95, wl_p0[2] + (1.4 + wl_rnd() * 1.6) * wl_s)];
+            wl_eCyl(wl_p0, wl_p1, 0.045 * wl_s, wl_mats.bark, wl_env, 7, 1, 0.022 * wl_s);
+            for (let wl_k = 0; wl_k < 9; wl_k++) {
+                let wl_tt = 0.35 + wl_rnd() * 0.75, cx = wl_p0[0] + (wl_p1[0] - wl_p0[0]) * wl_tt, cy = wl_p0[1] + (wl_p1[1] - wl_p0[1]) * wl_tt, cz = wl_p0[2] + (wl_p1[2] - wl_p0[2]) * wl_tt;
+                wl_clumps.push([cx + (wl_rnd() - 0.5) * 0.9 * wl_s, cy + (wl_rnd() - 0.5) * 0.9 * wl_s, cz + (wl_rnd() - 0.2) * 0.7 * wl_s, (0.22 + wl_rnd() * 0.22) * wl_s]);
+            }
+        }
+        for (let wl_k2 = 0; wl_k2 < 14; wl_k2++) wl_clumps.push([wl_top[0] + (wl_rnd() - 0.5) * 2.0 * wl_s, wl_top[1] + (wl_rnd() - 0.5) * 2.0 * wl_s, z + wl_H * (0.68 + wl_rnd() * 0.3), (0.24 + wl_rnd() * 0.22) * wl_s]);
+    }
+    for (let wl_ti = 0; wl_ti < 16; wl_ti++) {
+        let wl_tx = -150 + wl_ti * 19 + (wl_rnd() - 0.5) * 10, ty = 40 + wl_rnd() * 22, ts = 0.8 + wl_rnd() * 0.45;
+        wl_slimTree(wl_tx, ty, wl_gz(wl_tx, ty) - 0.15, ts);
+    }
+    let wl_leaves = new THREE.InstancedMesh(wl_clumpGeo, wl_mats.leaf, wl_clumps.length);
+    let wl_m4 = new THREE.Matrix4(), qq = new THREE.Quaternion(), cc = new THREE.Color();
+    wl_clumps.forEach(function (o, wl_i) {
+        qq.setFromEuler(new THREE.Euler(wl_rnd() * 6.28, wl_rnd() * 6.28, wl_rnd() * 6.28));
+        wl_m4.compose(wl_V(o[0], o[1], o[2]), qq, new THREE.Vector3(o[3], o[3], o[3]));
+        wl_leaves.setMatrixAt(wl_i, wl_m4);
+        cc.setHSL(0.22 + wl_rnd() * 0.06, 0.12 + wl_rnd() * 0.12, 0.72 + wl_rnd() * 0.2);
+        wl_leaves.setColorAt(wl_i, cc);
+    });
+    wl_leaves.castShadow = true;
+    wl_leaves.receiveShadow = true;
+    wl_env.add(wl_leaves);
+
+    // ---------- The boat ----------
+    let wl_boat = new THREE.Group();
+    wl_boat.name = 'houseboat';
+    wl_scene.add(wl_boat);
+    function wl_boatBox(x0, x1, y0, y1, z0, z1, mat, tile) { return wl_eBox(x0, x1, y0, y1, z0, z1, mat, wl_boat, tile); }
+    function wl_boatCyl(wl_a, wl_b, wl_r, mat, seg, tile, r2) { return wl_eCyl(wl_a, wl_b, wl_r, mat, wl_boat, seg, tile, r2); }
+    function wl_boatSphere(wl_c, wl_r, mat, sy, seg) { return wl_eSphere(wl_c, wl_r, mat, wl_boat, sy, seg); }
+
+    let wl_L0 = -6, L1 = 6, W = 2.5, ZB = -0.40, ZD = 0.85;
+    (function wl_hull() {
+        let wl_P = [[wl_L0 + 0.25, -W + 0.08, ZB], [4.6, -W + 0.08, ZB], [4.6, W - 0.08, ZB], [wl_L0 + 0.25, W - 0.08, ZB],
+            [wl_L0, -W, ZD], [L1, -W, ZD], [L1, W, ZD], [wl_L0, W, ZD],
+            [wl_L0 + 0.01, -W + 0.01, ZD - 0.04], [L1 - 0.01, -W + 0.01, ZD - 0.04], [L1 - 0.01, W - 0.01, ZD - 0.04], [wl_L0 + 0.01, W - 0.01, ZD - 0.04]];
+        let wl_F = [[0, 3, 2, 1], [8, 9, 10, 11], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]];
+        let wl_pos = [];
+        wl_F.forEach(function (wl_f) {
+            [[wl_f[0], wl_f[1], wl_f[2]], [wl_f[0], wl_f[2], wl_f[3]]].forEach(function (tri) {
+                tri.forEach(function (wl_i) { let wl_v = wl_V(wl_P[wl_i][0], wl_P[wl_i][1], wl_P[wl_i][2]); wl_pos.push(wl_v.x, wl_v.y, wl_v.z); });
+            });
+        });
+        let wl_g = new THREE.BufferGeometry();
+        wl_g.setAttribute('position', new THREE.Float32BufferAttribute(wl_pos, 3));
+        wl_eAdd(wl_g, wl_mats.hull, wl_boat, 1.8);
+    })();
+    wl_boatBox(wl_L0 + 0.05, 4.9, -W - 0.06, -W + 0.05, 0.30, 0.42, wl_mats.trim);
+    wl_boatBox(wl_L0 + 0.05, 4.9, W - 0.05, W + 0.06, 0.30, 0.42, wl_mats.trim);
+    wl_boatBox(wl_L0, L1, -W - 0.04, -W + 0.06, ZD, ZD + 0.12, wl_mats.trim);
+    wl_boatBox(wl_L0, L1, W - 0.06, W + 0.04, ZD, ZD + 0.12, wl_mats.trim);
+    wl_boatBox(wl_L0 + 0.02, L1 - 0.02, -W + 0.06, W - 0.06, ZD, ZD + 0.06, wl_mats.pier, 2);
+    let wl_DK = ZD + 0.06;
+
+    let wl_CX0 = -5.0, CX1 = 1.6, CW = 1.9, CH = 2.2, RZ = wl_DK + CH;
+    let wl_WT = 0.08, WZC = wl_DK + 1.25;
+    function wl_wallOpen(axis, u0, u1, a0, a1, opens) {
+        function wl_piece(ua, ub, za, zb) {
+            if (ub - ua < 1e-3 || zb - za < 1e-3) return;
+            if (axis === 'x') wl_boatBox(ua, ub, a0, a1, za, zb, wl_mats.cabin, 2);
+            else wl_boatBox(a0, a1, ua, ub, za, zb, wl_mats.cabin, 2);
+        }
+        let wl_cur = u0;
+        opens.slice().sort(function (wl_p, wl_q) { return wl_p[0] - wl_q[0]; }).forEach(function (o) {
+            wl_piece(wl_cur, o[0] - o[1] / 2, wl_DK, RZ);
+            wl_piece(o[0] - o[1] / 2, o[0] + o[1] / 2, wl_DK, o[2] - o[3] / 2);
+            wl_piece(o[0] - o[1] / 2, o[0] + o[1] / 2, o[2] + o[3] / 2, RZ);
+            wl_cur = o[0] + o[1] / 2;
+        });
+        wl_piece(wl_cur, u1, wl_DK, RZ);
+    }
+    let wl_sideOpen = [-4.15, -2.45, -0.75, 0.85].map(function (wl_x) { return [wl_x, 0.96, WZC, 0.81]; });
+    wl_wallOpen('x', wl_CX0, CX1, -CW, -CW + wl_WT, wl_sideOpen);
+    wl_wallOpen('x', wl_CX0, CX1, CW - wl_WT, CW, wl_sideOpen);
+    wl_wallOpen('y', -CW + wl_WT, CW - wl_WT, CX1 - wl_WT, CX1, [[-1.25, 0.56, wl_DK + 1.35, 0.56], [1.25, 0.56, wl_DK + 1.35, 0.56], [0, 0.86, wl_DK + 0.965, 1.83]]);
+    wl_wallOpen('y', -CW + wl_WT, CW - wl_WT, wl_CX0, wl_CX0 + wl_WT, [[-1.1, 0.56, wl_DK + 1.35, 0.56], [0.575, 0.81, wl_DK + 0.965, 1.83]]);
+    wl_boatBox(wl_CX0, CX1, -CW, CW, RZ - 0.04, RZ, wl_mats.cabin, 2);
+
+    wl_boatBox(-3.6, -1.2, -0.62, 0.3, wl_DK, wl_DK + 0.012, wl_mats.rug, 1.2);
+    (function wl_sofa(cx, cy) {
+        let wl_len = 1.2, d = 0.405;
+        wl_boatBox(cx - wl_len, cx + wl_len, cy - d, cy + d - 0.2, wl_DK + 0.06, wl_DK + 0.42, wl_mats.sofa);
+        wl_boatBox(cx - wl_len, cx + wl_len, cy + d - 0.2, cy + d, wl_DK + 0.06, wl_DK + 0.98, wl_mats.sofa);
+        [-1, 1].forEach(function (wl_s) { wl_boatBox(cx + wl_s * wl_len - (wl_s > 0 ? 0.18 : 0), cx + wl_s * wl_len + (wl_s < 0 ? 0.18 : 0), cy - d, cy + d - 0.2, wl_DK + 0.42, wl_DK + 0.66, wl_mats.sofa); });
+        for (let wl_k = 0; wl_k < 3; wl_k++) { let wl_x = cx - wl_len + 0.2 + wl_k * 0.67; wl_boatBox(wl_x, wl_x + 0.65, cy - d + 0.02, cy + d - 0.22, wl_DK + 0.42, wl_DK + 0.52, wl_mats.cushion); }
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (o) { wl_boatCyl([cx + o[0] * (wl_len - 0.08), cy + o[1] * (d - 0.08), wl_DK], [cx + o[0] * (wl_len - 0.08), cy + o[1] * (d - 0.08), wl_DK + 0.06], 0.025, wl_mats.metal, 8); });
+    })(-2.5, 1.34 + 0);
+    (function wl_sideTable(cx, cy) {
+        wl_boatBox(cx - 0.275, cx + 0.275, cy - 0.225, cy + 0.225, wl_DK + 0.52, wl_DK + 0.55, wl_mats.sideTable);
+        wl_boatBox(cx - 0.25, cx + 0.25, cy - 0.2, cy + 0.2, wl_DK + 0.18, wl_DK + 0.2, wl_mats.sideTable);
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (o) { wl_boatBox(cx + o[0] * 0.24 - 0.02, cx + o[0] * 0.24 + 0.02, cy + o[1] * 0.19 - 0.02, cy + o[1] * 0.19 + 0.02, wl_DK, wl_DK + 0.52, wl_mats.sideTable); });
+    })(-4.45, 1.35);
+    (function wl_armchair(cx, cy) {
+        let wl_hw = 0.425, hd = 0.385, back = cy - hd;
+        wl_boatBox(cx - wl_hw + 0.12, cx + wl_hw - 0.12, back + 0.14, cy + hd, wl_DK + 0.12, wl_DK + 0.46, wl_mats.armchair);
+        wl_boatBox(cx - wl_hw, cx + wl_hw, back, back + 0.16, wl_DK + 0.12, wl_DK + 1.07, wl_mats.armchair);
+        [-1, 1].forEach(function (wl_s) { let wl_x = cx + wl_s * (wl_hw - 0.06); wl_boatBox(wl_x - 0.06, wl_x + 0.06, back, cy + hd, wl_DK + 0.12, wl_DK + 0.66, wl_mats.armchair); });
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (o) { wl_boatCyl([cx + o[0] * (wl_hw - 0.07), cy + o[1] * (hd - 0.07), wl_DK], [cx + o[0] * (wl_hw - 0.07), cy + o[1] * (hd - 0.07), wl_DK + 0.12], 0.025, wl_mats.chairWood, 8); });
+    })(-2.5, -1.42 + 0);
+    (function wl_dining(cx, cy) {
+        let wl_hl = 0.565, wl_hw = 0.355;
+        wl_boatBox(cx - wl_hl, cx + wl_hl, cy - wl_hw, cy + wl_hw, wl_DK + 0.75, wl_DK + 0.80, wl_mats.diningWood);
+        wl_boatBox(cx - wl_hl + 0.06, cx + wl_hl - 0.06, cy - wl_hw + 0.06, cy + wl_hw - 0.06, wl_DK + 0.66, wl_DK + 0.75, wl_mats.diningWood);
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (o) { wl_boatBox(cx + o[0] * (wl_hl - 0.07) - 0.035, cx + o[0] * (wl_hl - 0.07) + 0.035, cy + o[1] * (wl_hw - 0.07) - 0.035, cy + o[1] * (wl_hw - 0.07) + 0.035, wl_DK, wl_DK + 0.75, wl_mats.diningWood); });
+        [-1, 1].forEach(function (wl_s) {
+            let wl_x = cx + wl_s * (wl_hl + 0.335 + 0.06), wl_bx = wl_x + wl_s * 0.27, hc = 0.335;
+            wl_boatBox(wl_x - hc + 0.03, wl_x + hc - 0.03, cy - hc + 0.03, cy + hc - 0.03, wl_DK + 0.42, wl_DK + 0.5, wl_mats.chairGreen);
+            wl_boatBox(Math.min(wl_bx, wl_bx + wl_s * 0.06), Math.max(wl_bx, wl_bx + wl_s * 0.06), cy - hc + 0.05, cy + hc - 0.05, wl_DK + 0.55, wl_DK + 1.0, wl_mats.chairGreen);
+            [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (o) {
+                let wl_lx = wl_x + o[0] * (hc - 0.06), ly = cy + o[1] * (hc - 0.06), wl_top = (o[0] === wl_s) ? wl_DK + 1.06 : wl_DK + 0.42;
+                wl_boatBox(wl_lx - 0.025, wl_lx + 0.025, ly - 0.025, ly + 0.025, wl_DK, wl_top, wl_mats.chairWood);
+            });
+        });
+    })(0.15, -0.15 + 0);
+    let wl_inLight = new THREE.PointLight(0xffb873, 1.4, 7, 2);
+    wl_inLight.position.copy(wl_V(-1.9, 0, RZ - 0.45));
+    wl_boat.add(wl_inLight);
+    [[wl_CX0, -CW], [wl_CX0, CW], [CX1, -CW], [CX1, CW]].forEach(function (wl_p) { wl_boatBox(wl_p[0] - 0.06, wl_p[0] + 0.06, wl_p[1] - 0.06, wl_p[1] + 0.06, wl_DK, RZ, wl_mats.trim); });
+    wl_boatBox(wl_CX0, CX1, -CW - 0.03, -CW + 0.01, wl_DK, wl_DK + 0.15, wl_mats.trim);
+    wl_boatBox(wl_CX0, CX1, CW - 0.01, CW + 0.03, wl_DK, wl_DK + 0.15, wl_mats.trim);
+
+    function wl_sideWindow(wl_x, wl_y, sgn) {
+        let wl_w = 1.1, wl_h = 0.95, zc = wl_DK + 1.25, wl_t = 0.07;
+        function wl_yy(wl_a) { let wl_b = wl_y + sgn * wl_a; return [Math.min(wl_y, wl_b), Math.max(wl_y, wl_b)]; }
+        let wl_gy = wl_y - sgn * 0.04;
+        let wl_glass = wl_boatBox(wl_x - 0.48, wl_x + 0.48, wl_gy - 0.008, wl_gy + 0.008, zc - 0.405, zc + 0.405, wl_mats.glass);
+        wl_glass.castShadow = false;
+        let wl_f = wl_yy(wl_t);
+        wl_boatBox(wl_x - wl_w / 2, wl_x + wl_w / 2, wl_f[0], wl_f[1], zc + wl_h / 2 - 0.07, zc + wl_h / 2, wl_mats.trim);
+        let wl_s = wl_yy(wl_t + 0.05);
+        wl_boatBox(wl_x - wl_w / 2 - 0.05, wl_x + wl_w / 2 + 0.05, wl_s[0], wl_s[1], zc - wl_h / 2 - 0.05, zc - wl_h / 2 + 0.06, wl_mats.trim);
+        wl_boatBox(wl_x - wl_w / 2, wl_x - wl_w / 2 + 0.07, wl_f[0], wl_f[1], zc - wl_h / 2, zc + wl_h / 2, wl_mats.trim);
+        wl_boatBox(wl_x + wl_w / 2 - 0.07, wl_x + wl_w / 2, wl_f[0], wl_f[1], zc - wl_h / 2, zc + wl_h / 2, wl_mats.trim);
+        let wl_m = wl_yy(0.05);
+        wl_boatBox(wl_x - 0.025, wl_x + 0.025, wl_m[0], wl_m[1], zc - wl_h / 2, zc + wl_h / 2, wl_mats.trim);
+        wl_boatBox(wl_x - wl_w / 2, wl_x + wl_w / 2, wl_m[0], wl_m[1], zc - 0.025, zc + 0.025, wl_mats.trim);
+    }
+    [-4.15, -2.45, -0.75, 0.85].forEach(function (wl_x) { wl_sideWindow(wl_x, -CW, -1); wl_sideWindow(wl_x, CW, 1); });
+    function wl_endWindow(xw, wl_y, sx, wl_w, wl_h, zc, solid) {
+        function wl_xx(wl_a) { let wl_b = xw + sx * wl_a; return [Math.min(xw, wl_b), Math.max(xw, wl_b)]; }
+        let wl_g = wl_xx(0.02), wl_f = wl_xx(0.07), gx = xw - sx * 0.04;
+        let wl_top = zc + wl_h / 2, wl_bot = zc - wl_h / 2, wl_y0 = wl_y - wl_w / 2, wl_y1 = wl_y + wl_w / 2;
+        if (solid) {
+            wl_boatBox(wl_f[0], wl_f[1], wl_y0, wl_y1, wl_top - 0.07, wl_top, wl_mats.trim);
+            wl_boatBox(wl_f[0], wl_f[1], wl_y0, wl_y1, wl_bot, wl_bot + 0.07, wl_mats.trim);
+            wl_boatBox(wl_f[0], wl_f[1], wl_y0, wl_y0 + 0.07, wl_bot + 0.07, wl_top - 0.07, wl_mats.trim);
+            wl_boatBox(wl_f[0], wl_f[1], wl_y1 - 0.07, wl_y1, wl_bot + 0.07, wl_top - 0.07, wl_mats.trim);
+        }
+        else { let wl_pane = wl_boatBox(gx - 0.008, gx + 0.008, wl_y - wl_w / 2 + 0.07, wl_y + wl_w / 2 - 0.07, zc - wl_h / 2 + 0.07, zc + wl_h / 2 - 0.07, wl_mats.glass); wl_pane.castShadow = false;
+        wl_boatBox(wl_f[0], wl_f[1], wl_y - wl_w / 2, wl_y + wl_w / 2, zc + wl_h / 2 - 0.07, zc + wl_h / 2, wl_mats.trim);
+        wl_boatBox(wl_f[0], wl_f[1], wl_y - wl_w / 2, wl_y + wl_w / 2, zc - wl_h / 2, zc - wl_h / 2 + 0.07, wl_mats.trim);
+        wl_boatBox(wl_f[0], wl_f[1], wl_y - wl_w / 2, wl_y - wl_w / 2 + 0.07, zc - wl_h / 2, zc + wl_h / 2, wl_mats.trim);
+        wl_boatBox(wl_f[0], wl_f[1], wl_y + wl_w / 2 - 0.07, wl_y + wl_w / 2, zc - wl_h / 2, zc + wl_h / 2, wl_mats.trim); }
+    }
+    function wl_doorSlab(xIn, xOut, y0, y1, z0, z1, wy0, wy1, wz0, wz1) {
+        let xa = Math.min(xIn, xOut), xb = Math.max(xIn, xOut);
+        wl_boatBox(xa, xb, y0, wy0, z0, z1, wl_mats.trim);
+        wl_boatBox(xa, xb, wy1, y1, z0, z1, wl_mats.trim);
+        wl_boatBox(xa, xb, wy0, wy1, z0, wz0, wl_mats.trim);
+        wl_boatBox(xa, xb, wy0, wy1, wz1, z1, wl_mats.trim);
+        let wl_pane = wl_boatBox(xa - 0.01, xb + 0.02, wy0 - 0.025, wy1 + 0.025, wz0 - 0.025, wz1 + 0.025, wl_mats.doorGlass);
+        wl_pane.castShadow = false;
+    }
+    wl_doorSlab(CX1 - wl_WT - 0.01, CX1 + 0.05, -0.45, 0.45, wl_DK - 0.01, wl_DK + 1.94, -0.23, 0.23, wl_DK + 1.07, wl_DK + 1.73);
+    wl_endWindow(CX1 + 0.05, 0, 1, 0.6, 0.8, wl_DK + 1.4, true);
+    wl_endWindow(CX1, -1.25, 1, 0.7, 0.7, wl_DK + 1.35);
+    wl_endWindow(CX1, 1.25, 1, 0.7, 0.7, wl_DK + 1.35);
+    wl_doorSlab(wl_CX0 - 0.05, wl_CX0 + wl_WT + 0.01, 0.15, 1.0, wl_DK - 0.01, wl_DK + 1.94, 0.395, 0.755, wl_DK + 1.195, wl_DK + 1.705);
+    wl_endWindow(wl_CX0 - 0.05, 0.575, -1, 0.5, 0.65, wl_DK + 1.45, true);
+    wl_endWindow(wl_CX0, -1.1, -1, 0.7, 0.7, wl_DK + 1.35);
+
+    let wl_TX0 = wl_CX0 - 0.2, TX1 = CX1 + 0.25, TW = CW + 0.25;
+    wl_boatBox(wl_TX0, TX1, -TW, TW, RZ, RZ + 0.14, wl_mats.trim);
+    wl_boatBox(wl_TX0 + 0.02, TX1 - 0.02, -TW + 0.02, TW - 0.02, RZ + 0.14, RZ + 0.19, wl_mats.pier, 2);
+    let wl_TZ = RZ + 0.19;
+    let wl_railPosts = [];
+    function wl_railRun(wl_a, wl_b, h0, height, wl_gap) {
+        let wl_dx = wl_b[0] - wl_a[0], dy = wl_b[1] - wl_a[1], wl_len = Math.hypot(wl_dx, dy), ux = wl_dx / wl_len, uy = dy / wl_len;
+        let wl_n = Math.max(2, Math.round(wl_len / 0.9));
+        let wl_ss = [];
+        for (let wl_i = 0; wl_i <= wl_n; wl_i++) {
+            let wl_s = wl_len * wl_i / wl_n;
+            if (wl_gap && wl_s > wl_gap[0] - 0.3 && wl_s < wl_gap[1] + 0.3) continue;
+            wl_ss.push(wl_s);
+        }
+        if (wl_gap) wl_ss.push(wl_gap[0], wl_gap[1]);
+        wl_ss.forEach(function (wl_s) {
+            let px = wl_a[0] + ux * wl_s, py = wl_a[1] + uy * wl_s;
+            for (let wl_i = 0; wl_i < wl_railPosts.length; wl_i++) {
+                let wl_q = wl_railPosts[wl_i];
+                if (Math.abs(wl_q[0] - px) < 0.02 && Math.abs(wl_q[1] - py) < 0.02 && Math.abs(wl_q[2] - h0) < 0.02) return;
+            }
+            wl_railPosts.push([px, py, h0]);
+            wl_boatCyl([px, py, h0 - 0.02], [px, py, h0 + height], 0.025, wl_mats.rail);
+        });
+        function wl_railsBetween(s0, s1) {
+            let wl_inside = wl_ss.filter(function (s) { return s >= s0 - 0.001 && s <= s1 + 0.001; }).sort(function (a, b) { return a - b; });
+            if (!wl_inside.length || wl_inside[0] > s0 + 0.001) wl_inside.unshift(s0);
+            if (wl_inside[wl_inside.length - 1] < s1 - 0.001) wl_inside.push(s1);
+            for (let wl_i = 0; wl_i < wl_inside.length - 1; wl_i++) {
+                let wl_from = wl_inside[wl_i] + (wl_i === 0 ? 0 : 0.012), wl_to = wl_inside[wl_i + 1] - (wl_i === wl_inside.length - 2 ? 0 : 0.012);
+                if (wl_to - wl_from < 0.04) continue;
+                [height, height * 0.62, height * 0.3].forEach(function (hh, wl_j) {
+                    wl_boatCyl([wl_a[0] + ux * wl_from, wl_a[1] + uy * wl_from, h0 + hh], [wl_a[0] + ux * wl_to, wl_a[1] + uy * wl_to, h0 + hh], wl_j === 0 ? 0.022 : 0.009, wl_mats.rail, 10);
+                });
+            }
+        }
+        if (wl_gap) { wl_railsBetween(0, wl_gap[0]); wl_railsBetween(wl_gap[1], wl_len); }
+        else wl_railsBetween(0, wl_len);
+    }
+    let wl_ri = 0.09, x0 = wl_TX0 + wl_ri, x1 = TX1 - wl_ri, y0 = -TW + wl_ri, y1 = TW - wl_ri;
+    wl_railRun([x0, y0], [x1, y0], wl_TZ, 1.0);
+    wl_railRun([x0, y1], [x1, y1], wl_TZ, 1.0);
+    wl_railRun([x1, y0], [x1, y1], wl_TZ, 1.0);
+    wl_railRun([x0, y0], [x0, y1], wl_TZ, 1.0, [0.5, 1.3]);
+    let wl_ladderX = wl_CX0 - 0.65;
+    [y0 + 0.5, y0 + 1.3].forEach(function (wl_yy) { wl_boatCyl([wl_ladderX, wl_yy, wl_DK], [x0, wl_yy, wl_TZ + 1.0], 0.03, wl_mats.rail); });
+    for (let wl_lk = 0; wl_lk < 7; wl_lk++) {
+        let wl_lf = (wl_lk + 1) / 8, px = wl_ladderX + (x0 - wl_ladderX) * wl_lf, pz = wl_DK + (wl_TZ + 1.0 - wl_DK) * wl_lf;
+        if (pz > wl_TZ - 0.05) break;
+        wl_boatCyl([px, y0 + 0.5, pz], [px, y0 + 1.3, pz], 0.02, wl_mats.rail);
+    }
+    wl_boatCyl([-4.35, 1.55, wl_TZ], [-4.35, 1.55, wl_TZ + 1.0], 0.08, wl_mats.metal);
+    wl_boatCyl([-4.35, 1.55, wl_TZ + 1.0], [-4.35, 1.55, wl_TZ + 1.06], 0.16, wl_mats.metal);
+
+    let wl_BX0 = CX1 + 0.25, bw = W - 0.15;
+    wl_railRun([wl_BX0, -bw], [L1 - 0.15, -bw], wl_DK, 0.75);
+    wl_railRun([wl_BX0, bw], [L1 - 0.15, bw], wl_DK, 0.75);
+    wl_railRun([L1 - 0.15, -bw], [L1 - 0.15, bw], wl_DK, 0.75, [1.5, 3.2]);
+    [-1.6, 1.6].forEach(function (wl_yy) {
+        wl_boatBox(5.45, 5.75, wl_yy - 0.05, wl_yy + 0.05, wl_DK, wl_DK + 0.06, wl_mats.metal);
+        wl_boatCyl([5.40, wl_yy, wl_DK + 0.077], [5.80, wl_yy, wl_DK + 0.077], 0.025, wl_mats.metal);
+    });
+    (function wl_coil() {
+        let wl_pts = [];
+        for (let wl_k = 0; wl_k < 4; wl_k++) for (let wl_a = 0; wl_a < 360; wl_a += 20) {
+            let wl_r = 0.12 + wl_k * 0.045, ang = wl_a * Math.PI / 180;
+            wl_pts.push([4.75 + wl_r * Math.cos(ang), 1.25 + wl_r * Math.sin(ang), wl_DK + 0.03]);
+        }
+        for (let wl_i = 0; wl_i < wl_pts.length - 1; wl_i++) wl_boatCyl(wl_pts[wl_i], wl_pts[wl_i + 1], 0.024, wl_mats.rope, 8, 0.12);
+    })();
+
+    function wl_slats(sx0, sx1, sy0, sy1, sz0, sz1, wl_n, alongX, mat) {
+        for (let wl_i = 0; wl_i < wl_n; wl_i++) {
+            let wl_t0 = wl_i / wl_n, t1 = (wl_i + 0.78) / wl_n;
+            if (alongX) wl_boatBox(sx0, sx1, sy0 + (sy1 - sy0) * wl_t0, sy0 + (sy1 - sy0) * t1, sz0, sz1, mat);
+            else wl_boatBox(sx0 + (sx1 - sx0) * wl_t0, sx0 + (sx1 - sx0) * t1, sy0, sy1, sz0, sz1, mat);
+        }
+    }
+    function wl_tableSet(cx, cy, z) {
+        let wl_hw = 0.35, wl_top = z + 0.72;
+        wl_slats(cx - wl_hw, cx + wl_hw, cy - wl_hw, cy + wl_hw, wl_top, wl_top + 0.025, 9, true, wl_mats.tableWood);
+        wl_boatBox(cx - wl_hw, cx + wl_hw, cy - wl_hw, cy - wl_hw + 0.03, wl_top - 0.04, wl_top, wl_mats.metal);
+        wl_boatBox(cx - wl_hw, cx + wl_hw, cy + wl_hw - 0.03, cy + wl_hw, wl_top - 0.04, wl_top, wl_mats.metal);
+        [-1, 1].forEach(function (wl_s) {
+            let wl_y = cy + wl_s * (wl_hw - 0.05);
+            wl_boatCyl([cx - wl_hw + 0.04, wl_y, z], [cx + wl_hw - 0.04, wl_y, wl_top - 0.04], 0.012, wl_mats.metal, 8);
+            wl_boatCyl([cx + wl_hw - 0.04, wl_y, z], [cx - wl_hw + 0.04, wl_y, wl_top - 0.04], 0.012, wl_mats.metal, 8);
+        });
+        [-1, 1].forEach(function (wl_s) {
+            let wl_x = cx + wl_s * 0.62, sw = 0.21, sz = z + 0.44, wl_bx = wl_x + wl_s * 0.2;
+            wl_slats(wl_x - sw, wl_x + sw, cy - sw, cy + sw, sz, sz + 0.02, 7, false, wl_mats.tableWood);
+            [-1, 1].forEach(function (wl_k) {
+                let wl_y = cy + wl_k * (sw + 0.012);
+                wl_boatCyl([wl_x - wl_s * 0.22, wl_y, z], [wl_bx, wl_y, sz], 0.011, wl_mats.metal, 8);
+                wl_boatCyl([wl_bx, wl_y, sz], [wl_bx + wl_s * 0.06, wl_y, z + 0.88], 0.011, wl_mats.metal, 8);
+                wl_boatCyl([wl_x + wl_s * 0.22, wl_y, z], [wl_x - wl_s * 0.05, wl_y, sz], 0.011, wl_mats.metal, 8);
+                wl_boatCyl([wl_x - sw, wl_y, sz], [wl_x + sw, wl_y, sz], 0.011, wl_mats.metal, 8);
+            });
+            for (let wl_i = 0; wl_i < 6; wl_i++) {
+                let wl_tf = 0.35 + wl_i * 0.11, zz = sz + (z + 0.88 - sz) * wl_tf, wl_xx = wl_bx + wl_s * 0.06 * wl_tf;
+                wl_boatBox(Math.min(wl_xx, wl_xx + wl_s * 0.018), Math.max(wl_xx, wl_xx + wl_s * 0.018), cy - sw, cy + sw, zz, zz + 0.045, wl_mats.tableWood);
+            }
+        });
+    }
+    wl_tableSet(-2.1, 0.0, wl_TZ);
+    function wl_pottedPlant(wl_x, wl_y, z, wl_h, mat) {
+        let wl_pr = wl_h * 0.22;
+        wl_boatCyl([wl_x, wl_y, z], [wl_x, wl_y, z + wl_h * 0.38], wl_pr * 0.78, wl_mats.terracotta, 16, 0.5, wl_pr);
+        for (let wl_i = 0; wl_i < 7; wl_i++) {
+            let wl_a = wl_i / 7 * 6.28, wl_r = wl_pr * 0.7 * (wl_i ? 1 : 0);
+            wl_boatSphere([wl_x + Math.cos(wl_a) * wl_r, wl_y + Math.sin(wl_a) * wl_r, z + wl_h * (0.40 + 0.1 * wl_hash(wl_i, wl_x, 1))], wl_h * 0.24, mat, 1.1, 10);
+        }
+    }
+    wl_pottedPlant(-3.7, -1.6, wl_TZ, 0.85, wl_mats.leafA);
+    wl_pottedPlant(1.3, 1.55, wl_TZ, 0.95, wl_mats.leafB);
+    wl_pottedPlant(1.3, -1.55, wl_TZ, 0.85, wl_mats.leafA);
+    wl_pottedPlant(2.25, 1.75, wl_DK, 0.27, wl_mats.leafB);
+    wl_lantern(0.95, 0.0, wl_TZ);
+    wl_lantern(5.25, -0.9, wl_DK);
+    function wl_paintedBench(cx, cy, z) {
+        let wl_hl = 0.58, hd = 0.25, back = cy + hd;
+        [-1, 1].forEach(function (wl_s) {
+            let wl_x = cx + wl_s * (wl_hl - 0.02);
+            wl_boatBox(wl_x - 0.02, wl_x + 0.02, cy - hd + 0.03, back - 0.03, z - 0.04, z + 0.44, wl_mats.benchPaint);
+            wl_boatBox(wl_x - 0.025, wl_x + 0.025, back - 0.06, back - 0.01, z - 0.04, z + 0.89, wl_mats.benchPaint);
+        });
+        wl_boatBox(cx - wl_hl, cx + wl_hl, cy - hd, back - 0.01, z + 0.42, z + 0.46, wl_mats.benchPaint);
+        wl_boatBox(cx - wl_hl + 0.04, cx + wl_hl - 0.04, cy - hd + 0.06, back - 0.06, z + 0.1, z + 0.125, wl_mats.benchPaint);
+        wl_boatBox(cx - wl_hl, cx + wl_hl, back - 0.04, back, z + 0.5, z + 0.89, wl_mats.benchPaint);
+    }
+    wl_paintedBench(3.4, -1.75, wl_DK);
+
+    function wl_lantern(wl_x, wl_y, z, parent) {
+        parent = parent || wl_boat;
+        wl_eBox(wl_x - 0.08, wl_x + 0.08, wl_y - 0.08, wl_y + 0.08, z, z + 0.03, wl_mats.trim, parent);
+        wl_eBox(wl_x - 0.08, wl_x + 0.08, wl_y - 0.08, wl_y + 0.08, z + 0.22, z + 0.25, wl_mats.trim, parent);
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (o) {
+            wl_eBox(wl_x + o[0] * 0.07 - 0.01, wl_x + o[0] * 0.07 + 0.01, wl_y + o[1] * 0.07 - 0.01, wl_y + o[1] * 0.07 + 0.01, z + 0.03, z + 0.22, wl_mats.trim, parent);
+        });
+        let wl_glow = wl_eSphere([wl_x, wl_y, z + 0.12], 0.045, wl_mats.glow, parent);
+        wl_glow.castShadow = false;
+        let wl_torus = new THREE.TorusGeometry(0.05, 0.007, 6, 16, Math.PI);
+        let wl_p = wl_V(wl_x, wl_y, z + 0.25);
+        wl_torus.translate(wl_p.x, wl_p.y, wl_p.z);
+        wl_eAdd(wl_torus, wl_mats.metal, parent, 0.3);
+        wl_eCyl([wl_x, wl_y, z + 0.12], [wl_x, wl_y, z + 0.24], 0.005, wl_mats.metal, parent, 6, 0.15);
+        let wl_pl = new THREE.PointLight(0xffb866, 0.9, 6, 2);
+        wl_pl.position.copy(wl_V(wl_x, wl_y, z + 0.2));
+        parent.add(wl_pl);
+        wl_lanterns.push(wl_pl);
+        return wl_pl;
+    }
+
+    // ---------- Camera presets & slow tour ----------
+    let wl_shots = {
+        tour: { p: wl_CAM0, t: wl_TARGET },
+        terrace: { p: wl_V(2.6, -5.2, wl_TZ + 4.4), t: wl_V(-1.8, 0, wl_TZ + 0.4) },
+        bow: { p: wl_V(10.5, -4.8, 3.6), t: wl_V(4.0, 0, wl_DK + 0.4) },
+        windows: { p: wl_V(-1.6, -9.5, 2.6), t: wl_V(-1.6, 0, wl_DK + 1.2) }
+    };
+    let wl_fly = null, wl_idleTimer = null;
+    wl_controls.autoRotate = true;
+    wl_controls.autoRotateSpeed = 0.55;
+    function wl_pickSpot(k) {
+        document.querySelectorAll('#spots button').forEach(function (x) { x.classList.toggle('on', x.dataset.k === k); });
+    }
+    document.querySelectorAll('#spots button').forEach(function (b) {
+        b.addEventListener('click', function () {
+            wl_pickSpot(b.dataset.k);
+            let wl_s = wl_shots[b.dataset.k];
+            wl_fly = { p0: wl_camera.position.clone(), t0: wl_controls.target.clone(), p1: wl_s.p.clone(), t1: wl_s.t.clone(), k: 0 };
+            wl_controls.autoRotate = b.dataset.k === 'tour';
+        });
+    });
+    wl_controls.addEventListener('start', function () {
+        wl_controls.autoRotate = false;
+        wl_fly = null;
+        clearTimeout(wl_idleTimer);
+    });
+    wl_controls.addEventListener('end', function () {
+        clearTimeout(wl_idleTimer);
+        wl_idleTimer = setTimeout(function () {
+            wl_controls.autoRotate = true;
+            wl_pickSpot('tour');
+        }, 5000);
+    });
+
+    // ---------- Keep the camera out of the water, the ground, the boat, and the pier ----------
+    function wl_groundY(x, z) {
+        let wl_dy = -z;
+        if (wl_dy >= 22 && wl_dy <= 97) {
+            let wl_h = wl_gz(x, wl_dy);
+            return wl_h > -1.5 ? Math.max(wl_h, -0.06) : -0.06;
+        }
+        return -0.06;
+    }
+    let wl_keepOut = [
+        [-6.5, 6.5, -0.5, 4.6, -2.6, 2.6],
+        [-6.3, 3.3, -0.6, 1.4, -4.9, -2.9],
+        [-2.3, -0.3, -0.6, 1.4, -33.5, -4.8]
+    ];
+    let wl_camRay = new THREE.Raycaster();
+    function wl_lockCamera() {
+        let wl_p = wl_camera.position;
+        let wl_m = 0.3, wl_e = 0.03;
+        let wl_floor = wl_groundY(wl_p.x, wl_p.z) + 0.45;
+        if (wl_p.y < wl_floor) wl_p.y = wl_floor;
+        function wl_outside(px, py, pz) {
+            for (let wl_b = 0; wl_b < wl_keepOut.length; wl_b++) {
+                let wl_k = wl_keepOut[wl_b];
+                if (px > wl_k[0] - wl_m && px < wl_k[1] + wl_m &&
+                    py > wl_k[2] - wl_m && py < wl_k[3] + wl_m &&
+                    pz > wl_k[4] - wl_m && pz < wl_k[5] + wl_m) return false;
+            }
+            return true;
+        }
+        for (let wl_pass = 0; wl_pass < 8; wl_pass++) {
+            if (wl_outside(wl_p.x, wl_p.y, wl_p.z)) break;
+            let wl_k = null;
+            for (let wl_b = 0; wl_b < wl_keepOut.length; wl_b++) {
+                let wl_t = wl_keepOut[wl_b];
+                if (wl_p.x > wl_t[0] - wl_m && wl_p.x < wl_t[1] + wl_m &&
+                    wl_p.y > wl_t[2] - wl_m && wl_p.y < wl_t[3] + wl_m &&
+                    wl_p.z > wl_t[4] - wl_m && wl_p.z < wl_t[5] + wl_m) { wl_k = wl_t; break; }
+            }
+            if (!wl_k) break;
+            let wl_x0 = wl_k[0] - wl_m, x1 = wl_k[1] + wl_m, y0 = wl_k[2] - wl_m, y1 = wl_k[3] + wl_m, z0 = wl_k[4] - wl_m, z1 = wl_k[5] + wl_m;
+            let wl_cand = [
+                { d: wl_p.x - wl_x0, x: wl_x0 - wl_e, y: wl_p.y, z: wl_p.z },
+                { d: x1 - wl_p.x, x: x1 + wl_e, y: wl_p.y, z: wl_p.z },
+                { d: wl_p.y - y0, x: wl_p.x, y: y0 - wl_e, z: wl_p.z },
+                { d: y1 - wl_p.y, x: wl_p.x, y: y1 + wl_e, z: wl_p.z },
+                { d: wl_p.z - z0, x: wl_p.x, y: wl_p.y, z: z0 - wl_e },
+                { d: z1 - wl_p.z, x: wl_p.x, y: wl_p.y, z: z1 + wl_e }
+            ];
+            wl_cand.sort(function (q, r) { return q.d - r.d; });
+            let wl_done = false;
+            for (let wl_c = 0; wl_c < wl_cand.length; wl_c++) {
+                let wl_f2 = wl_groundY(wl_cand[wl_c].x, wl_cand[wl_c].z) + 0.35;
+                if (wl_cand[wl_c].y < wl_f2) continue;
+                if (wl_outside(wl_cand[wl_c].x, wl_cand[wl_c].y, wl_cand[wl_c].z)) {
+                    wl_p.set(wl_cand[wl_c].x, wl_cand[wl_c].y, wl_cand[wl_c].z);
+                    wl_done = true;
+                    break;
+                }
+            }
+            if (!wl_done) {
+                for (let wl_c = 0; wl_c < wl_cand.length; wl_c++) {
+                    let wl_f2 = wl_groundY(wl_cand[wl_c].x, wl_cand[wl_c].z) + 0.35;
+                    if (wl_cand[wl_c].y >= wl_f2) {
+                        wl_p.set(wl_cand[wl_c].x, wl_cand[wl_c].y, wl_cand[wl_c].z);
+                        break;
+                    }
+                }
+            }
+        }
+        let wl_aim = wl_p.clone().sub(wl_controls.target);
+        let wl_span = wl_aim.length();
+        if (wl_span > 0.5) {
+            wl_env.updateMatrixWorld(true);
+            wl_camRay.set(wl_controls.target, wl_aim.multiplyScalar(1 / wl_span));
+            wl_camRay.far = wl_span;
+            let wl_hits = wl_camRay.intersectObject(wl_env, true).filter(function (hit) {
+                let wl_mat = hit.object.material;
+                return hit.object.castShadow && wl_mat && !wl_mat.transparent;
+            });
+            if (wl_hits.length && wl_hits[0].distance < wl_span - 0.45) {
+                wl_p.copy(wl_controls.target).addScaledVector(wl_camRay.ray.direction, wl_hits[0].distance - 0.45);
+            }
+        }
+        let wl_treeBox = new THREE.Box3();
+        for (let wl_pass = 0; wl_pass < 4; wl_pass++) {
+            wl_env.traverse(function (obj) {
+                if (!obj.geometry || obj.material !== wl_mats.bark) return;
+                if (!obj.geometry.boundingBox) obj.geometry.computeBoundingBox();
+                wl_treeBox.copy(obj.geometry.boundingBox).applyMatrix4(obj.matrixWorld).expandByScalar(0.4);
+                if (!wl_treeBox.containsPoint(wl_p)) return;
+                let wl_gap = [
+                    [wl_p.x - wl_treeBox.min.x, 0, wl_treeBox.min.x - 0.02],
+                    [wl_treeBox.max.x - wl_p.x, 0, wl_treeBox.max.x + 0.02],
+                    [wl_p.y - wl_treeBox.min.y, 1, wl_treeBox.min.y - 0.02],
+                    [wl_treeBox.max.y - wl_p.y, 1, wl_treeBox.max.y + 0.02],
+                    [wl_p.z - wl_treeBox.min.z, 2, wl_treeBox.min.z - 0.02],
+                    [wl_treeBox.max.z - wl_p.z, 2, wl_treeBox.max.z + 0.02]
+                ];
+                let wl_best = wl_gap[0];
+                for (let wl_g = 1; wl_g < wl_gap.length; wl_g++) if (wl_gap[wl_g][0] < wl_best[0]) wl_best = wl_gap[wl_g];
+                if (wl_best[1] === 0) wl_p.x = wl_best[2];
+                else if (wl_best[1] === 1) wl_p.y = wl_best[2];
+                else wl_p.z = wl_best[2];
+            });
+            let wl_arr = wl_leaves.instanceMatrix.array;
+            for (let wl_i = 0; wl_i < wl_leaves.count; wl_i++) {
+                let wl_o = wl_i * 16;
+                let wl_sc = Math.hypot(wl_arr[wl_o], wl_arr[wl_o + 1], wl_arr[wl_o + 2]);
+                let cx = wl_arr[wl_o + 12], cy = wl_arr[wl_o + 13], cz = wl_arr[wl_o + 14];
+                let dx = wl_p.x - cx, dy = wl_p.y - cy, dz = wl_p.z - cz;
+                let dist = Math.hypot(dx, dy, dz), rad = wl_sc * 1.25 + 0.25;
+                if (dist < rad) {
+                    if (dist < 0.001) wl_p.x = cx + rad;
+                    else { let wl_s = rad / dist; wl_p.set(cx + dx * wl_s, cy + dy * wl_s, cz + dz * wl_s); }
+                }
+            }
+        }
+        let wl_lift = wl_groundY(wl_p.x, wl_p.z) + 0.45;
+        if (wl_p.y < wl_lift) wl_p.y = wl_lift;
+    }
+
+    // Keep the orbit centred on the boat, the pier, and the near shore even when panning.
+    function wl_clampOrbit() {
+        let wl_t = wl_controls.target;
+        let wl_dx = 0, wl_dy = 0, wl_dz = 0;
+        if (wl_t.x < -7.5) wl_dx = wl_t.x + 7.5;
+        else if (wl_t.x > 7.5) wl_dx = wl_t.x - 7.5;
+        if (wl_t.y < 0.6) wl_dy = wl_t.y - 0.6;
+        else if (wl_t.y > 4.5) wl_dy = wl_t.y - 4.5;
+        if (wl_t.z < -37) wl_dz = wl_t.z + 37;
+        else if (wl_t.z > 7.5) wl_dz = wl_t.z - 7.5;
+        if (wl_dx !== 0 || wl_dy !== 0 || wl_dz !== 0) {
+            wl_t.set(wl_t.x - wl_dx, wl_t.y - wl_dy, wl_t.z - wl_dz);
+            wl_camera.position.x -= wl_dx;
+            wl_camera.position.y -= wl_dy;
+            wl_camera.position.z -= wl_dz;
+        }
+    }
+
+    // ---------- Animation: gentle bobbing on the water ----------
+    let wl_clock = new THREE.Clock();
+    let wl_t = 0;
+    function wl_animate() {
+        requestAnimationFrame(wl_animate);
+        let wl_dt = Math.min(wl_clock.getDelta(), 0.05);
+        wl_t += wl_dt;
+        if (wl_water.material.uniforms && wl_water.material.uniforms.time) wl_water.material.uniforms.time.value = wl_t * 0.35;
+        if (wl_sky.material.uniforms && wl_sky.material.uniforms.time) wl_sky.material.uniforms.time.value = wl_t;
+        wl_lanterns.forEach(function (l, wl_i) { l.intensity = 0.85 + Math.sin(wl_t * 7 + wl_i * 2) * 0.05 + Math.sin(wl_t * 13 + wl_i) * 0.03; });
+        if (wl_fly) {
+            wl_fly.k = Math.min(1, wl_fly.k + wl_dt / 1.6);
+            let wl_e = wl_fly.k * wl_fly.k * (3 - 2 * wl_fly.k);
+            wl_camera.position.lerpVectors(wl_fly.p0, wl_fly.p1, wl_e);
+            wl_controls.target.lerpVectors(wl_fly.t0, wl_fly.t1, wl_e);
+            if (wl_fly.k >= 1) wl_fly = null;
+        }
+        wl_controls.update();
+        wl_clampOrbit();
+        wl_lockCamera();
+        wl_renderer.render(wl_scene, wl_camera);
+    }
+    wl_animate();
+
+    // ---------- Resize ----------
+    window.addEventListener('resize', function () {
+        wl_camera.aspect = window.innerWidth / window.innerHeight;
+        wl_camera.updateProjectionMatrix();
+        wl_renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // handle exposed for tests
+    window.__WILLOW__ = { scene: wl_scene, camera: wl_camera, boat: wl_boat, water: wl_water, shore: wl_shore, sky: wl_sky };
+})();
+</script>
+</body>
+</html>
