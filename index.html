@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Revelo - 3D Scenes</title>
+<title>Revelo: 3D Scenes in Gemini 4 Argon &amp; Revelo Redesign</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -32,6 +32,9 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .btn{border:1px solid var(--line);border-radius:5px;padding:6px 11px;font-size:12.5px;
      font-weight:500;background:var(--raise)}
 .btn:hover{border-color:var(--dim)}
+.btn.icon{display:inline-flex;align-items:center;justify-content:center;padding:0 9px;
+          height:calc(12.5px * 1.5 + 14px)}                 /* same height as the text buttons */
+.btn.icon svg{display:block}
 .btn.hero{border-color:var(--amber);color:var(--amber)}
 .btn.hero:hover{background:var(--amber);color:#000}
 
@@ -46,18 +49,13 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .game:hover{background:var(--panel)}
 .game.sel{background:var(--panel);border-left-color:var(--amber)}
 .game-t{font-weight:600;font-size:14px;letter-spacing:-.01em}
-.game-m{margin-top:2px;color:var(--dim);font-size:11.5px;font-variant-numeric:tabular-nums}
 
 /* prompt */
 .prompt-box{padding:16px 24px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
 .ptitle{font-size:19px;font-weight:700;letter-spacing:-.02em;margin:0 0 8px}
-.ptext{border-left:2px solid var(--amber);padding:2px 0 2px 12px;margin:0 0 9px;max-width:84ch;
-       max-height:62px;overflow:auto;white-space:pre-wrap;font-size:13.5px;color:#C4C4C4}
-.ptext.open{max-height:none}
-.pmeta{display:flex;gap:14px;color:var(--dim);font-size:12px;align-items:center;flex-wrap:wrap}
-.more{color:var(--amber);font-size:12px;font-weight:500;text-decoration:underline}
-.src{color:var(--dim);font-size:12px}
-.src b{color:var(--text);font-weight:600}
+.ptext{border-left:2px solid var(--amber);padding:2px 0 2px 12px;margin:0 0 9px;
+       white-space:pre-wrap;font-size:13.5px;color:#C4C4C4}
+.more{color:var(--amber);font-size:12px;font-weight:500;text-decoration:underline;white-space:nowrap;padding:0}
 
 /* tabs */
 .tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--line);background:var(--bg);
@@ -69,6 +67,8 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .tab-k{font-size:10.5px;font-weight:500;color:var(--dim);font-family:var(--mono);margin-left:auto}
 .frame-tools{margin-left:auto;display:flex;align-items:center;gap:8px;padding:0 16px}
 .stage{padding:16px 24px;background:var(--bg)}
+.under{padding:0 24px 16px}
+.under:empty{display:none}
 .holder{height:clamp(520px,72vh,900px);background:#000;border:1px solid var(--line);
         border-radius:6px;overflow:hidden;position:relative}
 .holder iframe,.holder model-viewer{width:100%;height:100%;border:0;display:block}
@@ -147,7 +147,7 @@ tr.avg td.crit{color:var(--text)}
   .game{width:auto;flex:0 0 auto;border-left:0;border-bottom:3px solid transparent}
   .game.sel{border-bottom-color:var(--amber)}
   .tabs{flex-wrap:wrap} .tab{min-width:0;flex:1} .frame-tools{padding:8px 16px;width:100%}
-  .prompt-box,.stage,.sheet{padding-left:16px;padding-right:16px}
+  .prompt-box,.stage,.under,.sheet{padding-left:16px;padding-right:16px}
   .holder{height:60vh}
 }
 </style>
@@ -155,7 +155,7 @@ tr.avg td.crit{color:var(--text)}
 <body>
 <div class="shell">
   <header class="bar">
-    <div class="mark">Revelo <span>- 3D Scenes</span></div>
+    <div class="mark">Revelo: <span>3D Scenes in Gemini 4 Argon &amp; Revelo Redesign</span></div>
   </header>
   <div class="cols">
     <nav class="col"><div class="nav" id="nav"></div></nav>
@@ -163,6 +163,7 @@ tr.avg td.crit{color:var(--text)}
       <div class="prompt-box" id="prompt"></div>
       <div class="tabs" id="tabs"></div>
       <div class="stage"><div class="holder" id="holder"></div></div>
+      <div class="under" id="under"></div>
       <div class="sheet" id="sheet"></div>
     </main>
   </div>
@@ -211,7 +212,6 @@ function drawNav(){
   nav.innerHTML = '<div class="nav-h">Scenes</div>' + DATA.map((g,i) =>
     `<button class="game ${i===state.game?'sel':''}" data-i="${i}">
        <div class="game-t">${esc(g.nav || g.title)}</div>
-       <div class="game-m">${(g.versions||[]).map(v => scoreText(score(g,v))).join(' → ')}</div>
      </button>`).join('');
   nav.querySelectorAll('.game').forEach(b =>
     b.onclick = () => { state.game = +b.dataset.i; state.col = 0; drawAll(); });
@@ -228,17 +228,11 @@ function drawMid(){
 
   document.getElementById('prompt').innerHTML = `
     <h1 class="ptitle">${esc(g.title)}</h1>
-    ${g.description ? `<div class="ptext" id="ptext">${esc(g.description)}</div>` : ''}
-    <div class="pmeta">
-      ${g.category ? `<span>${esc(g.category)}</span>` : ''}
-      ${g.description ? '<button class="more" id="expand">Full description</button>' : ''}
-      ${g.source ? `<span class="src">Source: <b>${esc(g.source)}</b></span>` : ''}
-    </div>`;
+    ${g.description ? `<div class="ptext" id="ptext"><span id="ptxt"></span><button class="more" id="expand"></button></div>` : ''}`;
+  promptOpen = false;
+  fitPrompt();
   const ex = document.getElementById('expand');
-  if (ex) ex.onclick = e => {
-    const p = document.getElementById('ptext'); p.classList.toggle('open');
-    e.target.textContent = p.classList.contains('open') ? 'Collapse' : 'Full description';
-  };
+  if (ex) ex.onclick = () => { promptOpen = !promptOpen; fitPrompt(); };
 
   const vs = g.versions || [];
   document.getElementById('tabs').innerHTML =
@@ -247,23 +241,64 @@ function drawMid(){
       const cls = s.scored && s.total ? 's-' + band(s.passed / s.total) : 'u';
       return `<button class="tab ${state.col===i?'sel':''}" data-k="${i}">
         <div class="tab-n">${esc(v.label)}<span class="${cls}">${scoreText(s)}</span>
-          <span class="tab-k">${!v.file ? 'empty' : v.type === 'model' ? '3D model' : 'HTML'}</span></div>
+          ${!v.file ? '<span class="tab-k">empty</span>' : v.type === 'model' ? '<span class="tab-k">3D model</span>' : ''}</div>
       </button>`;
     }).join('') +
     `<div class="frame-tools">
-       ${cur()?.notes ? '<button class="btn" id="notes">Notes</button>' : ''}
-       <button class="btn" id="reload">Restart</button>
-       <button class="btn hero" id="full">Open full screen</button></div>`;
+       <button class="btn icon" id="reload" title="Restart (R)" aria-label="Restart">
+         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+           <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+       <button class="btn icon" id="full" title="Open full screen (F)" aria-label="Open full screen">
+         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+           <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/>
+           <path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button></div>`;
 
   document.getElementById('tabs').querySelectorAll('.tab').forEach(b =>
     b.onclick = () => { state.col = +b.dataset.k; drawAll(); });
   document.getElementById('reload').onclick = loadScene;
   document.getElementById('full').onclick = openFull;
+  document.getElementById('under').innerHTML =
+    cur()?.notes ? '<button class="btn" id="notes">Notes</button>' : '';
   const notes = document.getElementById('notes');
   if (notes) notes.onclick = openNotes;
 
   loadScene();
 }
+
+/* ---------- prompt preview ----------
+   Collapsed: the longest cut of the prompt that, with "… Show all" after it,
+   still fits in 3 lines. A CSS line-clamp can't put the link after its ellipsis. */
+const PROMPT_LINES = 3;
+let promptOpen = false;
+function fitPrompt(){
+  const p = document.getElementById('ptext'), t = document.getElementById('ptxt'),
+        b = document.getElementById('expand');
+  if (!p) return;
+  const full = DATA[state.game].description;
+  if (promptOpen){ t.textContent = full + ' '; b.textContent = 'Show less'; b.hidden = false; return; }
+
+  const lh  = parseFloat(getComputedStyle(p).lineHeight);
+  const top = p.getBoundingClientRect().top + parseFloat(getComputedStyle(p).paddingTop);
+  const fits = () => b.getBoundingClientRect().bottom - top <= lh * PROMPT_LINES + 1;
+
+  t.textContent = full; b.hidden = true;
+  if (t.getBoundingClientRect().bottom - top <= lh * PROMPT_LINES + 1) return;   // short prompt: no link
+
+  b.hidden = false; b.textContent = 'Show all';
+  let lo = 0, hi = full.length;
+  while (lo < hi){                                     // binary search the longest cut that fits
+    const mid = (lo + hi + 1) >> 1;
+    t.textContent = full.slice(0, mid).trimEnd() + '… ';
+    if (fits()) lo = mid; else hi = mid - 1;
+  }
+  const cut = full.slice(0, lo), space = cut.lastIndexOf(' ');
+  t.textContent = (space > lo * .8 ? cut.slice(0, space) : cut).trimEnd() + '… ';   // end on a whole word
+}
+let fitTimer;
+addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(fitPrompt, 100); });
+document.fonts?.ready.then(fitPrompt);                 // re-measure once the web font is in
 
 /* ---------- stage ---------- */
 function emptyStage(msg){
