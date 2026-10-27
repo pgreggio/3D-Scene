@@ -27,1059 +27,6 @@
 // Generated from exported_tasks_227.jsonl (assets) and exported_tasks_228.jsonl (primitives).
 window.SCENES = [
   {
-    "nav": "Cheese Board",
-    "title": "Artisan Cheese Board — Interactive 3D",
-    "description": "I'd love an interactive 3D cheese board presented on an oiled olive wood slab. On it I'd like a hard, crumbly wedge; a bloomy soft round; a blue cheese with cut veining; and a goat log. Scatter some walnuts around, add glossy grapes, and give the cheeses matte rinds. When I click the knife, it should lift up and work like in the real world, thanks.",
-    "category": "3D → OTS 3D Dev",
-    "source": "exported_tasks_228 (primitives) · exported_tasks_227 (assets)",
-    "questions": [
-      {
-        "tier": "Functionality",
-        "q": "**builds** — A visible cheese board scene renders"
-      },
-      {
-        "tier": "Functionality",
-        "q": "**interactivity** — Dragging the pointer across the canvas changes the viewing angle of the board"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — A flat wood-toned slab serves as the board beneath the food items"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — Four separate cheese pieces are present, each with a different overall shape from the other three"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — One cheese is a wedge with a triangular profile, being wider at one end and tapering to a point"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — One cheese is a low round with a visibly white or pale outer surface, appearing distinctly lighter in tone than the darker cheeses surrounding it"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — One cheese shows a cut face carrying darker blue or grey-green vein markings across it rather than a single uniform colour"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — One cheese is a slender cylindrical log that is clearly longer than it is thick"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — At least three walnut forms are present, spaced apart from one another rather than fused into a single mass"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — A cluster of small spheres reading as grapes sits on the board"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — Loose rind pieces are present as separate objects from the four whole cheeses"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — A knife is present whose blade and handle are distinguishable as two differently coloured parts"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**scene-fidelity** — The scene reads as a cheese board without needing the prompt, being a slab carrying several distinct food items on its upper surface"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**scene-fidelity** — The walnut forms have a lumpy or lobed surface rather than being smooth plain spheres"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**scene-fidelity** — After rotating the camera, the soft round shows a side wall with visible height rather than reading as a flat disc"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**lighting** — All four cheeses are bright enough at load to be told apart from the board they sit on"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**lighting** — The cheeses display visible shading and tonal variation on their surfaces, indicating three-dimensional form and volume rather than flat appearance"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**lighting** — The board's surface is brighter on one side than the other rather than being an even flat fill of one tone"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**materials** — The board's wood surface carries a visible sheen or highlight consistent with being oiled rather than reading as flat matte colour"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**materials** — The grapes show a tighter, brighter specular highlight than the cheese rind pieces"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**materials** — The knife blade shows a brighter reflective highlight than its handle"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**materials** — The crumbly wedge's broken or cut face shows irregular relief or loose crumb pieces rather than a perfectly smooth flat plane"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**composition** — All four cheeses are visible in the opening view, none completely hidden behind another item"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**composition** — Each cheese piece is in contact with the board's top surface rather than floating above it"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**composition** — No cheese piece passes through another cheese piece"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**ui-design** — Any on-screen text or panel leaves the board and its cheeses unobscured"
-      }
-    ],
-    "versions": [
-      {
-        "label": "Argon Primitive",
-        "type": "html",
-        "file": "scenes/cheese-board/argon-primitive/index.html",
-        "trajectory": "trajectories/cheese-board-argon-primitive.json",
-        "marks": [
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          false,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true
-        ],
-        "comments": [
-          "The 3D cheese board scene loads and renders cleanly without any console or page errors.",
-          "Comparing the load and after-drag screenshots shows that dragging across the canvas rotates the viewing angle around the board.",
-          "A flat, live-edge wood-toned slab with swirling olive wood grain serves as the board beneath all the food items.",
-          "Four distinct cheeses are present on the board: a hard crumbly wedge, a low circular bloomy round, a tall veined blue cheese wedge with a cut slab, and a cylindrical goat log.",
-          "Both the aged hard cheese and the blue cheese are wedges with a triangular profile that is wider at the outer heel and tapers toward a point.",
-          "The bloomy Brie is a low round wheel with a bright matte white outer surface that is distinctly lighter in tone than the surrounding cheeses.",
-          "The Roquefort cheese and its adjacent slice clearly display dark blue-green vein markings marbling the pale cut faces.",
-          "The ash-coated goat cheese in the foreground is a slender cylindrical log that is clearly longer than it is thick.",
-          "Roughly a dozen whole walnuts and walnut halves are scattered individually across the board rather than fused into a single mass.",
-          "Two clusters of small glossy ellipsoids (one ruby-purple and one green) sit on the board and clearly read as bunches of grapes.",
-          "While the cheeses have matte rinds and separate cut slices or crumbs beside them, there are no loose rind pieces placed as separate objects on the board.",
-          "A cheese knife rests on the right side of the board with a silver steel blade and a warm brown olive-wood handle separated by a brass bolster.",
-          "The arrangement of cheeses, grape clusters, walnuts, herbs, and a cheese knife on a wooden slab immediately reads as a cheese board.",
-          "The whole walnuts feature ridged, bumpy shells and the walnut halves show distinct double-lobed cerebral surfaces rather than plain smooth spheres.",
-          "In the after-drag and after-zoom screenshots, the white soft round clearly displays a vertical cylindrical side wall with substantial thickness.",
-          "All four cheeses are well-illuminated at load and stand out clearly against the darker olive wood grain.",
-          "Directional lighting, bump mapping, and cast shadows produce clear tonal variation across the top and side surfaces of all four cheeses.",
-          "The board surface exhibits clear tonal and lighting variation, with brighter specular reflections on the right side and shadowed areas beneath the food items.",
-          "The olive wood slab uses a clearcoat physical material that produces a visible satin sheen across the top surface and bevels, consistent with oiled wood.",
-          "Both the red and green grapes display tight, bright specular highlights, contrasting with the diffuse matte surfaces of the cheese rinds.",
-          "In the opening view, the metallic knife blade reflects a brighter highlight than its wooden handle.",
-          "The hard wedge features an irregularly displaced, craggy front tip and textured sides accompanied by loose crumb chunks on the board.",
-          "All four cheeses are clearly arranged and unobscured in the initial camera view.",
-          "Every cheese piece sits directly on the top surface of the olive wood slab rather than floating above it.",
-          "The four cheeses are spaced apart on the slab and none of the cheese pieces intersect one another.",
-          "The header, control buttons, and bottom tasting card are positioned around the perimeter of the viewport, leaving the board and cheeses unobscured."
-        ]
-      },
-      {
-        "label": "Redesign Primitive",
-        "type": "html",
-        "file": "scenes/cheese-board/primitive/index.html",
-        "trajectory": "trajectories/cheese-board-primitive.json",
-        "marks": [
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true
-        ],
-        "comments": [
-          "A visible cheese board scene renders successfully.",
-          "Dragging across the canvas changes the viewing angle of the board.",
-          "A flat wood-toned slab forms the board beneath the food items.",
-          "Four distinct cheese pieces are visible, and each has a different overall shape.",
-          "One cheese forms a clear triangular wedge that is wider at one end and narrows to a point.",
-          "One cheese is a low round with a pale outer surface that appears noticeably lighter than the surrounding cheeses.",
-          "One cheese has a visible cut face with darker blue or grey-green veining across the surface.",
-          "One cheese is a slender cylindrical log that is clearly longer than it is thick.",
-          "At least three separate walnut forms are present and spaced apart on the board.",
-          "A cluster of small spherical forms reading as grapes sits on the board.",
-          "Separate loose rind pieces are visible apart from the four whole cheeses.",
-          "A knife is present with visually distinct blade and handle sections.",
-          "The scene presents a board-like slab carrying several distinct food items on its upper surface.",
-          "The walnut forms have visibly uneven, lumpy surfaces rather than smooth spherical shapes.",
-          "After the camera is rotated, the soft round shows a visible side wall and clear thickness rather than appearing flat.",
-          "All four cheese objects are bright enough at load to remain distinguishable from the board beneath them.",
-          "The cheese objects show visible shading and tonal variation that gives their forms three-dimensional volume.",
-          "The board shows a visible brightness difference across its surface rather than a completely uniform flat tone.",
-          "The board’s wood surface shows a visible sheen or highlight consistent with an oiled finish rather than a flat matte surface.",
-          "The grapes show a tighter and brighter specular highlight than the rind pieces.",
-          "The knife blade has a noticeably brighter reflective highlight than the handle.",
-          "The crumbly wedge has an uneven broken or cut surface with visible relief and loose crumb pieces rather than a perfectly flat face.",
-          "All four cheese pieces are visible in the opening view without any being completely hidden behind another item.",
-          "Each cheese piece is positioned in contact with the top surface of the board.",
-          "All cheeses remain realistic without intersecting its surfaces by passing through tehm.",
-          "The on-screen interface leaves the board and cheese objects unobscured."
-        ]
-      },
-      {
-        "label": "Argon Assets",
-        "type": "html",
-        "file": "scenes/cheese-board/argon-assets/index.html",
-        "trajectory": "trajectories/cheese-board-argon-assets.json",
-        "marks": [
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          false,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          false,
-          false
-        ],
-        "comments": [
-          "The scene renders a complete 3D cheese board on a table with four cheeses, grapes, walnuts, and a knife.",
-          "Comparing the load and after-drag screenshots shows that dragging the pointer rotates the viewing angle around the board.",
-          "A flat, wood-toned olive wood slab with a bark edge serves as the board beneath all the food items.",
-          "Four separate cheese groupings are present on the board: a long stepped wedge, a flat round wheel, a shorter veined wedge with side slices, and a cylindrical log.",
-          "The hard cheese on the back-left (as well as the blue cheese body) has a triangular wedge profile tapering from a wide back end to a point.",
-          "The front-left cheese is a low cylindrical round with a chalk-white surface that is distinctly lighter than the surrounding cheeses and wood.",
-          "The back-right cheese displays pale cut faces marked with dark blue-green veining.",
-          "The front-right cheese is a slender, grey-ashed cylindrical log that is clearly longer than it is thick.",
-          "Multiple individual whole and halved walnuts are scattered and spaced apart across the surface of the board.",
-          "Two clusters of small spheres reading as dark ruby and green grapes sit on the board.",
-          "There are no loose rind pieces present as separate objects from the four cheeses on the board.",
-          "A Laguiole knife rests at the front of the board with a silver metallic blade that is clearly distinct from its brown wood and brass handle.",
-          "The scene immediately reads as an artisanal cheese board carrying distinct cheeses, fruits, and nuts on its upper surface.",
-          "The walnut pieces are modeled as two-lobed halves and ridged shells with bark normal mapping rather than smooth plain spheres.",
-          "In the after-drag and after-zoom screenshots, the soft white round clearly shows a vertical side wall with substantial thickness.",
-          "All four cheeses are brightly lit at load and stand out clearly against the darker olive wood slab.",
-          "Visible directional shading and tonal gradients across the top and side faces of the cheeses convey three-dimensional volume.",
-          "The board's surface exhibits clear lighting variation, cast shadows, and directional highlights rather than an even flat fill.",
-          "The olive wood board uses a clearcoat material that produces a visible satin sheen, especially prominent in the after-zoom view.",
-          "Both the red and green grapes show tight, bright specular highlights while the cheese rinds remain completely matte.",
-          "The metallic knife blade reflects a brighter silver-white highlight than its darker wooden handle.",
-          "The hard crumbly wedge features a bumpy, speckled surface relief and loose crumb pieces scattered on the board beside it.",
-          "All four cheeses are clearly visible and unobstructed by other 3D props in the opening view.",
-          "All four cheeses sit flush on the top surface of the wooden slab with grounded contact shadows.",
-          "In both the load and after-drag views, the front-most angled slices of the blue cheese interpenetrate the side of the grey goat log.",
-          "In the mobile view, the large top UI cards cover the upper half of the cheese board and obscure several cheeses, and on desktop the floating cursor prompt covers the cheeses when zoomed in."
-        ]
-      },
-      {
-        "label": "Redesign Assets",
-        "type": "html",
-        "file": "scenes/cheese-board/assets/index.html",
-        "trajectory": "trajectories/cheese-board-assets.json",
-        "marks": [
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true
-        ],
-        "comments": [
-          "The cheese board setup is clearly visible in the rendered scene.",
-          "Pointer dragging produces a noticeably different perspective of the board.",
-          "A broad wooden slab is clearly visible underneath the food.",
-          "Four distinct cheese pieces are visible with clearly different shapes.",
-          "One cheese has a tapered triangular wedge form.",
-          "A short pale round cheese stands out clearly from the darker cheeses.",
-          "A cheese cut surface contains visible blue or grey-green veining.",
-          "One cheese forms a narrow elongated cylinder with greater length than thickness.",
-          "At least three individual walnuts are visible with space between them.",
-          "A group of small round grape forms is clearly visible on the board.",
-          "Separate rind fragments are visible alongside the whole cheeses.",
-          "The knife has a clearly contrasting blade and handle.",
-          "The arrangement immediately reads as a food-serving cheese board.",
-          "The walnuts have visibly irregular lobed surfaces rather than smooth round shapes.",
-          "Camera rotation reveals vertical thickness along the side of the round cheese.",
-          "Each cheese remains visibly separated from the board by sufficient brightness or contrast.",
-          "Light and shadow variations across the cheeses make their forms visibly three-dimensional.",
-          "The board has noticeable lighting variation across its surface from one side to the other.",
-          "A visible surface sheen gives the wood the appearance of an oiled finish.",
-          "The grapes have sharper, brighter highlights than the rind fragments.",
-          "The blade produces a stronger reflective highlight than the knife handle.",
-          "The wedge's cut or broken face has uneven depth and visible crumb detail.",
-          "All four cheeses can be seen clearly in the opening view.",
-          "Each cheese visibly rests directly on the board surface.",
-          "The four cheeses occupy separate positions without intersecting each other.",
-          "On-screen text or panels remain positioned away from the board and cheese display."
-        ]
-      }
-    ]
-  },
-  {
-    "nav": "Biplane Crop Duster",
-    "title": "Biplane Crop Duster — Interactive 3D",
-    "description": "Build me a live 3D scene of a biplane crop duster, fully interactive with a free camera.\nWhat I'm looking for:\n- upper and lower wings with a staggered arrangement\n- bracing wires running between the struts\n- a fixed tailwheel landing gear\n- chunky low-pressure tyres on the wheels\n- spray booms mounted directly beneath the lower wing\n- a blue paint job with chipped wear\n- dark oil streaks trailing back from the engine cowling\n- an interactive control that switches the spray system on and off\n- boom nozzles that visibly open as the spray begins\nI want to be able to orbit the entire aircraft while the spray is running.",
-    "category": "3D → OTS 3D Dev",
-    "source": "exported_tasks_228 (primitives) · exported_tasks_227 (assets)",
-    "questions": [
-      {
-        "tier": "Functionality",
-        "q": "**builds** — A visible running biplane crop duster renders"
-      },
-      {
-        "tier": "Functionality",
-        "q": "**interactivity** — The free camera can be repositioned to view the biplane from another angle"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — Upper and lower wings show a staggered offset, horizontally shifted relative to each other, rather than being stacked directly one above the other."
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — Wire bracing lines are visible running between the interplane struts on at least one side of the biplane."
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — A single fixed tailwheel sits under the rear of the fuselage rather than a modern tricycle or retractable undercarriage."
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — The main wheels use noticeably fat, wide tyres rather than thin standard aircraft tyres."
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — Spray booms run beneath the lower wing, physically slung under it rather than mounted on the fuselage or upper wing."
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — The airframe is painted blue with visible chipped patches showing a different colour or bare material underneath."
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — Dark oil streaks run aft along the fuselage from the base of the engine cowling."
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — Visible spray, such as mist or particle trails, streams from the boom nozzles beneath the lower wing."
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — As the scene runs, the boom nozzle apertures stay open and continue emitting visible spray across multiple frames, rather than the openings appearing sealed shut."
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — After rotating the camera, the spray trail beneath the boom is still visible, confirming the effect persists while the camera moves."
-      },
-      {
-        "tier": "Visual design",
-        "q": "**ui-design** — A labelled toggle control for the spray system is visible in the interface."
-      },
-      {
-        "tier": "Visual design",
-        "q": "**scene-fidelity** — The main wheels and the tailwheel each visibly touch the ground plane rather than floating above it."
-      },
-      {
-        "tier": "Visual design",
-        "q": "**scene-fidelity** — As the scene runs, the propeller shows a change in rotational position or a motion blur compared to the opening view, consistent with the engine running."
-      },
-      {
-        "tier": "Visual design",
-        "q": "**scene-fidelity** — The engine cowling reads as a distinct rounded form separate from the flat wing surfaces, giving the oil streaks a surface to run down."
-      },
-      {
-        "tier": "Visual design",
-        "q": "**materials** — The oil streaks appear as a darker, duller finish than the surrounding blue paint rather than a same-toned decal."
-      },
-      {
-        "tier": "Visual design",
-        "q": "**materials** — The tyres show a flattened bulge where they meet the ground rather than a perfectly circular cross-section."
-      },
-      {
-        "tier": "Visual design",
-        "q": "**scene-fidelity** — Wire bracing crosses diagonally between the struts in an X-like pattern rather than running as a single straight vertical line."
-      },
-      {
-        "tier": "Visual design",
-        "q": "**lighting** — The biplane casts a shadow on the ground that aligns with its wheels' contact points."
-      },
-      {
-        "tier": "Visual design",
-        "q": "**composition** — The spray booms span most of the width of the lower wing rather than appearing as a single short stub."
-      },
-      {
-        "tier": "Visual design",
-        "q": "**materials** — The chipped paint patches concentrate on edges and high-wear areas such as the cowling and wing leading edges rather than being spread uniformly across flat panels."
-      }
-    ],
-    "versions": [
-      {
-        "label": "Argon Primitive",
-        "type": "html",
-        "file": "scenes/biplane-crop-duster/argon-primitive/index.html",
-        "trajectory": "trajectories/biplane-crop-duster-argon-primitive.json",
-        "marks": [
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          false,
-          true,
-          true,
-          true,
-          false,
-          true,
-          false,
-          true,
-          true
-        ],
-        "comments": [
-          "A detailed 3D biplane crop duster renders and runs smoothly over an agricultural field.",
-          "The camera orbits and zooms freely around the aircraft across the interaction screenshots.",
-          "The upper wing is visibly staggered forward relative to the lower wing, with forward-slanted interplane struts.",
-          "Metallic bracing wires with brass turnbuckles are clearly visible running between the struts on both sides of the wings.",
-          "A single fixed tailwheel assembly is mounted beneath the rear of the fuselage.",
-          "The main landing gear features wide, chunky low-pressure tundra tyres with deep tread lugs.",
-          "The pressurized spray booms are slung on drop brackets directly beneath the lower wing panels.",
-          "The fuselage, cowling, and wings are painted blue with visible bare-metal and olive-primer paint chips.",
-          "Dark black-brown oil streaks trail aft along the fuselage flanks and belly from the rear of the engine cowling.",
-          "Mist cones and dense particle spray trails stream continuously from the 16 nozzles beneath the lower wing.",
-          "The articulated nozzle deflector jaws stay open with glowing sight rings and active spray plumes across all captured frames.",
-          "In the after-drag and after-zoom screenshots, the spray cones and trailing mist plume remain clearly visible while orbiting.",
-          "A clearly labelled 'Boom Spray Master' toggle button is prominently displayed in the top-right control panel.",
-          "Wait—in all screenshots the aircraft defaults to Low Pass Flight mode, so the main wheels and tailwheel float high above the ground plane rather than touching it.",
-          "The propeller blades change angle across frames and include a translucent motion-blur disc indicating the engine is running.",
-          "The radial engine cowling is modeled as a distinct rounded cylinder at the nose, providing a curved surface that leads into the oil-streaked fuselage.",
-          "The oil streaks render as a much darker, sooty finish compared to the brighter surrounding blue paint.",
-          "The tyres are built as symmetric cylindrical lathes that rotate in the air without a flattened contact bulge at the bottom.",
-          "The rigging wires cross diagonally in a clear X-pattern between both the cabane/interplane struts and the N-struts.",
-          "Because the aircraft is airborne in Low Pass Flight mode, its cast shadow on the ground is separated from the wheels rather than aligning with wheel contact points.",
-          "The under-wing spray booms extend across nearly the entire span of both lower wing panels.",
-          "The chipped paint wear is concentrated along high-wear edges including the front cowling ring, panel seams, and wing leading edges."
-        ]
-      },
-      {
-        "label": "Redesign Primitive",
-        "type": "html",
-        "file": "scenes/biplane-crop-duster/primitive/index.html",
-        "trajectory": "trajectories/biplane-crop-duster-primitive.json",
-        "marks": [
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true
-        ],
-        "comments": [
-          "On render the page successfully renders a visible crop duster biplane.",
-          "The camera can be moved to view the biplane from different angles.",
-          "The upper and lower wings are horizontally offset rather than stacked directly above each other.",
-          "Visible bracing wires connect the interplane struts on at least one side.",
-          "A single fixed tailwheel is mounted beneath the rear fuselage, with no tricycle or retractable landing gear.",
-          "The main wheels use visibly fat, wide tyres rather than thin standard aircraft tyres.",
-          "The spray booms are suspended beneath the lower wing.",
-          "The airframe is painted blue with visible chipped areas exposing a contrasting underlying material.",
-          "Dark oil streaks extend aft along the fuselage from the base of the engine cowling.",
-          "Visible spray streams from the boom nozzles below the lower wing.",
-          "The nozzle openings remain open and continuously emit visible spray as the scene runs.",
-          "The spray remains visible beneath the boom while the camera rotates.",
-          "The interface includes a visible, labelled spray-system toggle.",
-          "Both main wheels and the tailwheel visibly contact the ground.",
-          "The propeller visibly rotates or shows motion blur, indicating that the engine is running.",
-          "The engine cowling has a distinct rounded shape, separate from the flat wings.",
-          "The oil streaks have a visibly darker, duller finish than the surrounding blue paint.",
-          "The main tyres show visible flattening and bulging where they contact the ground.",
-          "The bracing wires cross diagonally between the struts in an X-like pattern.",
-          "The aircraft casts a ground shadow aligned with the wheels’ contact points.",
-          "The spray booms extend across most of the lower wing’s width.",
-          "Paint chipping is concentrated around high-wear areas such as the cowling and wing leading edges rather than distributed evenly across flat surfaces."
-        ]
-      },
-      {
-        "label": "Argon Assets",
-        "type": "html",
-        "file": "scenes/biplane-crop-duster/argon-assets/index.html",
-        "trajectory": "trajectories/biplane-crop-duster-argon-assets.json",
-        "marks": [
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          false,
-          true,
-          true,
-          true,
-          false,
-          true,
-          false,
-          true,
-          true
-        ],
-        "comments": [
-          "A detailed blue biplane crop duster renders in the scene with a spinning propeller and active spray.",
-          "The camera orbits smoothly from the port side in the initial view to the starboard side after dragging and zooms in on the aircraft.",
-          "The upper wing is visibly positioned forward of the lower wing in a classic positive stagger configuration, with angled interplane struts connecting them.",
-          "Metallic bracing wires with brass turnbuckles are clearly visible running between the interplane struts on both sides of the aircraft.",
-          "A single fixed tailwheel on a yellow fork is mounted beneath the rear of the fuselage.",
-          "The main landing gear features wide, chunky low-pressure bush tyres with deep shoulder lugs.",
-          "Stainless-steel spray booms are suspended on hanger brackets directly beneath both lower wing panels.",
-          "The fuselage and wings are painted cobalt blue with chipped patches exposing bare silver aluminum and olive-yellow primer.",
-          "Dark black and brown oil streaks trail aft along the fuselage sides from the engine cowling.",
-          "Translucent spray cones and volumetric mist particles visibly stream from the nozzles beneath the lower wings.",
-          "Across all captured frames, the boom nozzle jaws remain spread open with green valve levers and continuous spray emission.",
-          "The spray cones and mist plumes remain clearly visible beneath the wings after orbiting and zooming the camera.",
-          "A prominent 'SPRAY SYSTEM' toggle button with an 'ACTIVE · ON' status indicator is visible in the top-right control panel.",
-          "Because the scene starts in 'Low Pass' flight mode with the aircraft elevated at y = 1.42, both the main wheels and tailwheel float in the air above the ground plane.",
-          "The propeller blades change rotational angle between frames and feature a translucent motion-blur disc indicating a running engine.",
-          "The engine cowling and forward fuselage form a distinct rounded barrel cylinder separate from the flat wings, providing a curved surface for the oil streaks.",
-          "The oil streaks render as a much darker, matte charcoal-black finish that contrasts strongly with the surrounding blue paint.",
-          "The tyres are built from a circular lathe revolution and are airborne in the default low-pass mode, showing no flattened contact bulge at the bottom.",
-          "The bracing wires cross diagonally in an X-pattern between the inner and outer interplane struts.",
-          "Because the aircraft is hovering above the field in low-pass mode, its ground shadow is offset below the airborne wheels rather than meeting at wheel contact points.",
-          "The under-wing spray booms with 22 nozzles span nearly the full width of both lower wing panels.",
-          "The chipped paint patches are concentrated along the forward cowling, fuselage panel seams, and wing leading and trailing edges while leaving the mid-chord wing bays mostly intact."
-        ]
-      },
-      {
-        "label": "Redesign Assets",
-        "type": "html",
-        "file": "scenes/biplane-crop-duster/assets/index.html",
-        "trajectory": "trajectories/biplane-crop-duster-assets.json",
-        "marks": [
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true
-        ],
-        "comments": [
-          "Yes, it's render even if using primitives.",
-          "Yes, the camera can be repositioned from another angle to view the biplane",
-          "Yes, upper and lower wings show a staggered offset, horizontally shifted relative to each other, rather than being stacked directly one above the other.",
-          "Yes, Wire bracing lines are visible running between the interplane struts on both side of the biplane.",
-          "Yes, a single fixed tailwheel sits under the rear of the fuselage rather than a modern tricycle or retractable undercarriage. but it's floating.",
-          "Yes. Main wheels use noticeably fat, wide tyres rather than thin standard aircraft tyres.",
-          "Yes, spray booms run beneath the lower wing, physically slung under it rather than mounted on the fuselage or upper wing.",
-          "Yes, the airframe is painted blue with visible chipped patches showing a different colour or bare material underneath.",
-          "Yes, there's Dark oil streaks run along the fuselage at the engine cowling",
-          "Yes, the spray already visible now but still it's more like particle trails, I think it would be better if add some mist effect later.",
-          "Yes, as the scene runs, the boom nozzle apertures stay open and continue emitting visible spray across multiple frames, rather than the openings appearing sealed shut.",
-          "Yes. the spray trail still visible beneath the boom even camera moves.",
-          "Yes, labelled toggle control for the spray system is visible in the interface.",
-          "Yes, the bottom tailwheel is connected and not floating.",
-          "Yes, as the scene runs, the propeller shows a change in rotational position or a motion blur compared to the opening view, consistent with the engine running.",
-          "Yes the engine cowling reads a distinct rounded form separated from the flat wing surface.",
-          "Yes, the oils areas appear darker and duller compared to other paint",
-          "Yes, the tyres show a flattened bulge where they meet the ground rather than a perfectly circular cross-section.",
-          "Yes, its bracing crosses diagonally between the struts in an X-like pattern rather than running as a single straight vertical line.",
-          "Yes, biplane casts a shadow on the ground that aligns with its wheels' contact points.",
-          "yes the spray booms spans most of the width of lower wing",
-          "Yes, the chipped paint concerate on edges and high-wear areas"
-        ]
-      }
-    ]
-  },
-  {
-    "nav": "Houseboat",
-    "title": "The Willow — Houseboat Holiday Let",
-    "description": "This is going on a holiday rental listing so potential guests can look around the property ahead of booking - it should be an interactive 3D simulation visitors can click and drag to explore. Aim for a welcoming, cozy-vacation feel rather than anything technical. I'd like a live 3D model of a wide, flat-bottomed houseboat. Since guests will be curious about outdoor seating, give it a roof terrace with railings plus a small deck at the bow. Add windows along both sides so people can picture the views out. It should run smoothly in a browser, letting anyone on the listing rotate the boat and check out every outdoor area.",
-    "category": "3D → OTS 3D Dev",
-    "source": "exported_tasks_228 (primitives) · exported_tasks_227 (assets)",
-    "questions": [
-      {
-        "tier": "Functionality",
-        "q": "**builds** — A visible houseboat renders"
-      },
-      {
-        "tier": "Functionality",
-        "q": "**interactivity** — Dragging on the canvas changes the viewing angle of the houseboat"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — The hull is wide relative to its length, reading as a broad barge rather than a narrow slender boat"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — The bottom of the hull is flat across its width rather than tapering to a V shaped or rounded keel"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — A terrace surface sits on top of the cabin roof"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — The roof terrace is bounded by a railing made of separate uprights and horizontal rails rather than a solid parapet wall"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — A flat deck area sits ahead of the cabin's forward wall at the bow"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — The bow deck's footprint is smaller than the roof terrace's footprint"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — At least three windows are spaced along the length of the cabin side facing the camera"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — After rotating the camera, windows are visible on the cabin side that the opening view does not show"
-      },
-      {
-        "tier": "Instruction following",
-        "q": "**prompt-adherence** — The houseboat's paintwork uses warm inviting tones such as timber brown, cream or soft pastel rather than grey industrial metal"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**scene-fidelity** — The silhouette reads as a houseboat, being a low flat hull topped by a house shaped cabin, rather than a yacht with a pointed raised prow"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**scene-fidelity** — The houseboat is assembled from distinguishable parts such as hull, cabin box, roof terrace and railing rather than one undivided block"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**scene-fidelity** — The cabin sits inboard of the hull's outer edges, leaving a walkable strip of deck visible along the side facing the camera"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**lighting** — The cabin walls and the roof terrace railing are distinguishable from the background rather than lost in darkness"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**lighting** — The light falling on the houseboat reads warm, such as cream or golden highlights on the cabin walls, rather than cold blue grey"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**lighting** — The roof terrace railing uprights show a lighter face and a shaded face rather than reading as flat uniform colour"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**lighting** — The area directly beneath the roof overhang or inside the window openings is darker than the sunlit cabin wall"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**materials** — The window glass differs from the cabin wall in reflectivity or tint rather than being the same flat colour as the wall it sits in"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**materials** — The hull differs in colour or shade from the cabin wall above it rather than the two reading as one continuous surface"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**materials** — The railing differs in shade from the terrace floor it stands on rather than sharing an identical flat colour"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**composition** — Both the bow deck and the roof terrace are visible in the opening view rather than one being hidden behind the cabin"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**composition** — The cabin sits toward the stern end so that the bow deck extends clear in front of it, rather than the cabin being centred with matching decks at both ends"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**composition** — The railing uprights meet the terrace floor at their base rather than floating above it or sinking through it"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**composition** — The opening view shows one long side of the houseboat together with one end, rather than a perfectly flat side on profile"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**ui-design** — No overlay panel or text block covers the cabin or the roof terrace in the opening view"
-      },
-      {
-        "tier": "Visual design",
-        "q": "**ui-design** — Any on-screen instruction or label text sits in a deliberately styled container such as a tinted or rounded panel rather than appearing as unstyled text directly on the canvas"
-      }
-    ],
-    "versions": [
-      {
-        "label": "Argon Primitive",
-        "type": "html",
-        "file": "scenes/houseboat/argon-primitive/index.html",
-        "trajectory": "trajectories/houseboat-argon-primitive.json",
-        "marks": [
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true
-        ],
-        "comments": [
-          "A detailed 3D houseboat renders clearly on the water in all screenshots.",
-          "Dragging on the canvas rotates the camera around the houseboat, as shown between the load and after-drag screenshots.",
-          "The hull has a wide beam relative to its length, reading clearly as a broad barge.",
-          "The hull is extruded vertically from a flat 2D footprint, giving it a flat bottom across its entire width.",
-          "A full teak terrace deck sits on top of the cabin roof with outdoor lounge and dining furniture.",
-          "The roof terrace is enclosed by a railing made of separate stainless steel uprights, horizontal rails, and glass panels rather than a solid wall.",
-          "A flat teak deck area sits ahead of the cabin's forward wall at the bow, furnished with two lounge chairs and a small table.",
-          "The bow deck's footprint is noticeably smaller than the full-length roof terrace above the cabin.",
-          "Four large rectangular panoramic windows are spaced along the length of the cabin side facing the camera.",
-          "Rotating the camera in after-drag and after-zoom reveals the stern windows and glass doors hidden in the opening view, as well as the opposite side's windows visible through the cabin.",
-          "The houseboat uses warm cedar and teak timber browns, cream trim, and terracotta/sage accents rather than grey industrial metal.",
-          "The silhouette clearly reads as a low, flat-bottomed barge hull topped by a rectangular house-shaped cabin.",
-          "The boat is built from distinct components including the dark hull, teak deck, cedar cabin box, cream roof slab, railings, and pergola.",
-          "The cabin walls are set inboard of the hull's outer edges, leaving a visible walkable strip of teak deck along the side.",
-          "The warm cabin walls and rooftop railings contrast clearly against the water and sky background.",
-          "The golden-hour directional and hemisphere lighting casts warm amber and cream highlights across the houseboat.",
-          "The 3D cylindrical railing posts and timber top rails show distinct lit and shaded faces under the directional sunlight.",
-          "Areas directly under the roof overhang and inside the window frames appear darker and shaded compared to the sunlit cabin walls.",
-          "The window glass uses a transparent, reflective physical material that clearly differs from the surrounding cedar wall.",
-          "The dark navy hull with its cream accent stripe contrasts clearly with the warm brown cedar cabin wall above it.",
-          "The stainless steel posts, glass panels, and solid teak handrail differ in shade and finish from the planked terrace floor.",
-          "Both the forward bow deck and the upper roof terrace are clearly visible in the opening three-quarter view.",
-          "The cabin and its rear staircase sit toward the stern so that the rounded bow deck extends clear in front of the forward wall.",
-          "The railing uprights sit flush on the roof terrace floor at their base without floating or sinking through.",
-          "The opening view is an angled three-quarter perspective showing both the long port side and the bow end of the houseboat.",
-          "In the opening view, all UI cards and button bars sit near the screen edges and do not cover the cabin or roof terrace.",
-          "All on-screen labels, controls, and interaction hints are housed inside styled rounded pill and card containers."
-        ]
-      },
-      {
-        "label": "Redesign Primitive",
-        "type": "html",
-        "file": "scenes/houseboat/primitive/index.html",
-        "trajectory": "trajectories/houseboat-primitive.json",
-        "marks": [
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true
-        ],
-        "comments": [
-          "A named houseboat group of real meshes sits in the scene and is large enough to see from the opening camera.\n",
-          "OrbitControls is bound to the canvas, so dragging orbits the camera around the boat.\n",
-          "The hull is 10 long and 4.6 wide, so the beam is broad rather than a slender hull.\n",
-          "The hull body is a box, so the bottom is a flat plane across the full width.\n",
-          "A separate terrace slab is placed on top of the cabin roof.\n",
-          "The terrace edge is built from separate posts and two horizontal rails, not a solid wall.\n",
-          "A flat bow-deck slab starts just ahead of the cabin's forward wall.\n",
-          "The bow deck is about 3.1 by 3.6, smaller than the roof terrace at about 6.0 by 3.7.\n",
-          "Four windows are spaced along the cabin side that faces the opening camera.\n",
-          "The far cabin side has its own row of windows, hidden in the opening view and revealed by orbiting.\n",
-          "The hull is timber brown and the cabin is cream, not grey industrial metal.\n",
-          "The form is a low flat hull with a box cabin on top, and the bow is not a raised yacht prow.\n",
-          "Hull, cabin, terrace, and railing are separate meshes, not one solid block.\n",
-          "The cabin is narrower than the hull, leaving a deck strip along the side facing the camera.\n",
-          "The cream cabin and pale railing stand out against the grey-blue sky and water.\n",
-          "The key light is a warm golden sun, so the cabin walls pick up cream and gold rather than cold blue-grey.\n",
-          "The uprights use a lit standard material under a directional sun, so one face is lighter and the opposite face is shaded.\n",
-          "A dark strip sits under the roof overhang and a dark panel sits inside each window, darker than the cream wall.\n",
-          "The glass is blue-tinted and much more reflective than the matte cream cabin wall.\n",
-          "The timber-brown hull is a different colour from the cream cabin above it.\n",
-          "The pale railing isn't a different shade from the teak terrace floor.\n",
-          "The elevated three-quarter camera sees the bow deck in front of the cabin and the terrace on the roof.\n",
-          "The cabin sits aft, with the open deck extending in front and no matching deck behind it.\n",
-          "Each upright is placed so its base sits on the terrace floor.\n",
-          "The opening camera sits off a corner, so one long side and the bow end are both in view.\n",
-          "The label and hint sit in the corner and along the bottom, leaving the cabin and terrace clear.\n",
-          "The title and the drag hint both sit in tinted, rounded panels.\n"
-        ]
-      },
-      {
-        "label": "Argon Assets",
-        "type": "html",
-        "file": "scenes/houseboat/argon-assets/index.html",
-        "trajectory": "trajectories/houseboat-argon-assets.json",
-        "marks": [
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          false,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          false,
-          true
-        ],
-        "comments": [
-          "The code constructs the houseboat synchronously from Three.js geometries and materials, adds lighting, and renders it in the animation loop.",
-          "OrbitControls is attached to the renderer canvas and updated each frame, enabling click-and-drag camera rotation around the boat.",
-          "The hull measures 4.4 units wide by 10.6 units long with a rectangular planform, giving it the proportions of a wide-beam barge.",
-          "The hull is created by extruding a flat-bottomed side profile uniformly across its entire 4.4-unit width with no V-shaped or rounded keel.",
-          "A roof slab and teak terrace deck sit at y = 3.06 to 3.15 directly on top of the cabin walls.",
-          "The roof terrace perimeter uses `createRailingSegment`, which builds separate vertical posts, a wooden top handrail, and three horizontal stainless steel cables.",
-          "The main deck planking extends forward from the cabin's front wall at x = 3.16 to the bow at x = 6.1, creating a flat bow deck.",
-          "The bow deck ahead of the cabin is roughly 2.9m by 4.38m, which is less than half the footprint of the 6.56m by 3.64m roof terrace.",
-          "Four framed glass windows are spaced along the port side of the cabin facing the initial camera position.",
-          "The cabin wall construction loop creates the same four framed windows on both the port (z = 1.70) and starboard (z = -1.70) sides.",
-          "The houseboat uses warm cedar siding, cream window trim, teak decking, and a terracotta hull stripe rather than industrial grey metal.",
-          "The geometry combines a low flat-bottomed barge hull with a rectangular box cabin and flat roof terrace rather than a pointed yacht prow.",
-          "The model is built from separate meshes for the hull, rub-rail, main deck, cabin walls, window frames, roof slab, railings, stairs, and pergola.",
-          "The cabin walls are placed at z = ±1.70 inside the 4.38-unit-wide hull and main deck, leaving walkable side decks along both sides.",
-          "The scene is illuminated by a hemisphere light, a directional sun light, an HDRI environment, and multiple point lights against the darker water and sky.",
-          "The default Golden Hour lighting uses a warm orange directional light (0xffb978), cream hemisphere light (0xffe9d2), and amber point lights.",
-          "The railing uprights are 3D BoxGeometry meshes using PBR MeshStandardMaterial under directional lighting, giving adjacent faces distinct shading.",
-          "Because there are no screenshots and bright point lights are placed inside the cabin and under the bow overhang, it cannot be verified from code alone that those areas appear darker than the sunlit wall.",
-          "The windows use a transparent, highly reflective blue-tinted MeshPhysicalMaterial that contrasts with the opaque cedar cabin walls.",
-          "The hull uses a dark green-charcoal material with a terracotta stripe, contrasting with the warm cedar siding and cream trim of the cabin above.",
-          "The dark iron uprights, metallic cables, and dark timber handrail contrast in shade with the lighter teak terrace deck beneath them.",
-          "The opening camera at (16.5, 8.2, 17.5) looks down from ahead of the bow and off the port side, making both the bow deck and roof terrace simultaneously visible.",
-          "The cabin is positioned closer to the stern (leaving a ~2.0m stern deck) so a longer ~3.0m bow deck extends clear in front of it.",
-          "The roof railing posts have their base at y = 3.17, matching the top surface of the roof teak deck at y = 3.175.",
-          "Positioned at (16.5, 8.2, 17.5) looking at the origin, the opening camera views the houseboat at an oblique three-quarter angle showing both the port side and the bow end.",
-          "Without screenshots, it cannot be verified that the open feature card and projected 3D hotspot pins do not overlap the cabin or roof terrace in the opening view.",
-          "All UI cards, navigation bars, hints, and hotspot labels are styled inside rounded or pill-shaped containers with translucent backgrounds and borders."
-        ]
-      },
-      {
-        "label": "Redesign Assets",
-        "type": "html",
-        "file": "scenes/houseboat/assets/index.html",
-        "trajectory": "trajectories/houseboat-assets.json",
-        "marks": [
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true
-        ],
-        "comments": [
-          "index.html opens by double-click with no error in the console and draws the houseboat from the designer's package in one WebGL canvas: the plank hull, the cream cabin with its windows and door, the roof terrace with its railing, table and chairs, the bow deck, the jetty, the lake and the tree-lined shore. The .blend's meshes load from assets/TheWillow_houseboat_asset.glb through its data-only wrapper, and the scene is up 1.4 to 1.6 s after opening.",
-          "A left drag (or one finger) orbits the camera round the boat with OrbitControls. There is no azimuth limit, so a drag can take the camera all the way round, and the tilt runs from 11 to 84 degrees off the vertical; the wheel or a pinch zooms from 9.5 to 48 m. In a check with real mouse events the right button left the camera's position and distance unchanged: it has no action and pan is off, so every drag turns the view instead of sliding the boat off screen. Swept over every place the camera can reach (1.2 million positions: 9.5 to 48 m away, the whole tilt range, all the way round), the lens never comes closer than 2.35 m to any surface and never goes under the ground or into the shore's trees and shrubs.",
-          "The hull is 12.0 m long and 5.0 m wide, a beam of 0.42 of its length, and the deck on it is as wide as the hull. A slender boat of that length would be under a quarter as wide as it is long.",
-          "The hull's underside is one flat face at y -0.40 m, 4.84 m wide across the 5.0 m beam (0.97 of it), with the sides rising from its edges to the top at 0.85 m. Nothing hangs below it: no keel, no V and no curve.",
-          "The cabin walls rise to 3.11 m, the roof slab caps them up to 3.25 m and the terrace floor, a 5 cm plank surface, lies on the slab from 3.25 to 3.30 m. It covers the whole roof, 7.0 by 4.3 m over a 6.6 by 3.8 m cabin, and carries a table, two chairs, potted plants and a lantern.",
-          "The terrace is fenced by separate uprights (5 cm thick, 1 m tall) and 15 separate horizontal bars: on each run a top rail and two intermediate rails at three heights, with open gaps between them. 27 uprights stand round the terrace: the model has 31 posts because the two runs that meet at each of the four corners each bring a post in exactly the same place, and the page draws that shared corner post once. No wall stands at the terrace edge, and the lake and the shore show through the railing.",
-          "The cabin's forward wall stands at x 1.60 m. Ahead of it the deck, a flat 6 cm plank surface at 0.91 m, runs on to the bow at x 5.98 across its full 4.88 m width: a clear deck 4.4 by 4.9 m with a bench, a coil of rope, a lantern and two cleats.",
-          "The bow deck, from the cabin's forward wall to the bow across the 4.88 m deck, covers 21.4 m²; the roof terrace floor, 7.01 by 4.26 m, covers 29.9 m². The bow deck is about 28 % smaller.",
-          "The opening camera stands on the starboard side, and that side of the cabin has four glazed windows with frames and sills, spread along the wall from x -4.63 to 1.33 m, 1.6 to 1.7 m apart. All four are in the opening view.",
-          "The port side, hidden in the opening view, has its own four windows along the same stretch of wall. The orbit has no azimuth limit, so dragging the camera round to the port side brings that wall and its four windows into view.",
-          "The boat's surfaces are the design's timber and plaster textures. In the opening view the sunlit cabin wall is cream (average sRGB 179, 165, 137 between the windows), the hull is brown timber planks (68, 54, 48), the bow deck and terrace floor are red-brown planks (94, 71, 69 and 100, 79, 80), and the window frames, door and roof edge are dark wood. Grey metal shows only in the slim railing and small fittings; none of the boat's large surfaces is grey.",
-          "The hull is low and flat, 1.25 m deep for 12 m long, and its top edge is level at 0.85 m from the stern to a square bow as wide as the boat: no raised or pointed prow. On it stands a box-shaped cabin with upright walls, 6.6 by 3.8 m and 2.2 m tall, with a flat roof terrace on top: a house on a barge.",
-          "The houseboat is built from separate parts, each its own mesh with its own material and maps: the plank hull (hb_hull), the deck (hb_deck), the plastered cabin walls (hb_cabin), the dark wood roof slab and trim (hb_trim), the terrace floor (hb_deck) and the metal railing (hb_rail), plus window frames and panes, the door, furniture, plants and lanterns. On screen they read as hull, cabin box, roof terrace and railing.",
-          "The cabin's starboard wall (the side the opening camera sees) stands at z 1.90 m and the deck runs on to z 2.44 m: a 0.54 m strip of deck along the whole cabin. Only wall trim reaches into it, the window sills by 12 cm at most, so at least 0.42 m stays clear from stern to bow, and the strip shows in the opening view between the cabin wall and the hull's edge.",
-          "Nothing on the boat is lost in darkness. In the opening view (1920 × 1080) the sunlit cream wall averages sRGB 179, 165, 137 (luminance 166), brighter and warmer than what surrounds it: the lake beside the boat (95, 126, 148, luminance 121), the grass on the shore behind (120, 114, 81, luminance 113) and the hull below (68, 54, 48, luminance 56). The railing's pale silver uprights peak at luminance 165 to 198, against the blue-grey water seen through them (about 142) and the red-brown terrace floor (84).",
-          "All the light is warm. The .blend's sun, colour 1.0, 0.86, 0.68 at strength 3.6, comes in low (16.6 degrees) from the stern and casts the shadows; the sky's own clipped sun is red; the cabin's 90 W light and the three 25 W lanterns are 1.0, 0.72, 0.40 to 0.45, and each lantern's light comes from the centre of its own glass, so the warm pool it throws on the deck, the terrace or the jetty is centred on the lantern. The sunlit cabin wall reads cream, 179, 165, 137 in the opening view, with no blue-grey cast.",
-          "The uprights are round, polished metal tubes (metalness 1, roughness 0.22) lit by the low sun, so each one shows a bright side and a shaded side. In a close view of the terrace (camera at 3.5, 6.8, 5.2), the luminance across a front upright falls from 173 on its sunlit side to 69 on its shaded side, and across another from 222 to 112.",
-          "The roof slab overhangs the walls by 0.20 to 0.25 m on every side and casts the sun's shadow under the eaves, and inside the cabin the walls let in only 8 % of the sky light. In the opening view the four starboard window openings average luminance 55 to 82, against 165 to 167 on the sunlit wall between them.",
-          "The panes are a smooth, see-through glass with its own tint (roughness 0.02, 16 % opaque, its own tint map), so they mirror the sky and show the warm-lit room behind them; the wall around them is opaque, rough cream plaster. In the opening view the windows average luminance 55 to 82 in warm browns, against 165 to 167 on the wall.",
-          "The hull is brown timber planks (hb_hull) and the cabin wall above it cream plaster (hb_cabin). In the opening view the hull side averages sRGB 68, 54, 48 (luminance 56) and the wall 179, 165, 137 (luminance 166), about three times as bright.",
-          "The railing is silver metal (hb_rail) and the terrace floor red-brown planks (hb_deck). In the opening view the floor averages sRGB 100, 79, 80 (luminance 84), while the uprights peak at luminance 165 to 198.",
-          "The opening camera (the designer's own: eye 15.5, 6.6, 14.0 looking at 0.2, 1.9, -0.3, 40 degree lens) stands above the terrace and off the bow, so it looks down onto the roof terrace and onto the bow deck in front of the cabin, and every corner of both falls inside the 16:9 picture. On narrower windows the camera backs off along the same line, and the whole boat stays in frame at all 12 window sizes measured.",
-          "The cabin runs from x -5.00 to 1.60 m on a deck from -5.98 to 5.98 m: it is pushed 1.7 m towards the stern, with about 1 m of deck behind it and 4.4 m of clear bow deck ahead.",
-          "All 31 posts of the model start on the terrace floor's top face at 3.30 m, within 2 mm, and every foot lies inside the floor's outline: none floats above the floor or sinks through it. Four of them are corner posts the model has twice in the same place; the page draws each of those once, so 27 uprights show.",
-          "The opening camera looks at the boat from 43 degrees off its long axis, from the starboard and bow side, so the picture shows the starboard long side with its four windows together with the bow end and its deck, in three-quarter view rather than a flat side-on profile. On narrow windows it backs off along the same line, keeping that angle.",
-          "The only panels are the title card in the top left corner and the how-to pill at the bottom centre, and the camera frames the boat between them. At 12 window sizes from 1920 × 1080 down to 360 × 740 (phone landscape included), in the light and the dark theme, neither panel overlaps the boat's on-screen box in any of the 24 cases, and the page never scrolls. The loading card fades out as soon as the scene is ready.",
-          "All the text on screen sits in styled cards: the title card in the top left (\"The Willow\", \"Houseboat holiday let · sleeps 4\" and a short invitation to look around) and the \"Drag to look around · Scroll to zoom\" line (\"Pinch to zoom\" on touch screens) in a pill at the bottom. Each card has a tinted, translucent background with a blur behind it, a thin border, a soft shadow and rounded corners (14 px for the title, a full pill for the hint), and its colours follow the OS light or dark theme."
-        ]
-      }
-    ]
-  },
-  {
     "nav": "Camper Van",
     "title": "Evening at the Beach — Camper Van",
     "description": "I'd like to see a live 3D simulation of a camper van parked at a beach in the evening. The door should be open, with a small table set up outside holding a lamp, and the ground should have both sand and grass.",
@@ -1753,6 +700,1059 @@ window.SCENES = [
           "The title card reads \"Drag to rotate the view. Grab any platform and pull it up or down along the trunk...\", and the hint line at the bottom reads \"Drag to rotate • Scroll to zoom • Drag platforms vertically\" (\"Pinch to zoom\" on touch screens). Both describe the left-drag orbit the page has, and neither mentions panning.",
           "Measured at 10 window sizes (1920 x 1080, 2560 x 1080, 1366 x 768, 1280 x 720, 1024 x 768, 844 x 390, 768 x 1024, 390 x 844, 360 x 640 and 320 x 568): no vertex of the trunk, the platforms, the bridge, the ladders, the cabin or the crown falls under the title card or the hint line. On narrower windows the page measures the tree's outline and places it beside or below the card, backing the camera off just enough; only a few meadow bushes pass under the hint on small screens.",
           "The view can be dragged all the way round the tree. In the opening view the visible bark faces the directions from 260 through 0 to 130 degrees; after half a turn round the tree the bark facing 140 to 250 degrees comes into view, and the cabin and the three platforms are seen from their other side, none of which the opening view shows."
+        ]
+      }
+    ]
+  },
+  {
+    "nav": "Biplane Crop Duster",
+    "title": "Biplane Crop Duster — Interactive 3D",
+    "description": "Build me a live 3D scene of a biplane crop duster, fully interactive with a free camera.\nWhat I'm looking for:\n- upper and lower wings with a staggered arrangement\n- bracing wires running between the struts\n- a fixed tailwheel landing gear\n- chunky low-pressure tyres on the wheels\n- spray booms mounted directly beneath the lower wing\n- a blue paint job with chipped wear\n- dark oil streaks trailing back from the engine cowling\n- an interactive control that switches the spray system on and off\n- boom nozzles that visibly open as the spray begins\nI want to be able to orbit the entire aircraft while the spray is running.",
+    "category": "3D → OTS 3D Dev",
+    "source": "exported_tasks_228 (primitives) · exported_tasks_227 (assets)",
+    "questions": [
+      {
+        "tier": "Functionality",
+        "q": "**builds** — A visible running biplane crop duster renders"
+      },
+      {
+        "tier": "Functionality",
+        "q": "**interactivity** — The free camera can be repositioned to view the biplane from another angle"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — Upper and lower wings show a staggered offset, horizontally shifted relative to each other, rather than being stacked directly one above the other."
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — Wire bracing lines are visible running between the interplane struts on at least one side of the biplane."
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — A single fixed tailwheel sits under the rear of the fuselage rather than a modern tricycle or retractable undercarriage."
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — The main wheels use noticeably fat, wide tyres rather than thin standard aircraft tyres."
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — Spray booms run beneath the lower wing, physically slung under it rather than mounted on the fuselage or upper wing."
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — The airframe is painted blue with visible chipped patches showing a different colour or bare material underneath."
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — Dark oil streaks run aft along the fuselage from the base of the engine cowling."
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — Visible spray, such as mist or particle trails, streams from the boom nozzles beneath the lower wing."
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — As the scene runs, the boom nozzle apertures stay open and continue emitting visible spray across multiple frames, rather than the openings appearing sealed shut."
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — After rotating the camera, the spray trail beneath the boom is still visible, confirming the effect persists while the camera moves."
+      },
+      {
+        "tier": "Visual design",
+        "q": "**ui-design** — A labelled toggle control for the spray system is visible in the interface."
+      },
+      {
+        "tier": "Visual design",
+        "q": "**scene-fidelity** — The main wheels and the tailwheel each visibly touch the ground plane rather than floating above it."
+      },
+      {
+        "tier": "Visual design",
+        "q": "**scene-fidelity** — As the scene runs, the propeller shows a change in rotational position or a motion blur compared to the opening view, consistent with the engine running."
+      },
+      {
+        "tier": "Visual design",
+        "q": "**scene-fidelity** — The engine cowling reads as a distinct rounded form separate from the flat wing surfaces, giving the oil streaks a surface to run down."
+      },
+      {
+        "tier": "Visual design",
+        "q": "**materials** — The oil streaks appear as a darker, duller finish than the surrounding blue paint rather than a same-toned decal."
+      },
+      {
+        "tier": "Visual design",
+        "q": "**materials** — The tyres show a flattened bulge where they meet the ground rather than a perfectly circular cross-section."
+      },
+      {
+        "tier": "Visual design",
+        "q": "**scene-fidelity** — Wire bracing crosses diagonally between the struts in an X-like pattern rather than running as a single straight vertical line."
+      },
+      {
+        "tier": "Visual design",
+        "q": "**lighting** — The biplane casts a shadow on the ground that aligns with its wheels' contact points."
+      },
+      {
+        "tier": "Visual design",
+        "q": "**composition** — The spray booms span most of the width of the lower wing rather than appearing as a single short stub."
+      },
+      {
+        "tier": "Visual design",
+        "q": "**materials** — The chipped paint patches concentrate on edges and high-wear areas such as the cowling and wing leading edges rather than being spread uniformly across flat panels."
+      }
+    ],
+    "versions": [
+      {
+        "label": "Argon Primitive",
+        "type": "html",
+        "file": "scenes/biplane-crop-duster/argon-primitive/index.html",
+        "trajectory": "trajectories/biplane-crop-duster-argon-primitive.json",
+        "marks": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          true
+        ],
+        "comments": [
+          "A detailed 3D biplane crop duster renders and runs smoothly over an agricultural field.",
+          "The camera orbits and zooms freely around the aircraft across the interaction screenshots.",
+          "The upper wing is visibly staggered forward relative to the lower wing, with forward-slanted interplane struts.",
+          "Metallic bracing wires with brass turnbuckles are clearly visible running between the struts on both sides of the wings.",
+          "A single fixed tailwheel assembly is mounted beneath the rear of the fuselage.",
+          "The main landing gear features wide, chunky low-pressure tundra tyres with deep tread lugs.",
+          "The pressurized spray booms are slung on drop brackets directly beneath the lower wing panels.",
+          "The fuselage, cowling, and wings are painted blue with visible bare-metal and olive-primer paint chips.",
+          "Dark black-brown oil streaks trail aft along the fuselage flanks and belly from the rear of the engine cowling.",
+          "Mist cones and dense particle spray trails stream continuously from the 16 nozzles beneath the lower wing.",
+          "The articulated nozzle deflector jaws stay open with glowing sight rings and active spray plumes across all captured frames.",
+          "In the after-drag and after-zoom screenshots, the spray cones and trailing mist plume remain clearly visible while orbiting.",
+          "A clearly labelled 'Boom Spray Master' toggle button is prominently displayed in the top-right control panel.",
+          "Wait—in all screenshots the aircraft defaults to Low Pass Flight mode, so the main wheels and tailwheel float high above the ground plane rather than touching it.",
+          "The propeller blades change angle across frames and include a translucent motion-blur disc indicating the engine is running.",
+          "The radial engine cowling is modeled as a distinct rounded cylinder at the nose, providing a curved surface that leads into the oil-streaked fuselage.",
+          "The oil streaks render as a much darker, sooty finish compared to the brighter surrounding blue paint.",
+          "The tyres are built as symmetric cylindrical lathes that rotate in the air without a flattened contact bulge at the bottom.",
+          "The rigging wires cross diagonally in a clear X-pattern between both the cabane/interplane struts and the N-struts.",
+          "Because the aircraft is airborne in Low Pass Flight mode, its cast shadow on the ground is separated from the wheels rather than aligning with wheel contact points.",
+          "The under-wing spray booms extend across nearly the entire span of both lower wing panels.",
+          "The chipped paint wear is concentrated along high-wear edges including the front cowling ring, panel seams, and wing leading edges."
+        ]
+      },
+      {
+        "label": "Redesign Primitive",
+        "type": "html",
+        "file": "scenes/biplane-crop-duster/primitive/index.html",
+        "trajectory": "trajectories/biplane-crop-duster-primitive.json",
+        "marks": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "comments": [
+          "On render the page successfully renders a visible crop duster biplane.",
+          "The camera can be moved to view the biplane from different angles.",
+          "The upper and lower wings are horizontally offset rather than stacked directly above each other.",
+          "Visible bracing wires connect the interplane struts on at least one side.",
+          "A single fixed tailwheel is mounted beneath the rear fuselage, with no tricycle or retractable landing gear.",
+          "The main wheels use visibly fat, wide tyres rather than thin standard aircraft tyres.",
+          "The spray booms are suspended beneath the lower wing.",
+          "The airframe is painted blue with visible chipped areas exposing a contrasting underlying material.",
+          "Dark oil streaks extend aft along the fuselage from the base of the engine cowling.",
+          "Visible spray streams from the boom nozzles below the lower wing.",
+          "The nozzle openings remain open and continuously emit visible spray as the scene runs.",
+          "The spray remains visible beneath the boom while the camera rotates.",
+          "The interface includes a visible, labelled spray-system toggle.",
+          "Both main wheels and the tailwheel visibly contact the ground.",
+          "The propeller visibly rotates or shows motion blur, indicating that the engine is running.",
+          "The engine cowling has a distinct rounded shape, separate from the flat wings.",
+          "The oil streaks have a visibly darker, duller finish than the surrounding blue paint.",
+          "The main tyres show visible flattening and bulging where they contact the ground.",
+          "The bracing wires cross diagonally between the struts in an X-like pattern.",
+          "The aircraft casts a ground shadow aligned with the wheels’ contact points.",
+          "The spray booms extend across most of the lower wing’s width.",
+          "Paint chipping is concentrated around high-wear areas such as the cowling and wing leading edges rather than distributed evenly across flat surfaces."
+        ]
+      },
+      {
+        "label": "Argon Assets",
+        "type": "html",
+        "file": "scenes/biplane-crop-duster/argon-assets/index.html",
+        "trajectory": "trajectories/biplane-crop-duster-argon-assets.json",
+        "marks": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          true
+        ],
+        "comments": [
+          "A detailed blue biplane crop duster renders in the scene with a spinning propeller and active spray.",
+          "The camera orbits smoothly from the port side in the initial view to the starboard side after dragging and zooms in on the aircraft.",
+          "The upper wing is visibly positioned forward of the lower wing in a classic positive stagger configuration, with angled interplane struts connecting them.",
+          "Metallic bracing wires with brass turnbuckles are clearly visible running between the interplane struts on both sides of the aircraft.",
+          "A single fixed tailwheel on a yellow fork is mounted beneath the rear of the fuselage.",
+          "The main landing gear features wide, chunky low-pressure bush tyres with deep shoulder lugs.",
+          "Stainless-steel spray booms are suspended on hanger brackets directly beneath both lower wing panels.",
+          "The fuselage and wings are painted cobalt blue with chipped patches exposing bare silver aluminum and olive-yellow primer.",
+          "Dark black and brown oil streaks trail aft along the fuselage sides from the engine cowling.",
+          "Translucent spray cones and volumetric mist particles visibly stream from the nozzles beneath the lower wings.",
+          "Across all captured frames, the boom nozzle jaws remain spread open with green valve levers and continuous spray emission.",
+          "The spray cones and mist plumes remain clearly visible beneath the wings after orbiting and zooming the camera.",
+          "A prominent 'SPRAY SYSTEM' toggle button with an 'ACTIVE · ON' status indicator is visible in the top-right control panel.",
+          "Because the scene starts in 'Low Pass' flight mode with the aircraft elevated at y = 1.42, both the main wheels and tailwheel float in the air above the ground plane.",
+          "The propeller blades change rotational angle between frames and feature a translucent motion-blur disc indicating a running engine.",
+          "The engine cowling and forward fuselage form a distinct rounded barrel cylinder separate from the flat wings, providing a curved surface for the oil streaks.",
+          "The oil streaks render as a much darker, matte charcoal-black finish that contrasts strongly with the surrounding blue paint.",
+          "The tyres are built from a circular lathe revolution and are airborne in the default low-pass mode, showing no flattened contact bulge at the bottom.",
+          "The bracing wires cross diagonally in an X-pattern between the inner and outer interplane struts.",
+          "Because the aircraft is hovering above the field in low-pass mode, its ground shadow is offset below the airborne wheels rather than meeting at wheel contact points.",
+          "The under-wing spray booms with 22 nozzles span nearly the full width of both lower wing panels.",
+          "The chipped paint patches are concentrated along the forward cowling, fuselage panel seams, and wing leading and trailing edges while leaving the mid-chord wing bays mostly intact."
+        ]
+      },
+      {
+        "label": "Redesign Assets",
+        "type": "html",
+        "file": "scenes/biplane-crop-duster/assets/index.html",
+        "trajectory": "trajectories/biplane-crop-duster-assets.json",
+        "marks": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "comments": [
+          "Yes, it's render even if using primitives.",
+          "Yes, the camera can be repositioned from another angle to view the biplane",
+          "Yes, upper and lower wings show a staggered offset, horizontally shifted relative to each other, rather than being stacked directly one above the other.",
+          "Yes, Wire bracing lines are visible running between the interplane struts on both side of the biplane.",
+          "Yes, a single fixed tailwheel sits under the rear of the fuselage rather than a modern tricycle or retractable undercarriage. but it's floating.",
+          "Yes. Main wheels use noticeably fat, wide tyres rather than thin standard aircraft tyres.",
+          "Yes, spray booms run beneath the lower wing, physically slung under it rather than mounted on the fuselage or upper wing.",
+          "Yes, the airframe is painted blue with visible chipped patches showing a different colour or bare material underneath.",
+          "Yes, there's Dark oil streaks run along the fuselage at the engine cowling",
+          "Yes, the spray already visible now but still it's more like particle trails, I think it would be better if add some mist effect later.",
+          "Yes, as the scene runs, the boom nozzle apertures stay open and continue emitting visible spray across multiple frames, rather than the openings appearing sealed shut.",
+          "Yes. the spray trail still visible beneath the boom even camera moves.",
+          "Yes, labelled toggle control for the spray system is visible in the interface.",
+          "Yes, the bottom tailwheel is connected and not floating.",
+          "Yes, as the scene runs, the propeller shows a change in rotational position or a motion blur compared to the opening view, consistent with the engine running.",
+          "Yes the engine cowling reads a distinct rounded form separated from the flat wing surface.",
+          "Yes, the oils areas appear darker and duller compared to other paint",
+          "Yes, the tyres show a flattened bulge where they meet the ground rather than a perfectly circular cross-section.",
+          "Yes, its bracing crosses diagonally between the struts in an X-like pattern rather than running as a single straight vertical line.",
+          "Yes, biplane casts a shadow on the ground that aligns with its wheels' contact points.",
+          "yes the spray booms spans most of the width of lower wing",
+          "Yes, the chipped paint concerate on edges and high-wear areas"
+        ]
+      }
+    ]
+  },
+  {
+    "nav": "Cheese Board",
+    "title": "Artisan Cheese Board — Interactive 3D",
+    "description": "I'd love an interactive 3D cheese board presented on an oiled olive wood slab. On it I'd like a hard, crumbly wedge; a bloomy soft round; a blue cheese with cut veining; and a goat log. Scatter some walnuts around, add glossy grapes, and give the cheeses matte rinds. When I click the knife, it should lift up and work like in the real world, thanks.",
+    "category": "3D → OTS 3D Dev",
+    "source": "exported_tasks_228 (primitives) · exported_tasks_227 (assets)",
+    "questions": [
+      {
+        "tier": "Functionality",
+        "q": "**builds** — A visible cheese board scene renders"
+      },
+      {
+        "tier": "Functionality",
+        "q": "**interactivity** — Dragging the pointer across the canvas changes the viewing angle of the board"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — A flat wood-toned slab serves as the board beneath the food items"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — Four separate cheese pieces are present, each with a different overall shape from the other three"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — One cheese is a wedge with a triangular profile, being wider at one end and tapering to a point"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — One cheese is a low round with a visibly white or pale outer surface, appearing distinctly lighter in tone than the darker cheeses surrounding it"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — One cheese shows a cut face carrying darker blue or grey-green vein markings across it rather than a single uniform colour"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — One cheese is a slender cylindrical log that is clearly longer than it is thick"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — At least three walnut forms are present, spaced apart from one another rather than fused into a single mass"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — A cluster of small spheres reading as grapes sits on the board"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — Loose rind pieces are present as separate objects from the four whole cheeses"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — A knife is present whose blade and handle are distinguishable as two differently coloured parts"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**scene-fidelity** — The scene reads as a cheese board without needing the prompt, being a slab carrying several distinct food items on its upper surface"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**scene-fidelity** — The walnut forms have a lumpy or lobed surface rather than being smooth plain spheres"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**scene-fidelity** — After rotating the camera, the soft round shows a side wall with visible height rather than reading as a flat disc"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**lighting** — All four cheeses are bright enough at load to be told apart from the board they sit on"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**lighting** — The cheeses display visible shading and tonal variation on their surfaces, indicating three-dimensional form and volume rather than flat appearance"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**lighting** — The board's surface is brighter on one side than the other rather than being an even flat fill of one tone"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**materials** — The board's wood surface carries a visible sheen or highlight consistent with being oiled rather than reading as flat matte colour"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**materials** — The grapes show a tighter, brighter specular highlight than the cheese rind pieces"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**materials** — The knife blade shows a brighter reflective highlight than its handle"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**materials** — The crumbly wedge's broken or cut face shows irregular relief or loose crumb pieces rather than a perfectly smooth flat plane"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**composition** — All four cheeses are visible in the opening view, none completely hidden behind another item"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**composition** — Each cheese piece is in contact with the board's top surface rather than floating above it"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**composition** — No cheese piece passes through another cheese piece"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**ui-design** — Any on-screen text or panel leaves the board and its cheeses unobscured"
+      }
+    ],
+    "versions": [
+      {
+        "label": "Argon Primitive",
+        "type": "html",
+        "file": "scenes/cheese-board/argon-primitive/index.html",
+        "trajectory": "trajectories/cheese-board-argon-primitive.json",
+        "marks": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "comments": [
+          "The 3D cheese board scene loads and renders cleanly without any console or page errors.",
+          "Comparing the load and after-drag screenshots shows that dragging across the canvas rotates the viewing angle around the board.",
+          "A flat, live-edge wood-toned slab with swirling olive wood grain serves as the board beneath all the food items.",
+          "Four distinct cheeses are present on the board: a hard crumbly wedge, a low circular bloomy round, a tall veined blue cheese wedge with a cut slab, and a cylindrical goat log.",
+          "Both the aged hard cheese and the blue cheese are wedges with a triangular profile that is wider at the outer heel and tapers toward a point.",
+          "The bloomy Brie is a low round wheel with a bright matte white outer surface that is distinctly lighter in tone than the surrounding cheeses.",
+          "The Roquefort cheese and its adjacent slice clearly display dark blue-green vein markings marbling the pale cut faces.",
+          "The ash-coated goat cheese in the foreground is a slender cylindrical log that is clearly longer than it is thick.",
+          "Roughly a dozen whole walnuts and walnut halves are scattered individually across the board rather than fused into a single mass.",
+          "Two clusters of small glossy ellipsoids (one ruby-purple and one green) sit on the board and clearly read as bunches of grapes.",
+          "While the cheeses have matte rinds and separate cut slices or crumbs beside them, there are no loose rind pieces placed as separate objects on the board.",
+          "A cheese knife rests on the right side of the board with a silver steel blade and a warm brown olive-wood handle separated by a brass bolster.",
+          "The arrangement of cheeses, grape clusters, walnuts, herbs, and a cheese knife on a wooden slab immediately reads as a cheese board.",
+          "The whole walnuts feature ridged, bumpy shells and the walnut halves show distinct double-lobed cerebral surfaces rather than plain smooth spheres.",
+          "In the after-drag and after-zoom screenshots, the white soft round clearly displays a vertical cylindrical side wall with substantial thickness.",
+          "All four cheeses are well-illuminated at load and stand out clearly against the darker olive wood grain.",
+          "Directional lighting, bump mapping, and cast shadows produce clear tonal variation across the top and side surfaces of all four cheeses.",
+          "The board surface exhibits clear tonal and lighting variation, with brighter specular reflections on the right side and shadowed areas beneath the food items.",
+          "The olive wood slab uses a clearcoat physical material that produces a visible satin sheen across the top surface and bevels, consistent with oiled wood.",
+          "Both the red and green grapes display tight, bright specular highlights, contrasting with the diffuse matte surfaces of the cheese rinds.",
+          "In the opening view, the metallic knife blade reflects a brighter highlight than its wooden handle.",
+          "The hard wedge features an irregularly displaced, craggy front tip and textured sides accompanied by loose crumb chunks on the board.",
+          "All four cheeses are clearly arranged and unobscured in the initial camera view.",
+          "Every cheese piece sits directly on the top surface of the olive wood slab rather than floating above it.",
+          "The four cheeses are spaced apart on the slab and none of the cheese pieces intersect one another.",
+          "The header, control buttons, and bottom tasting card are positioned around the perimeter of the viewport, leaving the board and cheeses unobscured."
+        ]
+      },
+      {
+        "label": "Redesign Primitive",
+        "type": "html",
+        "file": "scenes/cheese-board/primitive/index.html",
+        "trajectory": "trajectories/cheese-board-primitive.json",
+        "marks": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "comments": [
+          "A visible cheese board scene renders successfully.",
+          "Dragging across the canvas changes the viewing angle of the board.",
+          "A flat wood-toned slab forms the board beneath the food items.",
+          "Four distinct cheese pieces are visible, and each has a different overall shape.",
+          "One cheese forms a clear triangular wedge that is wider at one end and narrows to a point.",
+          "One cheese is a low round with a pale outer surface that appears noticeably lighter than the surrounding cheeses.",
+          "One cheese has a visible cut face with darker blue or grey-green veining across the surface.",
+          "One cheese is a slender cylindrical log that is clearly longer than it is thick.",
+          "At least three separate walnut forms are present and spaced apart on the board.",
+          "A cluster of small spherical forms reading as grapes sits on the board.",
+          "Separate loose rind pieces are visible apart from the four whole cheeses.",
+          "A knife is present with visually distinct blade and handle sections.",
+          "The scene presents a board-like slab carrying several distinct food items on its upper surface.",
+          "The walnut forms have visibly uneven, lumpy surfaces rather than smooth spherical shapes.",
+          "After the camera is rotated, the soft round shows a visible side wall and clear thickness rather than appearing flat.",
+          "All four cheese objects are bright enough at load to remain distinguishable from the board beneath them.",
+          "The cheese objects show visible shading and tonal variation that gives their forms three-dimensional volume.",
+          "The board shows a visible brightness difference across its surface rather than a completely uniform flat tone.",
+          "The board’s wood surface shows a visible sheen or highlight consistent with an oiled finish rather than a flat matte surface.",
+          "The grapes show a tighter and brighter specular highlight than the rind pieces.",
+          "The knife blade has a noticeably brighter reflective highlight than the handle.",
+          "The crumbly wedge has an uneven broken or cut surface with visible relief and loose crumb pieces rather than a perfectly flat face.",
+          "All four cheese pieces are visible in the opening view without any being completely hidden behind another item.",
+          "Each cheese piece is positioned in contact with the top surface of the board.",
+          "All cheeses remain realistic without intersecting its surfaces by passing through tehm.",
+          "The on-screen interface leaves the board and cheese objects unobscured."
+        ]
+      },
+      {
+        "label": "Argon Assets",
+        "type": "html",
+        "file": "scenes/cheese-board/argon-assets/index.html",
+        "trajectory": "trajectories/cheese-board-argon-assets.json",
+        "marks": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          false
+        ],
+        "comments": [
+          "The scene renders a complete 3D cheese board on a table with four cheeses, grapes, walnuts, and a knife.",
+          "Comparing the load and after-drag screenshots shows that dragging the pointer rotates the viewing angle around the board.",
+          "A flat, wood-toned olive wood slab with a bark edge serves as the board beneath all the food items.",
+          "Four separate cheese groupings are present on the board: a long stepped wedge, a flat round wheel, a shorter veined wedge with side slices, and a cylindrical log.",
+          "The hard cheese on the back-left (as well as the blue cheese body) has a triangular wedge profile tapering from a wide back end to a point.",
+          "The front-left cheese is a low cylindrical round with a chalk-white surface that is distinctly lighter than the surrounding cheeses and wood.",
+          "The back-right cheese displays pale cut faces marked with dark blue-green veining.",
+          "The front-right cheese is a slender, grey-ashed cylindrical log that is clearly longer than it is thick.",
+          "Multiple individual whole and halved walnuts are scattered and spaced apart across the surface of the board.",
+          "Two clusters of small spheres reading as dark ruby and green grapes sit on the board.",
+          "There are no loose rind pieces present as separate objects from the four cheeses on the board.",
+          "A Laguiole knife rests at the front of the board with a silver metallic blade that is clearly distinct from its brown wood and brass handle.",
+          "The scene immediately reads as an artisanal cheese board carrying distinct cheeses, fruits, and nuts on its upper surface.",
+          "The walnut pieces are modeled as two-lobed halves and ridged shells with bark normal mapping rather than smooth plain spheres.",
+          "In the after-drag and after-zoom screenshots, the soft white round clearly shows a vertical side wall with substantial thickness.",
+          "All four cheeses are brightly lit at load and stand out clearly against the darker olive wood slab.",
+          "Visible directional shading and tonal gradients across the top and side faces of the cheeses convey three-dimensional volume.",
+          "The board's surface exhibits clear lighting variation, cast shadows, and directional highlights rather than an even flat fill.",
+          "The olive wood board uses a clearcoat material that produces a visible satin sheen, especially prominent in the after-zoom view.",
+          "Both the red and green grapes show tight, bright specular highlights while the cheese rinds remain completely matte.",
+          "The metallic knife blade reflects a brighter silver-white highlight than its darker wooden handle.",
+          "The hard crumbly wedge features a bumpy, speckled surface relief and loose crumb pieces scattered on the board beside it.",
+          "All four cheeses are clearly visible and unobstructed by other 3D props in the opening view.",
+          "All four cheeses sit flush on the top surface of the wooden slab with grounded contact shadows.",
+          "In both the load and after-drag views, the front-most angled slices of the blue cheese interpenetrate the side of the grey goat log.",
+          "In the mobile view, the large top UI cards cover the upper half of the cheese board and obscure several cheeses, and on desktop the floating cursor prompt covers the cheeses when zoomed in."
+        ]
+      },
+      {
+        "label": "Redesign Assets",
+        "type": "html",
+        "file": "scenes/cheese-board/assets/index.html",
+        "trajectory": "trajectories/cheese-board-assets.json",
+        "marks": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "comments": [
+          "The cheese board setup is clearly visible in the rendered scene.",
+          "Pointer dragging produces a noticeably different perspective of the board.",
+          "A broad wooden slab is clearly visible underneath the food.",
+          "Four distinct cheese pieces are visible with clearly different shapes.",
+          "One cheese has a tapered triangular wedge form.",
+          "A short pale round cheese stands out clearly from the darker cheeses.",
+          "A cheese cut surface contains visible blue or grey-green veining.",
+          "One cheese forms a narrow elongated cylinder with greater length than thickness.",
+          "At least three individual walnuts are visible with space between them.",
+          "A group of small round grape forms is clearly visible on the board.",
+          "Separate rind fragments are visible alongside the whole cheeses.",
+          "The knife has a clearly contrasting blade and handle.",
+          "The arrangement immediately reads as a food-serving cheese board.",
+          "The walnuts have visibly irregular lobed surfaces rather than smooth round shapes.",
+          "Camera rotation reveals vertical thickness along the side of the round cheese.",
+          "Each cheese remains visibly separated from the board by sufficient brightness or contrast.",
+          "Light and shadow variations across the cheeses make their forms visibly three-dimensional.",
+          "The board has noticeable lighting variation across its surface from one side to the other.",
+          "A visible surface sheen gives the wood the appearance of an oiled finish.",
+          "The grapes have sharper, brighter highlights than the rind fragments.",
+          "The blade produces a stronger reflective highlight than the knife handle.",
+          "The wedge's cut or broken face has uneven depth and visible crumb detail.",
+          "All four cheeses can be seen clearly in the opening view.",
+          "Each cheese visibly rests directly on the board surface.",
+          "The four cheeses occupy separate positions without intersecting each other.",
+          "On-screen text or panels remain positioned away from the board and cheese display."
+        ]
+      }
+    ]
+  },
+  {
+    "nav": "Houseboat",
+    "title": "The Willow — Houseboat Holiday Let",
+    "description": "This is going on a holiday rental listing so potential guests can look around the property ahead of booking - it should be an interactive 3D simulation visitors can click and drag to explore. Aim for a welcoming, cozy-vacation feel rather than anything technical. I'd like a live 3D model of a wide, flat-bottomed houseboat. Since guests will be curious about outdoor seating, give it a roof terrace with railings plus a small deck at the bow. Add windows along both sides so people can picture the views out. It should run smoothly in a browser, letting anyone on the listing rotate the boat and check out every outdoor area.",
+    "category": "3D → OTS 3D Dev",
+    "source": "exported_tasks_228 (primitives) · exported_tasks_227 (assets)",
+    "questions": [
+      {
+        "tier": "Functionality",
+        "q": "**builds** — A visible houseboat renders"
+      },
+      {
+        "tier": "Functionality",
+        "q": "**interactivity** — Dragging on the canvas changes the viewing angle of the houseboat"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — The hull is wide relative to its length, reading as a broad barge rather than a narrow slender boat"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — The bottom of the hull is flat across its width rather than tapering to a V shaped or rounded keel"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — A terrace surface sits on top of the cabin roof"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — The roof terrace is bounded by a railing made of separate uprights and horizontal rails rather than a solid parapet wall"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — A flat deck area sits ahead of the cabin's forward wall at the bow"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — The bow deck's footprint is smaller than the roof terrace's footprint"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — At least three windows are spaced along the length of the cabin side facing the camera"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — After rotating the camera, windows are visible on the cabin side that the opening view does not show"
+      },
+      {
+        "tier": "Instruction following",
+        "q": "**prompt-adherence** — The houseboat's paintwork uses warm inviting tones such as timber brown, cream or soft pastel rather than grey industrial metal"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**scene-fidelity** — The silhouette reads as a houseboat, being a low flat hull topped by a house shaped cabin, rather than a yacht with a pointed raised prow"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**scene-fidelity** — The houseboat is assembled from distinguishable parts such as hull, cabin box, roof terrace and railing rather than one undivided block"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**scene-fidelity** — The cabin sits inboard of the hull's outer edges, leaving a walkable strip of deck visible along the side facing the camera"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**lighting** — The cabin walls and the roof terrace railing are distinguishable from the background rather than lost in darkness"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**lighting** — The light falling on the houseboat reads warm, such as cream or golden highlights on the cabin walls, rather than cold blue grey"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**lighting** — The roof terrace railing uprights show a lighter face and a shaded face rather than reading as flat uniform colour"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**lighting** — The area directly beneath the roof overhang or inside the window openings is darker than the sunlit cabin wall"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**materials** — The window glass differs from the cabin wall in reflectivity or tint rather than being the same flat colour as the wall it sits in"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**materials** — The hull differs in colour or shade from the cabin wall above it rather than the two reading as one continuous surface"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**materials** — The railing differs in shade from the terrace floor it stands on rather than sharing an identical flat colour"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**composition** — Both the bow deck and the roof terrace are visible in the opening view rather than one being hidden behind the cabin"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**composition** — The cabin sits toward the stern end so that the bow deck extends clear in front of it, rather than the cabin being centred with matching decks at both ends"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**composition** — The railing uprights meet the terrace floor at their base rather than floating above it or sinking through it"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**composition** — The opening view shows one long side of the houseboat together with one end, rather than a perfectly flat side on profile"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**ui-design** — No overlay panel or text block covers the cabin or the roof terrace in the opening view"
+      },
+      {
+        "tier": "Visual design",
+        "q": "**ui-design** — Any on-screen instruction or label text sits in a deliberately styled container such as a tinted or rounded panel rather than appearing as unstyled text directly on the canvas"
+      }
+    ],
+    "versions": [
+      {
+        "label": "Argon Primitive",
+        "type": "html",
+        "file": "scenes/houseboat/argon-primitive/index.html",
+        "trajectory": "trajectories/houseboat-argon-primitive.json",
+        "marks": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "comments": [
+          "A detailed 3D houseboat renders clearly on the water in all screenshots.",
+          "Dragging on the canvas rotates the camera around the houseboat, as shown between the load and after-drag screenshots.",
+          "The hull has a wide beam relative to its length, reading clearly as a broad barge.",
+          "The hull is extruded vertically from a flat 2D footprint, giving it a flat bottom across its entire width.",
+          "A full teak terrace deck sits on top of the cabin roof with outdoor lounge and dining furniture.",
+          "The roof terrace is enclosed by a railing made of separate stainless steel uprights, horizontal rails, and glass panels rather than a solid wall.",
+          "A flat teak deck area sits ahead of the cabin's forward wall at the bow, furnished with two lounge chairs and a small table.",
+          "The bow deck's footprint is noticeably smaller than the full-length roof terrace above the cabin.",
+          "Four large rectangular panoramic windows are spaced along the length of the cabin side facing the camera.",
+          "Rotating the camera in after-drag and after-zoom reveals the stern windows and glass doors hidden in the opening view, as well as the opposite side's windows visible through the cabin.",
+          "The houseboat uses warm cedar and teak timber browns, cream trim, and terracotta/sage accents rather than grey industrial metal.",
+          "The silhouette clearly reads as a low, flat-bottomed barge hull topped by a rectangular house-shaped cabin.",
+          "The boat is built from distinct components including the dark hull, teak deck, cedar cabin box, cream roof slab, railings, and pergola.",
+          "The cabin walls are set inboard of the hull's outer edges, leaving a visible walkable strip of teak deck along the side.",
+          "The warm cabin walls and rooftop railings contrast clearly against the water and sky background.",
+          "The golden-hour directional and hemisphere lighting casts warm amber and cream highlights across the houseboat.",
+          "The 3D cylindrical railing posts and timber top rails show distinct lit and shaded faces under the directional sunlight.",
+          "Areas directly under the roof overhang and inside the window frames appear darker and shaded compared to the sunlit cabin walls.",
+          "The window glass uses a transparent, reflective physical material that clearly differs from the surrounding cedar wall.",
+          "The dark navy hull with its cream accent stripe contrasts clearly with the warm brown cedar cabin wall above it.",
+          "The stainless steel posts, glass panels, and solid teak handrail differ in shade and finish from the planked terrace floor.",
+          "Both the forward bow deck and the upper roof terrace are clearly visible in the opening three-quarter view.",
+          "The cabin and its rear staircase sit toward the stern so that the rounded bow deck extends clear in front of the forward wall.",
+          "The railing uprights sit flush on the roof terrace floor at their base without floating or sinking through.",
+          "The opening view is an angled three-quarter perspective showing both the long port side and the bow end of the houseboat.",
+          "In the opening view, all UI cards and button bars sit near the screen edges and do not cover the cabin or roof terrace.",
+          "All on-screen labels, controls, and interaction hints are housed inside styled rounded pill and card containers."
+        ]
+      },
+      {
+        "label": "Redesign Primitive",
+        "type": "html",
+        "file": "scenes/houseboat/primitive/index.html",
+        "trajectory": "trajectories/houseboat-primitive.json",
+        "marks": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "comments": [
+          "A named houseboat group of real meshes sits in the scene and is large enough to see from the opening camera.\n",
+          "OrbitControls is bound to the canvas, so dragging orbits the camera around the boat.\n",
+          "The hull is 10 long and 4.6 wide, so the beam is broad rather than a slender hull.\n",
+          "The hull body is a box, so the bottom is a flat plane across the full width.\n",
+          "A separate terrace slab is placed on top of the cabin roof.\n",
+          "The terrace edge is built from separate posts and two horizontal rails, not a solid wall.\n",
+          "A flat bow-deck slab starts just ahead of the cabin's forward wall.\n",
+          "The bow deck is about 3.1 by 3.6, smaller than the roof terrace at about 6.0 by 3.7.\n",
+          "Four windows are spaced along the cabin side that faces the opening camera.\n",
+          "The far cabin side has its own row of windows, hidden in the opening view and revealed by orbiting.\n",
+          "The hull is timber brown and the cabin is cream, not grey industrial metal.\n",
+          "The form is a low flat hull with a box cabin on top, and the bow is not a raised yacht prow.\n",
+          "Hull, cabin, terrace, and railing are separate meshes, not one solid block.\n",
+          "The cabin is narrower than the hull, leaving a deck strip along the side facing the camera.\n",
+          "The cream cabin and pale railing stand out against the grey-blue sky and water.\n",
+          "The key light is a warm golden sun, so the cabin walls pick up cream and gold rather than cold blue-grey.\n",
+          "The uprights use a lit standard material under a directional sun, so one face is lighter and the opposite face is shaded.\n",
+          "A dark strip sits under the roof overhang and a dark panel sits inside each window, darker than the cream wall.\n",
+          "The glass is blue-tinted and much more reflective than the matte cream cabin wall.\n",
+          "The timber-brown hull is a different colour from the cream cabin above it.\n",
+          "The pale railing isn't a different shade from the teak terrace floor.\n",
+          "The elevated three-quarter camera sees the bow deck in front of the cabin and the terrace on the roof.\n",
+          "The cabin sits aft, with the open deck extending in front and no matching deck behind it.\n",
+          "Each upright is placed so its base sits on the terrace floor.\n",
+          "The opening camera sits off a corner, so one long side and the bow end are both in view.\n",
+          "The label and hint sit in the corner and along the bottom, leaving the cabin and terrace clear.\n",
+          "The title and the drag hint both sit in tinted, rounded panels.\n"
+        ]
+      },
+      {
+        "label": "Argon Assets",
+        "type": "html",
+        "file": "scenes/houseboat/argon-assets/index.html",
+        "trajectory": "trajectories/houseboat-argon-assets.json",
+        "marks": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true
+        ],
+        "comments": [
+          "The code constructs the houseboat synchronously from Three.js geometries and materials, adds lighting, and renders it in the animation loop.",
+          "OrbitControls is attached to the renderer canvas and updated each frame, enabling click-and-drag camera rotation around the boat.",
+          "The hull measures 4.4 units wide by 10.6 units long with a rectangular planform, giving it the proportions of a wide-beam barge.",
+          "The hull is created by extruding a flat-bottomed side profile uniformly across its entire 4.4-unit width with no V-shaped or rounded keel.",
+          "A roof slab and teak terrace deck sit at y = 3.06 to 3.15 directly on top of the cabin walls.",
+          "The roof terrace perimeter uses `createRailingSegment`, which builds separate vertical posts, a wooden top handrail, and three horizontal stainless steel cables.",
+          "The main deck planking extends forward from the cabin's front wall at x = 3.16 to the bow at x = 6.1, creating a flat bow deck.",
+          "The bow deck ahead of the cabin is roughly 2.9m by 4.38m, which is less than half the footprint of the 6.56m by 3.64m roof terrace.",
+          "Four framed glass windows are spaced along the port side of the cabin facing the initial camera position.",
+          "The cabin wall construction loop creates the same four framed windows on both the port (z = 1.70) and starboard (z = -1.70) sides.",
+          "The houseboat uses warm cedar siding, cream window trim, teak decking, and a terracotta hull stripe rather than industrial grey metal.",
+          "The geometry combines a low flat-bottomed barge hull with a rectangular box cabin and flat roof terrace rather than a pointed yacht prow.",
+          "The model is built from separate meshes for the hull, rub-rail, main deck, cabin walls, window frames, roof slab, railings, stairs, and pergola.",
+          "The cabin walls are placed at z = ±1.70 inside the 4.38-unit-wide hull and main deck, leaving walkable side decks along both sides.",
+          "The scene is illuminated by a hemisphere light, a directional sun light, an HDRI environment, and multiple point lights against the darker water and sky.",
+          "The default Golden Hour lighting uses a warm orange directional light (0xffb978), cream hemisphere light (0xffe9d2), and amber point lights.",
+          "The railing uprights are 3D BoxGeometry meshes using PBR MeshStandardMaterial under directional lighting, giving adjacent faces distinct shading.",
+          "Because there are no screenshots and bright point lights are placed inside the cabin and under the bow overhang, it cannot be verified from code alone that those areas appear darker than the sunlit wall.",
+          "The windows use a transparent, highly reflective blue-tinted MeshPhysicalMaterial that contrasts with the opaque cedar cabin walls.",
+          "The hull uses a dark green-charcoal material with a terracotta stripe, contrasting with the warm cedar siding and cream trim of the cabin above.",
+          "The dark iron uprights, metallic cables, and dark timber handrail contrast in shade with the lighter teak terrace deck beneath them.",
+          "The opening camera at (16.5, 8.2, 17.5) looks down from ahead of the bow and off the port side, making both the bow deck and roof terrace simultaneously visible.",
+          "The cabin is positioned closer to the stern (leaving a ~2.0m stern deck) so a longer ~3.0m bow deck extends clear in front of it.",
+          "The roof railing posts have their base at y = 3.17, matching the top surface of the roof teak deck at y = 3.175.",
+          "Positioned at (16.5, 8.2, 17.5) looking at the origin, the opening camera views the houseboat at an oblique three-quarter angle showing both the port side and the bow end.",
+          "Without screenshots, it cannot be verified that the open feature card and projected 3D hotspot pins do not overlap the cabin or roof terrace in the opening view.",
+          "All UI cards, navigation bars, hints, and hotspot labels are styled inside rounded or pill-shaped containers with translucent backgrounds and borders."
+        ]
+      },
+      {
+        "label": "Redesign Assets",
+        "type": "html",
+        "file": "scenes/houseboat/assets/index.html",
+        "trajectory": "trajectories/houseboat-assets.json",
+        "marks": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "comments": [
+          "index.html opens by double-click with no error in the console and draws the houseboat from the designer's package in one WebGL canvas: the plank hull, the cream cabin with its windows and door, the roof terrace with its railing, table and chairs, the bow deck, the jetty, the lake and the tree-lined shore. The .blend's meshes load from assets/TheWillow_houseboat_asset.glb through its data-only wrapper, and the scene is up 1.4 to 1.6 s after opening.",
+          "A left drag (or one finger) orbits the camera round the boat with OrbitControls. There is no azimuth limit, so a drag can take the camera all the way round, and the tilt runs from 11 to 84 degrees off the vertical; the wheel or a pinch zooms from 9.5 to 48 m. In a check with real mouse events the right button left the camera's position and distance unchanged: it has no action and pan is off, so every drag turns the view instead of sliding the boat off screen. Swept over every place the camera can reach (1.2 million positions: 9.5 to 48 m away, the whole tilt range, all the way round), the lens never comes closer than 2.35 m to any surface and never goes under the ground or into the shore's trees and shrubs.",
+          "The hull is 12.0 m long and 5.0 m wide, a beam of 0.42 of its length, and the deck on it is as wide as the hull. A slender boat of that length would be under a quarter as wide as it is long.",
+          "The hull's underside is one flat face at y -0.40 m, 4.84 m wide across the 5.0 m beam (0.97 of it), with the sides rising from its edges to the top at 0.85 m. Nothing hangs below it: no keel, no V and no curve.",
+          "The cabin walls rise to 3.11 m, the roof slab caps them up to 3.25 m and the terrace floor, a 5 cm plank surface, lies on the slab from 3.25 to 3.30 m. It covers the whole roof, 7.0 by 4.3 m over a 6.6 by 3.8 m cabin, and carries a table, two chairs, potted plants and a lantern.",
+          "The terrace is fenced by separate uprights (5 cm thick, 1 m tall) and 15 separate horizontal bars: on each run a top rail and two intermediate rails at three heights, with open gaps between them. 27 uprights stand round the terrace: the model has 31 posts because the two runs that meet at each of the four corners each bring a post in exactly the same place, and the page draws that shared corner post once. No wall stands at the terrace edge, and the lake and the shore show through the railing.",
+          "The cabin's forward wall stands at x 1.60 m. Ahead of it the deck, a flat 6 cm plank surface at 0.91 m, runs on to the bow at x 5.98 across its full 4.88 m width: a clear deck 4.4 by 4.9 m with a bench, a coil of rope, a lantern and two cleats.",
+          "The bow deck, from the cabin's forward wall to the bow across the 4.88 m deck, covers 21.4 m²; the roof terrace floor, 7.01 by 4.26 m, covers 29.9 m². The bow deck is about 28 % smaller.",
+          "The opening camera stands on the starboard side, and that side of the cabin has four glazed windows with frames and sills, spread along the wall from x -4.63 to 1.33 m, 1.6 to 1.7 m apart. All four are in the opening view.",
+          "The port side, hidden in the opening view, has its own four windows along the same stretch of wall. The orbit has no azimuth limit, so dragging the camera round to the port side brings that wall and its four windows into view.",
+          "The boat's surfaces are the design's timber and plaster textures. In the opening view the sunlit cabin wall is cream (average sRGB 179, 165, 137 between the windows), the hull is brown timber planks (68, 54, 48), the bow deck and terrace floor are red-brown planks (94, 71, 69 and 100, 79, 80), and the window frames, door and roof edge are dark wood. Grey metal shows only in the slim railing and small fittings; none of the boat's large surfaces is grey.",
+          "The hull is low and flat, 1.25 m deep for 12 m long, and its top edge is level at 0.85 m from the stern to a square bow as wide as the boat: no raised or pointed prow. On it stands a box-shaped cabin with upright walls, 6.6 by 3.8 m and 2.2 m tall, with a flat roof terrace on top: a house on a barge.",
+          "The houseboat is built from separate parts, each its own mesh with its own material and maps: the plank hull (hb_hull), the deck (hb_deck), the plastered cabin walls (hb_cabin), the dark wood roof slab and trim (hb_trim), the terrace floor (hb_deck) and the metal railing (hb_rail), plus window frames and panes, the door, furniture, plants and lanterns. On screen they read as hull, cabin box, roof terrace and railing.",
+          "The cabin's starboard wall (the side the opening camera sees) stands at z 1.90 m and the deck runs on to z 2.44 m: a 0.54 m strip of deck along the whole cabin. Only wall trim reaches into it, the window sills by 12 cm at most, so at least 0.42 m stays clear from stern to bow, and the strip shows in the opening view between the cabin wall and the hull's edge.",
+          "Nothing on the boat is lost in darkness. In the opening view (1920 × 1080) the sunlit cream wall averages sRGB 179, 165, 137 (luminance 166), brighter and warmer than what surrounds it: the lake beside the boat (95, 126, 148, luminance 121), the grass on the shore behind (120, 114, 81, luminance 113) and the hull below (68, 54, 48, luminance 56). The railing's pale silver uprights peak at luminance 165 to 198, against the blue-grey water seen through them (about 142) and the red-brown terrace floor (84).",
+          "All the light is warm. The .blend's sun, colour 1.0, 0.86, 0.68 at strength 3.6, comes in low (16.6 degrees) from the stern and casts the shadows; the sky's own clipped sun is red; the cabin's 90 W light and the three 25 W lanterns are 1.0, 0.72, 0.40 to 0.45, and each lantern's light comes from the centre of its own glass, so the warm pool it throws on the deck, the terrace or the jetty is centred on the lantern. The sunlit cabin wall reads cream, 179, 165, 137 in the opening view, with no blue-grey cast.",
+          "The uprights are round, polished metal tubes (metalness 1, roughness 0.22) lit by the low sun, so each one shows a bright side and a shaded side. In a close view of the terrace (camera at 3.5, 6.8, 5.2), the luminance across a front upright falls from 173 on its sunlit side to 69 on its shaded side, and across another from 222 to 112.",
+          "The roof slab overhangs the walls by 0.20 to 0.25 m on every side and casts the sun's shadow under the eaves, and inside the cabin the walls let in only 8 % of the sky light. In the opening view the four starboard window openings average luminance 55 to 82, against 165 to 167 on the sunlit wall between them.",
+          "The panes are a smooth, see-through glass with its own tint (roughness 0.02, 16 % opaque, its own tint map), so they mirror the sky and show the warm-lit room behind them; the wall around them is opaque, rough cream plaster. In the opening view the windows average luminance 55 to 82 in warm browns, against 165 to 167 on the wall.",
+          "The hull is brown timber planks (hb_hull) and the cabin wall above it cream plaster (hb_cabin). In the opening view the hull side averages sRGB 68, 54, 48 (luminance 56) and the wall 179, 165, 137 (luminance 166), about three times as bright.",
+          "The railing is silver metal (hb_rail) and the terrace floor red-brown planks (hb_deck). In the opening view the floor averages sRGB 100, 79, 80 (luminance 84), while the uprights peak at luminance 165 to 198.",
+          "The opening camera (the designer's own: eye 15.5, 6.6, 14.0 looking at 0.2, 1.9, -0.3, 40 degree lens) stands above the terrace and off the bow, so it looks down onto the roof terrace and onto the bow deck in front of the cabin, and every corner of both falls inside the 16:9 picture. On narrower windows the camera backs off along the same line, and the whole boat stays in frame at all 12 window sizes measured.",
+          "The cabin runs from x -5.00 to 1.60 m on a deck from -5.98 to 5.98 m: it is pushed 1.7 m towards the stern, with about 1 m of deck behind it and 4.4 m of clear bow deck ahead.",
+          "All 31 posts of the model start on the terrace floor's top face at 3.30 m, within 2 mm, and every foot lies inside the floor's outline: none floats above the floor or sinks through it. Four of them are corner posts the model has twice in the same place; the page draws each of those once, so 27 uprights show.",
+          "The opening camera looks at the boat from 43 degrees off its long axis, from the starboard and bow side, so the picture shows the starboard long side with its four windows together with the bow end and its deck, in three-quarter view rather than a flat side-on profile. On narrow windows it backs off along the same line, keeping that angle.",
+          "The only panels are the title card in the top left corner and the how-to pill at the bottom centre, and the camera frames the boat between them. At 12 window sizes from 1920 × 1080 down to 360 × 740 (phone landscape included), in the light and the dark theme, neither panel overlaps the boat's on-screen box in any of the 24 cases, and the page never scrolls. The loading card fades out as soon as the scene is ready.",
+          "All the text on screen sits in styled cards: the title card in the top left (\"The Willow\", \"Houseboat holiday let · sleeps 4\" and a short invitation to look around) and the \"Drag to look around · Scroll to zoom\" line (\"Pinch to zoom\" on touch screens) in a pill at the bottom. Each card has a tinted, translucent background with a blur behind it, a thin border, a soft shadow and rounded corners (14 px for the title, a full pill for the hint), and its colours follow the OS light or dark theme."
         ]
       }
     ]
