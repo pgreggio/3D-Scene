@@ -303,8 +303,8 @@ function drawStage(){
     <div class="stage-id"><b>${esc(v.label)}</b><span>${esc(v.file || 'No file registered')}</span></div>
     <div class="tools">
       ${v.notes ? `<button class="tool text ${state.notes?'on':''}" id="notesbtn" aria-expanded="${state.notes}">${svg('notes')}Notes</button>` : ''}
-      <button class="tool" id="traj" aria-label="Download trajectory"
-              title="${esc(t ? `Download trajectory (${fileName(t)})` : 'No trajectory for this version')}" ${t ? '' : 'disabled'}>${svg('dl')}</button>
+      <button class="tool text" id="traj" aria-label="Download trajectory"
+              title="${esc(t ? `Download trajectory (${fileName(t)})` : 'No trajectory for this version')}" ${t ? '' : 'disabled'}>${svg('dl')}Trajectory</button>
       <button class="tool" id="reload" aria-label="Restart scene" title="Restart (R)">${svg('reload')}</button>
       <button class="tool" id="full" aria-label="Open full screen" title="Full screen (F)">${svg('full')}</button>
     </div>`;
