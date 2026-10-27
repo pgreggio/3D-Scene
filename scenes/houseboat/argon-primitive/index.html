@@ -1,0 +1,2141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Halcyon Barge — Interactive 3D Holiday Houseboat Tour</title>
+  <style>
+    :root {
+      --bg-glass: rgba(255, 251, 245, 0.86);
+      --bg-glass-dark: rgba(26, 33, 41, 0.82);
+      --text-main: #232a31;
+      --text-muted: #5c6670;
+      --accent-warm: #c96d42;
+      --accent-gold: #e09f3e;
+      --accent-teal: #2b6e68;
+      --border-soft: rgba(255, 255, 255, 0.65);
+      --shadow-soft: 0 12px 32px rgba(20, 28, 38, 0.16);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #1a2634;
+      color: var(--text-main);
+    }
+
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+
+    #canvas-container:active {
+      cursor: grabbing;
+    }
+
+    /* Top Left Rental Listing Card */
+    .listing-card {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+      max-width: 350px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border-soft);
+      border-radius: 18px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow-soft);
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    .badge-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent-teal);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .badge-pill {
+      background: rgba(43, 110, 104, 0.14);
+      padding: 3px 9px;
+      border-radius: 20px;
+    }
+
+    .rating-pill {
+      color: #b5651d;
+      margin-left: auto;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .listing-title {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: #1b242c;
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+
+    .listing-subtitle {
+      font-size: 13.5px;
+      line-height: 1.45;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .amenities-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .amenity-tag {
+      font-size: 11.5px;
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.78);
+      color: #39444e;
+      padding: 4px 9px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    /* Top Right Controls: Ambiance & Toggles */
+    .top-right-panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 10px;
+    }
+
+    .control-pill-group {
+      display: flex;
+      background: var(--bg-glass);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border-soft);
+      border-radius: 999px;
+      padding: 5px;
+      box-shadow: var(--shadow-soft);
+      gap: 4px;
+    }
+
+    .mode-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 7px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mode-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .mode-btn.active {
+      background: var(--accent-warm);
+      color: #fff;
+      box-shadow: 0 3px 10px rgba(201, 109, 66, 0.35);
+    }
+
+    .action-toggles {
+      display: flex;
+      gap: 8px;
+    }
+
+    .toggle-chip {
+      border: 1px solid var(--border-soft);
+      background: var(--bg-glass);
+      backdrop-filter: blur(12px);
+      padding: 7px 13px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+      transition: all 0.2s ease;
+    }
+
+    .toggle-chip:hover {
+      transform: translateY(-1px);
+      background: #fff;
+    }
+
+    .toggle-chip.active {
+      background: var(--accent-teal);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    /* Bottom Camera Tour Navigation Bar */
+    .bottom-nav {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-soft);
+      padding: 7px 9px;
+      border-radius: 999px;
+      box-shadow: var(--shadow-soft);
+      max-width: 94vw;
+      overflow-x: auto;
+    }
+
+    .cam-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 9px 16px;
+      border-radius: 999px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.22s ease;
+    }
+
+    .cam-btn:hover {
+      background: rgba(201, 109, 66, 0.12);
+      color: var(--accent-warm);
+    }
+
+    .cam-btn.active {
+      background: #232a31;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Interactive Info Popup for Selected Feature */
+    .hotspot-card {
+      position: fixed;
+      bottom: 84px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      z-index: 10;
+      background: var(--bg-glass-dark);
+      color: #fdfaf6;
+      backdrop-filter: blur(14px);
+      padding: 14px 20px;
+      border-radius: 16px;
+      max-width: 420px;
+      width: 90vw;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .hotspot-card.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
+
+    .hotspot-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .hotspot-card-title {
+      font-family: Georgia, serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: #ffd29d;
+    }
+
+    .hotspot-close {
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 4px;
+    }
+
+    .hotspot-card-desc {
+      font-size: 13px;
+      line-height: 1.45;
+      color: rgba(255, 250, 244, 0.88);
+    }
+
+    /* 3D Projected Hotspot Markers */
+    #hotspots-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .hotspot-pin {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      pointer-events: auto;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 251, 245, 0.94);
+      border: 2px solid var(--accent-warm);
+      color: var(--accent-warm);
+      font-weight: 700;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+    }
+
+    .hotspot-pin:hover, .hotspot-pin.active {
+      transform: translate(-50%, -50%) scale(1.18);
+      background: var(--accent-warm);
+      color: #fff;
+    }
+
+    .hotspot-pin::after {
+      content: '';
+      position: absolute;
+      inset: -6px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255, 255, 255, 0.75);
+      animation: pulseRing 2.2s infinite ease-out;
+    }
+
+    @keyframes pulseRing {
+      0% { transform: scale(0.8); opacity: 0.9; }
+      100% { transform: scale(1.45); opacity: 0; }
+    }
+
+    /* Subtle Hint Pill */
+    .interaction-hint {
+      position: fixed;
+      bottom: 24px;
+      right: 22px;
+      z-index: 9;
+      background: rgba(26, 33, 41, 0.65);
+      color: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(8px);
+      padding: 7px 13px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      pointer-events: none;
+    }
+
+    @media (max-width: 768px) {
+      .listing-card {
+        max-width: 280px;
+        padding: 13px 15px;
+        top: 12px;
+        left: 12px;
+      }
+      .listing-title { font-size: 18px; }
+      .listing-subtitle { display: none; }
+      .top-right-panel { top: 12px; right: 12px; }
+      .interaction-hint { display: none; }
+    }
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <div id="hotspots-layer"></div>
+
+  <!-- Holiday Rental Property Card -->
+  <div class="listing-card">
+    <div class="badge-row">
+      <span class="badge-pill">Floating Boutique Stay</span>
+      <span class="rating-pill">★ 4.98 (142)</span>
+    </div>
+    <h1 class="listing-title">The Halcyon Wide-Beam Houseboat</h1>
+    <p class="listing-subtitle">
+      Step aboard our handcrafted flat-bottomed timber houseboat. Relax on the bow sun deck, dine under the rooftop pergola, or unwind inside by the panoramic lake windows.
+    </p>
+    <div class="amenities-row">
+      <span class="amenity-tag">☀ Roof Terrace & Railings</span>
+      <span class="amenity-tag">⚓ Bow Lounge Deck</span>
+      <span class="amenity-tag">🪟 Dual-Side Panorama Windows</span>
+      <span class="amenity-tag">🔥 Cozy Wood Stove</span>
+    </div>
+  </div>
+
+  <!-- Ambiance & Feature Toggles -->
+  <div class="top-right-panel">
+    <div class="control-pill-group" role="group" aria-label="Lighting Ambiance">
+      <button class="mode-btn" data-mood="day">☀ Sunny Day</button>
+      <button class="mode-btn active" data-mood="sunset">🌅 Golden Hour</button>
+      <button class="mode-btn" data-mood="evening">🌙 Cozy Evening</button>
+    </div>
+    <div class="action-toggles">
+      <button class="toggle-chip" id="toggle-doors-btn">🚪 Open Deck Doors</button>
+      <button class="toggle-chip active" id="toggle-hotspots-btn">📍 Tour Pins</button>
+    </div>
+  </div>
+
+  <!-- Hotspot Detail Card -->
+  <div class="hotspot-card" id="hotspot-card">
+    <div class="hotspot-card-header">
+      <div class="hotspot-card-title" id="hotspot-title">Rooftop Sunset Terrace</div>
+      <button class="hotspot-close" id="hotspot-close" title="Close">&times;</button>
+    </div>
+    <div class="hotspot-card-desc" id="hotspot-desc">
+      Full-length upper sun deck enclosed by safety railings, featuring an L-shaped cushioned corner sofa, teak dining table, shade umbrella, and warm festoon string lights.
+    </div>
+  </div>
+
+  <!-- Camera Preset Navigation -->
+  <nav class="bottom-nav" aria-label="Camera Views">
+    <button class="cam-btn active" data-view="overview">Full Boat Overview</button>
+    <button class="cam-btn" data-view="rooftop">Roof Terrace</button>
+    <button class="cam-btn" data-view="bow">Bow Sun Deck</button>
+    <button class="cam-btn" data-view="windows">Side Windows & Lounge</button>
+    <button class="cam-btn" data-view="stern">Aft Swim Deck & Pier</button>
+  </nav>
+
+  <div class="interaction-hint">Drag to rotate · Scroll to zoom · Right-drag to pan</div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // === SECTION 1: SCENE, RENDERER, CAMERA & PROCEDURAL TEXTURES ===
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    container.appendChild(renderer.domElement);
+
+    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.2, 350);
+    camera.position.set(17.5, 9.2, 18.5);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.055;
+    controls.maxPolarAngle = Math.PI * 0.482; // Keep camera above the water surface
+    controls.minDistance = 4.0;
+    controls.maxDistance = 48.0;
+    controls.target.set(0, 2.3, 0);
+
+    // Helper to create rich procedural canvas textures
+    function makeCanvasTexture(width, height, drawFn, repeatX = 1, repeatY = 1) {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      drawFn(ctx, width, height);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(repeatX, repeatY);
+      tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    // 1. Marine Teak Decking Texture (warm golden-brown planks with dark caulking lines & subtle wood grain)
+    const teakDeckTex = makeCanvasTexture(512, 512, (ctx, w, h) => {
+      ctx.fillStyle = '#9c683d';
+      ctx.fillRect(0, 0, w, h);
+      const planks = 8;
+      const plankH = h / planks;
+      for (let i = 0; i < planks; i++) {
+        const y = i * plankH;
+        const hueShift = (Math.sin(i * 2.3) * 8) | 0;
+        ctx.fillStyle = `rgb(${158 + hueShift}, ${106 + (hueShift >> 1)}, ${62 + (hueShift >> 2)})`;
+        ctx.fillRect(0, y + 3, w, plankH - 5);
+        // Wood grain streaks
+        for (let g = 0; g < 38; g++) {
+          ctx.fillStyle = g % 2 === 0 ? 'rgba(65, 36, 15, 0.08)' : 'rgba(225, 175, 120, 0.07)';
+          const gy = y + 4 + Math.random() * (plankH - 8);
+          ctx.fillRect(0, gy, w, 1.5 + Math.random() * 2);
+        }
+        // Plank butt joint
+        const jointX = ((i * 173 + 90) % (w - 60)) + 30;
+        ctx.fillStyle = '#2a1d15';
+        ctx.fillRect(jointX, y, 3, plankH);
+        // Dark marine caulking seam
+        ctx.fillStyle = '#241911';
+        ctx.fillRect(0, y, w, 4);
+      }
+    }, 5, 3);
+
+    // 2. Warm Cedar Cabin Siding Texture
+    const cedarSidingTex = makeCanvasTexture(512, 512, (ctx, w, h) => {
+      ctx.fillStyle = '#b97442';
+      ctx.fillRect(0, 0, w, h);
+      const slats = 12;
+      const slatH = h / slats;
+      for (let i = 0; i < slats; i++) {
+        const y = i * slatH;
+        const grad = ctx.createLinearGradient(0, y, 0, y + slatH);
+        grad.addColorStop(0, '#c67f4b');
+        grad.addColorStop(0.85, '#a86434');
+        grad.addColorStop(1, '#683919');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, y, w, slatH);
+        for (let g = 0; g < 22; g++) {
+          ctx.fillStyle = 'rgba(70, 32, 10, 0.07)';
+          ctx.fillRect(0, y + Math.random() * slatH, w, 1.5);
+        }
+      }
+    }, 3, 2);
+
+    // 3. Resort Striped Cushion Fabric Texture (cream & coastal terracotta/sage stripes)
+    const stripedFabricTex = makeCanvasTexture(256, 256, (ctx, w, h) => {
+      ctx.fillStyle = '#f6efe4';
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = '#d47a53';
+      for (let x = 0; x < w; x += 32) {
+        ctx.fillRect(x, 0, 10, h);
+        ctx.fillStyle = '#3c6e68';
+        ctx.fillRect(x + 14, 0, 3, h);
+        ctx.fillStyle = '#d47a53';
+      }
+      // Subtle linen weave
+      ctx.fillStyle = 'rgba(120, 100, 80, 0.06)';
+      for (let y = 0; y < h; y += 4) ctx.fillRect(0, y, w, 1);
+    }, 2, 2);
+
+    // 4. Woven Rattan / Wicker Texture for Outdoor Furniture Bases & Rugs
+    const wickerTex = makeCanvasTexture(256, 256, (ctx, w, h) => {
+      ctx.fillStyle = '#8c6239';
+      ctx.fillRect(0, 0, w, h);
+      const step = 16;
+      for (let y = 0; y < h; y += step) {
+        for (let x = 0; x < w; x += step) {
+          const even = ((x / step + y / step) % 2) === 0;
+          ctx.fillStyle = even ? '#a97c50' : '#734d28';
+          ctx.fillRect(x + 1, y + 1, step - 2, step - 2);
+          ctx.strokeStyle = '#4e3216';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(x + 0.5, y + 0.5, step - 1, step - 1);
+        }
+      }
+    }, 3, 3);
+
+    // 5. Interior Rug Pattern (Cozy Geometric Boho Kilim)
+    const rugTex = makeCanvasTexture(512, 256, (ctx, w, h) => {
+      ctx.fillStyle = '#ece1cf';
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = '#c46843';
+      ctx.lineWidth = 12;
+      ctx.strokeRect(18, 18, w - 36, h - 36);
+      ctx.strokeStyle = '#2d5c57';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(36, 36, w - 72, h - 72);
+      // Center diamonds
+      for (let i = 0; i < 3; i++) {
+        const cx = 128 + i * 128;
+        const cy = h / 2;
+        ctx.fillStyle = i === 1 ? '#2d5c57' : '#c86f46';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 55);
+        ctx.lineTo(cx + 55, cy);
+        ctx.lineTo(cx, cy + 55);
+        ctx.lineTo(cx - 55, cy);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }, 1, 1);
+
+    // 6. Weathered Pier Timber Texture
+    const pierWoodTex = makeCanvasTexture(512, 512, (ctx, w, h) => {
+      ctx.fillStyle = '#6e5a49';
+      ctx.fillRect(0, 0, w, h);
+      const planks = 10;
+      const ph = h / planks;
+      for (let i = 0; i < planks; i++) {
+        ctx.fillStyle = i % 2 === 0 ? '#786452' : '#655343';
+        ctx.fillRect(0, i * ph + 2, w, ph - 4);
+        ctx.fillStyle = '#2b221b';
+        ctx.fillRect(0, i * ph, w, 3);
+      }
+    }, 4, 2);
+
+    // Shared Materials Library
+    const materials = {
+      hullDark: new THREE.MeshStandardMaterial({ color: 0x1d2d3a, roughness: 0.42, metalness: 0.18 }),
+      hullBottom: new THREE.MeshStandardMaterial({ color: 0x6e2b23, roughness: 0.65, metalness: 0.1 }),
+      hullStripe: new THREE.MeshStandardMaterial({ color: 0xf4ead8, roughness: 0.35, metalness: 0.05 }),
+      rubRail: new THREE.MeshStandardMaterial({ color: 0x26292e, roughness: 0.78, metalness: 0.1 }),
+      teakDeck: new THREE.MeshStandardMaterial({ map: teakDeckTex, roughness: 0.55, metalness: 0.05 }),
+      cedarWall: new THREE.MeshStandardMaterial({ map: cedarSidingTex, roughness: 0.52, metalness: 0.05 }),
+      creamTrim: new THREE.MeshStandardMaterial({ color: 0xf7f2e7, roughness: 0.38, metalness: 0.05 }),
+      charcoalFrame: new THREE.MeshStandardMaterial({ color: 0x252c33, roughness: 0.35, metalness: 0.45 }),
+      brushedBrass: new THREE.MeshStandardMaterial({ color: 0xd9a84e, roughness: 0.25, metalness: 0.85 }),
+      stainlessSteel: new THREE.MeshStandardMaterial({ color: 0xdce2e8, roughness: 0.2, metalness: 0.88 }),
+      wicker: new THREE.MeshStandardMaterial({ map: wickerTex, roughness: 0.75, metalness: 0.02 }),
+      cushionCream: new THREE.MeshStandardMaterial({ color: 0xf6efe2, roughness: 0.82, metalness: 0.0 }),
+      cushionStripe: new THREE.MeshStandardMaterial({ map: stripedFabricTex, roughness: 0.8, metalness: 0.0 }),
+      cushionTerracotta: new THREE.MeshStandardMaterial({ color: 0xc96941, roughness: 0.78, metalness: 0.0 }),
+      cushionSage: new THREE.MeshStandardMaterial({ color: 0x46736c, roughness: 0.78, metalness: 0.0 }),
+      teakFurniture: new THREE.MeshStandardMaterial({ color: 0xa66a38, roughness: 0.45, metalness: 0.06 }),
+      foliageGreen: new THREE.MeshStandardMaterial({ color: 0x3b6e3c, roughness: 0.65, metalness: 0.02 }),
+      foliageLight: new THREE.MeshStandardMaterial({ color: 0x578c49, roughness: 0.6, metalness: 0.02 }),
+      terracottaPot: new THREE.MeshStandardMaterial({ color: 0xb35c37, roughness: 0.68, metalness: 0.04 }),
+      pierWood: new THREE.MeshStandardMaterial({ map: pierWoodTex, roughness: 0.8, metalness: 0.02 }),
+      windowGlass: new THREE.MeshPhysicalMaterial({
+        color: 0xdff4ff,
+        transparent: true,
+        opacity: 0.34,
+        roughness: 0.06,
+        metalness: 0.1,
+        reflectivity: 0.9,
+        transmission: 0.55,
+        side: THREE.DoubleSide
+      }),
+      railingGlass: new THREE.MeshPhysicalMaterial({
+        color: 0xe6f7ff,
+        transparent: true,
+        opacity: 0.38,
+        roughness: 0.08,
+        metalness: 0.08,
+        transmission: 0.5,
+        side: THREE.DoubleSide
+      }),
+      warmBulb: new THREE.MeshStandardMaterial({
+        color: 0xffe4b5,
+        emissive: 0xffa834,
+        emissiveIntensity: 1.8,
+        roughness: 0.2
+      })
+    };
+    // === SECTION 2: ENVIRONMENT, SKY DOME, WATER SHADER & MOORING COVE ===
+    // Procedural Sky Dome with smooth gradient & sun disc
+    const skyUniforms = {
+      uTopColor: { value: new THREE.Color(0x284b7a) },
+      uMidColor: { value: new THREE.Color(0xe68a5c) },
+      uBottomColor: { value: new THREE.Color(0xffd194) },
+      uSunDir: { value: new THREE.Vector3(-0.65, 0.22, -0.72).normalize() },
+      uSunColor: { value: new THREE.Color(0xffe0a3) }
+    };
+
+    const skyGeo = new THREE.SphereGeometry(220, 48, 32);
+    const skyMat = new THREE.ShaderMaterial({
+      side: THREE.BackSide,
+      depthWrite: false,
+      uniforms: skyUniforms,
+      vertexShader: `
+        varying vec3 vWorldPos;
+        void main() {
+          vec4 wp = modelMatrix * vec4(position, 1.0);
+          vWorldPos = wp.xyz;
+          gl_Position = projectionMatrix * viewMatrix * wp;
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vWorldPos;
+        uniform vec3 uTopColor;
+        uniform vec3 uMidColor;
+        uniform vec3 uBottomColor;
+        uniform vec3 uSunDir;
+        uniform vec3 uSunColor;
+        void main() {
+          vec3 dir = normalize(vWorldPos);
+          float h = clamp(dir.y, 0.0, 1.0);
+          vec3 col = mix(uBottomColor, uMidColor, smoothstep(0.0, 0.24, h));
+          col = mix(col, uTopColor, smoothstep(0.18, 0.85, h));
+          float sunAmt = max(dot(dir, uSunDir), 0.0);
+          col += uSunColor * pow(sunAmt, 18.0) * 0.45;
+          col += uSunColor * smoothstep(0.996, 0.9995, sunAmt) * 1.4;
+          gl_FragColor = vec4(col, 1.0);
+        }
+      `
+    });
+    const skyDome = new THREE.Mesh(skyGeo, skyMat);
+    scene.add(skyDome);
+
+    // Generate initial PMREM environment from sky dome for realistic glass & water reflections
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    function updateEnvMap() {
+      const envScene = new THREE.Scene();
+      envScene.add(skyDome.clone());
+      const rt = pmremGenerator.fromScene(envScene, 0.04);
+      scene.environment = rt.texture;
+    }
+    updateEnvMap();
+
+    // Custom Animated Lake Water Shader
+    const waterUniforms = {
+      uTime: { value: 0 },
+      uSunDir: { value: skyUniforms.uSunDir.value },
+      uSunColor: { value: new THREE.Color(0xffbe76) },
+      uWaterDeep: { value: new THREE.Color(0x13384c) },
+      uWaterShallow: { value: new THREE.Color(0x28666e) },
+      uSkyHorizon: { value: new THREE.Color(0xf09d67) },
+      uEveningGlow: { value: 0.35 }
+    };
+
+    const waterGeo = new THREE.PlaneGeometry(320, 320, 140, 140);
+    waterGeo.rotateX(-Math.PI / 2);
+    const waterMat = new THREE.ShaderMaterial({
+      uniforms: waterUniforms,
+      transparent: true,
+      vertexShader: `
+        uniform float uTime;
+        varying vec3 vWorldPos;
+        varying float vWaveHeight;
+        void main() {
+          vec3 pos = position;
+          float w1 = sin(pos.x * 0.45 + uTime * 1.3) * cos(pos.z * 0.38 + uTime * 1.0) * 0.045;
+          float w2 = sin((pos.x * 0.8 - pos.z * 0.7) + uTime * 2.1) * 0.022;
+          // Dampen waves right inside the boat hull footprint
+          float hullMask = smoothstep(2.5, 5.5, max(abs(pos.x) * 0.48, abs(pos.z) * 0.85));
+          pos.y += (w1 + w2) * mix(0.25, 1.0, hullMask);
+          vWaveHeight = w1 + w2;
+          vec4 wp = modelMatrix * vec4(pos, 1.0);
+          vWorldPos = wp.xyz;
+          gl_Position = projectionMatrix * viewMatrix * wp;
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform vec3 uSunDir;
+        uniform vec3 uSunColor;
+        uniform vec3 uWaterDeep;
+        uniform vec3 uWaterShallow;
+        uniform vec3 uSkyHorizon;
+        uniform float uEveningGlow;
+        varying vec3 vWorldPos;
+        varying float vWaveHeight;
+
+        float waveNoise(vec2 p) {
+          float n = sin(p.x * 1.7 + uTime * 1.6) * cos(p.y * 1.9 - uTime * 1.3);
+          n += 0.5 * sin(p.x * 3.8 - p.y * 2.7 + uTime * 2.4);
+          n += 0.25 * cos(p.x * 7.1 + p.y * 6.3 - uTime * 3.1);
+          return n;
+        }
+
+        void main() {
+          vec2 uv = vWorldPos.xz;
+          float eps = 0.08;
+          float h0 = waveNoise(uv);
+          float hx = waveNoise(uv + vec2(eps, 0.0));
+          float hz = waveNoise(uv + vec2(0.0, eps));
+          vec3 normal = normalize(vec3((h0 - hx) * 0.22, 1.0, (h0 - hz) * 0.22));
+
+          vec3 viewDir = normalize(cameraPosition - vWorldPos);
+          float fresnel = pow(1.0 - max(dot(viewDir, normal), 0.0), 3.2);
+
+          // Base water color with shallow turquoise glow near the boat & dock
+          float distBoat = length(vWorldPos.xz / vec2(9.2, 4.4));
+          float shallowFactor = smoothstep(2.6, 0.85, distBoat);
+          vec3 baseCol = mix(uWaterDeep, uWaterShallow, shallowFactor + vWaveHeight * 2.5);
+
+          // Sky reflection
+          vec3 col = mix(baseCol, uSkyHorizon, clamp(fresnel * 0.72, 0.0, 0.85));
+
+          // Sun specular reflection
+          vec3 halfVec = normalize(uSunDir + viewDir);
+          float spec = pow(max(dot(normal, halfVec), 0.0), 90.0);
+          float sparkle = pow(max(dot(normal, halfVec), 0.0), 320.0);
+          col += uSunColor * (spec * 0.75 + sparkle * 1.6);
+
+          // Warm cabin & string-light reflection shimmer on water around the boat
+          float boatGlowMask = exp(-max(distBoat - 0.9, 0.0) * 1.4);
+          col += vec3(1.0, 0.68, 0.32) * boatGlowMask * uEveningGlow * (0.35 + 0.25 * sin(h0 * 4.0));
+
+          // Subtle shoreline / hull ripple ring
+          float rippleZone = abs(distBoat - 1.04);
+          if (rippleZone < 0.14) {
+            float foam = smoothstep(0.14, 0.0, rippleZone) * (0.45 + 0.55 * sin(distBoat * 38.0 - uTime * 3.0));
+            col = mix(col, vec3(0.92, 0.96, 0.98), foam * 0.45);
+          }
+
+          // Distance fade to horizon
+          float distCam = length(vWorldPos.xz);
+          col = mix(col, uSkyHorizon, smoothstep(95.0, 155.0, distCam));
+
+          gl_FragColor = vec4(col, 0.95);
+        }
+      `
+    });
+    const waterMesh = new THREE.Mesh(waterGeo, waterMat);
+    waterMesh.position.y = 0;
+    scene.add(waterMesh);
+
+    // Scenic Wooden Mooring Pier & Gangway at the Stern (-X, +Z side)
+    const coveGroup = new THREE.Group();
+    scene.add(coveGroup);
+
+    function buildMooringPier() {
+      const pier = new THREE.Group();
+      // Main wooden walkway extending from the stern toward shore
+      const deckGeo = new THREE.BoxGeometry(8.5, 0.22, 2.8);
+      const deck = new THREE.Mesh(deckGeo, materials.pierWood);
+      deck.position.set(-12.2, 0.65, 0.0);
+      deck.castShadow = true;
+      deck.receiveShadow = true;
+      pier.add(deck);
+
+      // Side finger pier alongside the stern quarter
+      const fingerGeo = new THREE.BoxGeometry(4.2, 0.22, 1.5);
+      const finger = new THREE.Mesh(fingerGeo, materials.pierWood);
+      finger.position.set(-7.6, 0.65, 2.15);
+      finger.castShadow = true;
+      finger.receiveShadow = true;
+      pier.add(finger);
+
+      // Timber pilings in the water
+      const pilingGeo = new THREE.CylinderGeometry(0.16, 0.17, 3.2, 12);
+      const pilingCoords = [
+        [-8.3, 1.2], [-8.3, -1.2], [-11.8, 1.2], [-11.8, -1.2],
+        [-15.5, 1.2], [-15.5, -1.2], [-5.8, 2.7], [-5.8, 1.6], [-8.5, 2.7]
+      ];
+      pilingCoords.forEach(([px, pz]) => {
+        const post = new THREE.Mesh(pilingGeo, materials.pierWood);
+        post.position.set(px, 0.1, pz);
+        post.castShadow = true;
+        pier.add(post);
+
+        // Rope wrapping near top of piling
+        const ropeWrap = new THREE.Mesh(
+          new THREE.TorusGeometry(0.17, 0.03, 8, 18),
+          materials.cushionCream
+        );
+        ropeWrap.rotation.x = Math.PI / 2;
+        ropeWrap.position.set(px, 1.35, pz);
+        pier.add(ropeWrap);
+      });
+
+      // Welcoming dock lamp post
+      const lampPole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 2.4, 10), materials.charcoalFrame);
+      lampPole.position.set(-8.2, 1.85, 2.65);
+      pier.add(lampPole);
+
+      const lanternGlobe = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 12), materials.warmBulb);
+      lanternGlobe.position.set(-8.2, 3.08, 2.65);
+      pier.add(lanternGlobe);
+
+      // Distant scenic shoreline silhouette & pine trees so views through windows feel alive
+      const islandMat = new THREE.MeshStandardMaterial({ color: 0x2d4a3a, roughness: 0.9 });
+      const shoreConfigs = [
+        { x: -45, z: -55, rx: 38, ry: 5.5, rz: 18 },
+        { x: 35, z: -68, rx: 46, ry: 7.2, rz: 22 },
+        { x: -55, z: 32, rx: 32, ry: 4.2, rz: 24 }
+      ];
+      shoreConfigs.forEach(cfg => {
+        const hill = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), islandMat);
+        hill.scale.set(cfg.rx, cfg.ry, cfg.rz);
+        hill.position.set(cfg.x, -1.2, cfg.z);
+        pier.add(hill);
+      });
+
+      // Floating water lilies near the pier for vacation charm
+      const lilyMat = new THREE.MeshStandardMaterial({ color: 0x467a44, roughness: 0.7 });
+      const flowerMat = new THREE.MeshStandardMaterial({ color: 0xfff0f5, roughness: 0.4 });
+      const lilySpots = [[-6.5, 4.2], [-7.2, 4.8], [-5.6, 4.6], [-9.5, -2.6], [-10.2, -3.1]];
+      lilySpots.forEach(([lx, lz], idx) => {
+        const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.02, 16, 1, false, 0, Math.PI * 1.85), lilyMat);
+        pad.position.set(lx, 0.03, lz);
+        pad.rotation.y = idx * 1.4;
+        pier.add(pad);
+        if (idx % 2 === 0) {
+          const blossom = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.09, 7), flowerMat);
+          blossom.position.set(lx, 0.07, lz);
+          pier.add(blossom);
+        }
+      });
+
+      coveGroup.add(pier);
+    }
+    buildMooringPier();
+    // === SECTION 3: HOUSEBOAT HULL, BOW DECK & STERN PLATFORM ===
+    const boatGroup = new THREE.Group();
+    scene.add(boatGroup);
+
+    // Helper for potted plants (used on bow deck, stern, and rooftop terrace)
+    function createPottedPlant(scale = 1.0) {
+      const plant = new THREE.Group();
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.26 * scale, 0.19 * scale, 0.36 * scale, 16), materials.terracottaPot);
+      pot.position.y = 0.18 * scale;
+      pot.castShadow = true;
+      pot.receiveShadow = true;
+      plant.add(pot);
+
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.255 * scale, 0.025 * scale, 8, 20), materials.terracottaPot);
+      rim.rotation.x = Math.PI / 2;
+      rim.position.y = 0.35 * scale;
+      plant.add(rim);
+
+      // Lush arching fronds
+      for (let i = 0; i < 9; i++) {
+        const angle = (i / 9) * Math.PI * 2 + (i % 2) * 0.2;
+        const frondGeo = new THREE.ConeGeometry(0.11 * scale, 0.55 * scale, 5);
+        frondGeo.translate(0, 0.27 * scale, 0);
+        const frond = new THREE.Mesh(frondGeo, i % 2 === 0 ? materials.foliageGreen : materials.foliageLight);
+        frond.position.set(0, 0.32 * scale, 0);
+        frond.rotation.y = angle;
+        frond.rotation.z = 0.38 + (i % 3) * 0.14;
+        frond.castShadow = true;
+        plant.add(frond);
+      }
+      return plant;
+    }
+
+    // Build custom wide, flat-bottomed barge hull
+    function buildWideFlatHull() {
+      const hullGroup = new THREE.Group();
+
+      // 2D plan-view footprint of the wide houseboat (X: length -7.5 to +8.0, Y in shape = Z width -3.3 to +3.3)
+      const hullShape = new THREE.Shape();
+      hullShape.moveTo(-7.2, -3.25);
+      hullShape.lineTo(4.6, -3.25);
+      // Gently rounded wide barge bow
+      hullShape.quadraticCurveTo(7.5, -3.1, 7.9, -1.25);
+      hullShape.lineTo(7.9, 1.25);
+      hullShape.quadraticCurveTo(7.5, 3.1, 4.6, 3.25);
+      hullShape.lineTo(-7.2, 3.25);
+      hullShape.quadraticCurveTo(-7.6, 3.25, -7.6, 2.8);
+      hullShape.lineTo(-7.6, -2.8);
+      hullShape.quadraticCurveTo(-7.6, -3.25, -7.2, -3.25);
+
+      // Main dark navy-slate flat-bottomed hull body
+      const hullExtrude = new THREE.ExtrudeGeometry(hullShape, {
+        depth: 1.15,
+        bevelEnabled: true,
+        bevelSegments: 3,
+        steps: 1,
+        bevelSize: 0.08,
+        bevelThickness: 0.12
+      });
+      hullExtrude.rotateX(Math.PI / 2);
+      const hullMesh = new THREE.Mesh(hullExtrude, materials.hullDark);
+      hullMesh.position.y = 0.85; // Extends from y = 0.97 down to flat bottom at y = -0.42
+      hullMesh.castShadow = true;
+      hullMesh.receiveShadow = true;
+      hullGroup.add(hullMesh);
+
+      // Flat bottom anti-fouling red-oxide waterline plate
+      const waterlineExtrude = new THREE.ExtrudeGeometry(hullShape, {
+        depth: 0.26,
+        bevelEnabled: false
+      });
+      waterlineExtrude.rotateX(Math.PI / 2);
+      const waterlineMesh = new THREE.Mesh(waterlineExtrude, materials.hullBottom);
+      waterlineMesh.position.y = 0.16;
+      hullGroup.add(waterlineMesh);
+
+      // Crisp cream boot-top accent stripe along the hull sides
+      const stripeExtrude = new THREE.ExtrudeGeometry(hullShape, {
+        depth: 0.09,
+        bevelEnabled: true,
+        bevelSegments: 1,
+        bevelSize: 0.095,
+        bevelThickness: 0.01
+      });
+      stripeExtrude.rotateX(Math.PI / 2);
+      const stripeMesh = new THREE.Mesh(stripeExtrude, materials.hullStripe);
+      stripeMesh.position.y = 0.72;
+      hullGroup.add(stripeMesh);
+
+      // Heavy-duty black rubber rub-rail bumper around the deck edge
+      const rubRailExtrude = new THREE.ExtrudeGeometry(hullShape, {
+        depth: 0.12,
+        bevelEnabled: true,
+        bevelSegments: 2,
+        bevelSize: 0.13,
+        bevelThickness: 0.04
+      });
+      rubRailExtrude.rotateX(Math.PI / 2);
+      const rubRailMesh = new THREE.Mesh(rubRailExtrude, materials.rubRail);
+      rubRailMesh.position.y = 0.96;
+      hullGroup.add(rubRailMesh);
+
+      // Main Teak Deck Surface covering the entire wide hull
+      const deckExtrude = new THREE.ExtrudeGeometry(hullShape, {
+        depth: 0.08,
+        bevelEnabled: false
+      });
+      deckExtrude.rotateX(Math.PI / 2);
+      // Scale UVs so the teak planks run lengthwise along X
+      const posAttr = deckExtrude.attributes.position;
+      const uvAttr = deckExtrude.attributes.uv;
+      for (let i = 0; i < posAttr.count; i++) {
+        uvAttr.setXY(i, posAttr.getX(i) * 0.18, posAttr.getZ(i) * 0.28);
+      }
+      const deckMesh = new THREE.Mesh(deckExtrude, materials.teakDeck);
+      deckMesh.position.y = 1.02;
+      deckMesh.receiveShadow = true;
+      hullGroup.add(deckMesh);
+
+      // Hanging cylindrical boat fenders along Port & Starboard hull sides
+      const fenderGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.62, 14);
+      const fenderCapGeo = new THREE.SphereGeometry(0.14, 14, 10);
+      const fenderX = [-5.0, -1.6, 1.8, 4.5];
+      [-3.42, 3.42].forEach(zSide => {
+        fenderX.forEach(fx => {
+          const fender = new THREE.Group();
+          const body = new THREE.Mesh(fenderGeo, materials.rubRail);
+          const topCap = new THREE.Mesh(fenderCapGeo, materials.hullStripe);
+          topCap.position.y = 0.31;
+          const botCap = new THREE.Mesh(fenderCapGeo, materials.hullStripe);
+          botCap.position.y = -0.31;
+          const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.35, 6), materials.cushionCream);
+          rope.position.y = 0.45;
+          fender.add(body, topCap, botCap, rope);
+          fender.position.set(fx, 0.48, zSide);
+          hullGroup.add(fender);
+        });
+      });
+
+      // Brass Mooring Cleats at Bow and Stern corners
+      function createCleat(x, z) {
+        const cleat = new THREE.Group();
+        const base = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.04, 0.09), materials.brushedBrass);
+        const horn = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.38, 10), materials.brushedBrass);
+        horn.rotation.z = Math.PI / 2;
+        horn.position.y = 0.06;
+        cleat.add(base, horn);
+        cleat.position.set(x, 1.04, z);
+        hullGroup.add(cleat);
+      }
+      createCleat(7.35, -2.1);
+      createCleat(7.35, 2.1);
+      createCleat(-7.25, -2.85);
+      createCleat(-7.25, 2.85);
+
+      boatGroup.add(hullGroup);
+    }
+    buildWideFlatHull();
+
+    // Build Inviting Bow Sun Deck (x: +3.6 to +7.8) with Railings, Lounge Chairs, Drinks & Plants
+    function buildBowDeck() {
+      const bowGroup = new THREE.Group();
+      const deckY = 1.02;
+
+      // Bow safety railing (stainless posts, warm teak top handrail, horizontal tension cables)
+      const bowNodes = [
+        [3.6, -3.12], [5.2, -3.12], [6.8, -2.75], [7.68, -1.35],
+        [7.68, 1.35], [6.8, 2.75], [5.2, 3.12], [3.6, 3.12]
+      ];
+      const railH = 0.86;
+      bowNodes.forEach(([nx, nz], i) => {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.035, railH, 10), materials.stainlessSteel);
+        post.position.set(nx, deckY + railH / 2, nz);
+        post.castShadow = true;
+        bowGroup.add(post);
+
+        if (i < bowNodes.length - 1) {
+          const [nx2, nz2] = bowNodes[i + 1];
+          const dx = nx2 - nx;
+          const dz = nz2 - nz;
+          const len = Math.hypot(dx, dz);
+          const angle = Math.atan2(dz, dx);
+
+          // Teak top handrail
+          const topBar = new THREE.Mesh(new THREE.BoxGeometry(len + 0.05, 0.055, 0.08), materials.teakFurniture);
+          topBar.position.set((nx + nx2) / 2, deckY + railH, (nz + nz2) / 2);
+          topBar.rotation.y = -angle;
+          topBar.castShadow = true;
+          bowGroup.add(topBar);
+
+          // Three stainless safety cables between posts
+          [0.24, 0.44, 0.64].forEach(ch => {
+            const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, len, 6), materials.stainlessSteel);
+            cable.rotation.z = Math.PI / 2;
+            cable.rotation.y = -angle;
+            cable.position.set((nx + nx2) / 2, deckY + ch, (nz + nz2) / 2);
+            bowGroup.add(cable);
+          });
+        }
+      });
+
+      // Outdoor Woven Round Rug on the Bow Deck
+      const bowRug = new THREE.Mesh(new THREE.CylinderGeometry(1.65, 1.65, 0.015, 36), materials.wicker);
+      bowRug.position.set(5.65, deckY + 0.01, 0);
+      bowRug.receiveShadow = true;
+      bowGroup.add(bowRug);
+
+      // Pair of Cozy Resort Lounge Chairs on the Bow Deck
+      function createBowLoungeChair(x, z, rotY, pillowMat) {
+        const chair = new THREE.Group();
+        // Slatted teak base frame
+        const base = new THREE.Mesh(new THREE.BoxGeometry(1.18, 0.14, 0.88), materials.teakFurniture);
+        base.position.y = 0.24;
+        base.castShadow = true;
+        chair.add(base);
+
+        // 4 angled teak legs
+        [[-0.5, -0.36], [0.5, -0.36], [-0.5, 0.36], [0.5, 0.36]].forEach(([lx, lz]) => {
+          const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.024, 0.24, 8), materials.teakFurniture);
+          leg.position.set(lx, 0.12, lz);
+          chair.add(leg);
+        });
+
+        // Armrests
+        [-0.42, 0.42].forEach(az => {
+          const arm = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.05, 0.09), materials.teakFurniture);
+          arm.position.set(-0.02, 0.52, az);
+          arm.castShadow = true;
+          chair.add(arm);
+          const support = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.26, 8), materials.teakFurniture);
+          support.position.set(0.38, 0.38, az);
+          chair.add(support);
+        });
+
+        // Thick striped seat cushion
+        const seatCushion = new THREE.Mesh(new THREE.BoxGeometry(1.08, 0.15, 0.78), materials.cushionStripe);
+        seatCushion.position.set(0.03, 0.38, 0);
+        seatCushion.castShadow = true;
+        seatCushion.receiveShadow = true;
+        chair.add(seatCushion);
+
+        // Reclined backrest cushion
+        const backCushion = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.58, 0.76), materials.cushionStripe);
+        backCushion.position.set(-0.44, 0.66, 0);
+        backCushion.rotation.z = 0.32;
+        backCushion.castShadow = true;
+        chair.add(backCushion);
+
+        // Accent throw pillow
+        const pillow = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.28, 0.42), pillowMat);
+        pillow.position.set(-0.29, 0.56, 0);
+        pillow.rotation.z = 0.42;
+        pillow.castShadow = true;
+        chair.add(pillow);
+
+        chair.position.set(x, deckY, z);
+        chair.rotation.y = rotY;
+        bowGroup.add(chair);
+      }
+
+      createBowLoungeChair(5.55, -1.25, 0.32, materials.cushionTerracotta);
+      createBowLoungeChair(5.55, 1.25, -0.32, materials.cushionSage);
+
+      // Low Teak Coffee Table between the Bow Lounge Chairs with Hurricane Lantern & Drinks
+      const table = new THREE.Group();
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.05, 24), materials.teakFurniture);
+      top.position.y = 0.44;
+      top.castShadow = true;
+      table.add(top);
+      const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.22, 0.42, 14), materials.wicker);
+      pedestal.position.y = 0.21;
+      table.add(pedestal);
+
+      // Glowing bow lantern
+      const lanternBase = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.04, 12), materials.brushedBrass);
+      lanternBase.position.set(0, 0.48, 0);
+      const lanternCandle = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.14, 12), materials.warmBulb);
+      lanternCandle.position.set(0, 0.56, 0);
+      const lanternGlass = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.22, 14, 1, true), materials.windowGlass);
+      lanternGlass.position.set(0, 0.59, 0);
+      table.add(lanternBase, lanternCandle, lanternGlass);
+
+      // Two summer glasses
+      [-0.22, 0.22].forEach((gx, idx) => {
+        const glass = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.045, 0.036, 0.11, 12),
+          new THREE.MeshStandardMaterial({ color: idx === 0 ? 0xf7a541 : 0xe85d4a, roughness: 0.15, transparent: true, opacity: 0.85 })
+        );
+        glass.position.set(gx, 0.52, 0.16);
+        table.add(glass);
+      });
+
+      table.position.set(5.85, deckY, 0);
+      bowGroup.add(table);
+
+      // Potted plants on the bow corners
+      const bowPlantL = createPottedPlant(1.05);
+      bowPlantL.position.set(6.75, deckY, -1.95);
+      const bowPlantR = createPottedPlant(1.05);
+      bowPlantR.position.set(6.75, deckY, 1.95);
+      bowGroup.add(bowPlantL, bowPlantR);
+
+      // Stern Swim Platform details (Ladder & Lifebuoy at x: -7.6 to -4.3)
+      const ladderGroup = new THREE.Group();
+      [-0.24, 0.24].forEach(lz => {
+        const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1.45, 10), materials.stainlessSteel);
+        rail.position.set(-7.66, 0.55, -1.6 + lz);
+        ladderGroup.add(rail);
+      });
+      for (let r = 0; r < 4; r++) {
+        const rung = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.025, 0.48), materials.teakFurniture);
+        rung.position.set(-7.66, 0.02 + r * 0.3, -1.6);
+        ladderGroup.add(rung);
+      }
+      bowGroup.add(ladderGroup);
+
+      // Classic orange & white Lifebuoy ring on the stern quarter rail
+      const buoy = new THREE.Mesh(
+        new THREE.TorusGeometry(0.28, 0.075, 12, 24),
+        new THREE.MeshStandardMaterial({ color: 0xe35633, roughness: 0.4 })
+      );
+      buoy.position.set(-5.8, deckY + 0.55, -3.18);
+      bowGroup.add(buoy);
+
+      boatGroup.add(bowGroup);
+    }
+    buildBowDeck();
+    // === SECTION 4: CABIN SUPERSTRUCTURE, SIDE WINDOWS & COZY INTERIOR ===
+    const slidingDoorPanels = [];
+
+    function buildCabinAndInterior() {
+      const cabinGroup = new THREE.Group();
+      const deckY = 1.02;
+      const cabH = 2.42;
+      const cabMinX = -4.2;
+      const cabMaxX = 3.5;
+      const cabLen = cabMaxX - cabMinX; // 7.7
+      const cabCenterX = (cabMinX + cabMaxX) / 2; // -0.35
+      const cabHalfW = 2.45; // Leaves wide walk-around side decks on port & starboard
+
+      // Interior Hardwood Floor & Boho Kilim Rug
+      const floorMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(cabLen - 0.16, 0.04, cabHalfW * 2 - 0.16),
+        materials.teakFurniture
+      );
+      floorMesh.position.set(cabCenterX, deckY + 0.02, 0);
+      floorMesh.receiveShadow = true;
+      cabinGroup.add(floorMesh);
+
+      const rugMat = new THREE.MeshStandardMaterial({ map: rugTex, roughness: 0.85 });
+      const interiorRug = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.015, 2.2), rugMat);
+      interiorRug.position.set(0.6, deckY + 0.045, -0.2);
+      interiorRug.receiveShadow = true;
+      cabinGroup.add(interiorRug);
+
+      // Build Port (z = -2.45) and Starboard (z = +2.45) Walls with 4 Large Panoramic Windows on EACH side
+      const winCentersX = [-3.0, -1.25, 0.5, 2.25];
+      const winWidth = 1.42;
+      const sillH = 0.52;
+      const headerH = 0.34;
+      const winH = cabH - sillH - headerH; // 1.56m tall panoramic windows!
+
+      [-cabHalfW, cabHalfW].forEach(zWall => {
+        // Continuous lower cedar wainscoting sill wall
+        const lowerWall = new THREE.Mesh(
+          new THREE.BoxGeometry(cabLen, sillH, 0.12),
+          materials.cedarWall
+        );
+        lowerWall.position.set(cabCenterX, deckY + sillH / 2, zWall);
+        lowerWall.castShadow = true;
+        lowerWall.receiveShadow = true;
+        cabinGroup.add(lowerWall);
+
+        // Continuous upper cedar frieze band
+        const upperWall = new THREE.Mesh(
+          new THREE.BoxGeometry(cabLen, headerH, 0.12),
+          materials.cedarWall
+        );
+        upperWall.position.set(cabCenterX, deckY + cabH - headerH / 2, zWall);
+        upperWall.castShadow = true;
+        cabinGroup.add(upperWall);
+
+        // Vertical cedar pilasters between windows & at corners
+        const pillarXCoords = [-4.08, -2.12, -0.37, 1.38, 3.22];
+        const pillarWidths = [0.26, 0.32, 0.32, 0.32, 0.56];
+        pillarXCoords.forEach((px, idx) => {
+          const pillar = new THREE.Mesh(
+            new THREE.BoxGeometry(pillarWidths[idx], winH, 0.13),
+            materials.cedarWall
+          );
+          pillar.position.set(px, deckY + sillH + winH / 2, zWall);
+          pillar.castShadow = true;
+          pillar.receiveShadow = true;
+          cabinGroup.add(pillar);
+        });
+
+        // 4 Panoramic Side Windows with dark metal frames, glass panes & soft linen drapes
+        winCentersX.forEach(wx => {
+          const wy = deckY + sillH + winH / 2;
+          // Top & bottom charcoal frames
+          const frameTop = new THREE.Mesh(new THREE.BoxGeometry(winWidth, 0.05, 0.15), materials.charcoalFrame);
+          frameTop.position.set(wx, wy + winH / 2 - 0.025, zWall);
+          const frameBot = new THREE.Mesh(new THREE.BoxGeometry(winWidth, 0.06, 0.16), materials.charcoalFrame);
+          frameBot.position.set(wx, wy - winH / 2 + 0.03, zWall);
+          // Side vertical mullions
+          const frameL = new THREE.Mesh(new THREE.BoxGeometry(0.05, winH, 0.15), materials.charcoalFrame);
+          frameL.position.set(wx - winWidth / 2 + 0.025, wy, zWall);
+          const frameR = new THREE.Mesh(new THREE.BoxGeometry(0.05, winH, 0.15), materials.charcoalFrame);
+          frameR.position.set(wx + winWidth / 2 - 0.025, wy, zWall);
+          cabinGroup.add(frameTop, frameBot, frameL, frameR);
+
+          // Panoramic glass pane
+          const glass = new THREE.Mesh(new THREE.PlaneGeometry(winWidth - 0.08, winH - 0.08), materials.windowGlass);
+          glass.position.set(wx, wy, zWall);
+          cabinGroup.add(glass);
+
+          // Cozy sheer linen curtain panel tucked inside each window edge
+          const curtain = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.055, 0.065, winH - 0.12, 8),
+            materials.cushionCream
+          );
+          curtain.position.set(wx - winWidth / 2 + 0.12, wy, zWall > 0 ? zWall - 0.09 : zWall + 0.09);
+          cabinGroup.add(curtain);
+        });
+      });
+
+      // Bow & Stern End Walls with Interactive Sliding Glass Patio Doors
+      function buildEndWallWithDoors(xWall, isBow) {
+        // Left & right cedar wall wings
+        [-1.78, 1.78].forEach(zWing => {
+          const wing = new THREE.Mesh(new THREE.BoxGeometry(0.14, cabH, 1.35), materials.cedarWall);
+          wing.position.set(xWall, deckY + cabH / 2, zWing);
+          wing.castShadow = true;
+          wing.receiveShadow = true;
+          cabinGroup.add(wing);
+
+          // Decorative porthole window on the bow & stern wall wings
+          const portholeRing = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.035, 10, 24), materials.brushedBrass);
+          portholeRing.rotation.y = Math.PI / 2;
+          portholeRing.position.set(xWall + (isBow ? 0.07 : -0.07), deckY + 1.52, zWing);
+          const portholeGlass = new THREE.Mesh(new THREE.CircleGeometry(0.27, 20), materials.windowGlass);
+          portholeGlass.rotation.y = Math.PI / 2;
+          portholeGlass.position.set(xWall, deckY + 1.52, zWing);
+          cabinGroup.add(portholeRing, portholeGlass);
+        });
+
+        // Header beam above the sliding doors
+        const header = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.34, 2.22), materials.cedarWall);
+        header.position.set(xWall, deckY + cabH - 0.17, 0);
+        cabinGroup.add(header);
+
+        // Two sliding glass door panels in the center (z from -1.1 to +1.1)
+        [-0.55, 0.55].forEach((zPanel, idx) => {
+          const doorGroup = new THREE.Group();
+          const doorH = cabH - 0.34;
+          const doorW = 1.12;
+          const frame = new THREE.Mesh(new THREE.BoxGeometry(0.06, doorH, doorW), materials.charcoalFrame);
+          // Cutout appearance with inner glass
+          const topBar = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.06, doorW), materials.charcoalFrame);
+          topBar.position.y = doorH / 2 - 0.03;
+          const botBar = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.08, doorW), materials.charcoalFrame);
+          botBar.position.y = -doorH / 2 + 0.04;
+          const leftBar = new THREE.Mesh(new THREE.BoxGeometry(0.07, doorH, 0.06), materials.charcoalFrame);
+          leftBar.position.z = -doorW / 2 + 0.03;
+          const rightBar = new THREE.Mesh(new THREE.BoxGeometry(0.07, doorH, 0.06), materials.charcoalFrame);
+          rightBar.position.z = doorW / 2 - 0.03;
+          const glassPane = new THREE.Mesh(new THREE.BoxGeometry(0.02, doorH - 0.12, doorW - 0.1), materials.windowGlass);
+          const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.28, 8), materials.brushedBrass);
+          handle.position.set(isBow ? 0.045 : -0.045, -0.05, idx === 0 ? 0.42 : -0.42);
+          doorGroup.add(topBar, botBar, leftBar, rightBar, glassPane, handle);
+
+          const closedZ = zPanel;
+          const openZ = idx === 0 ? zPanel - 0.92 : zPanel + 0.92;
+          doorGroup.position.set(xWall + (idx === 0 ? -0.02 : 0.02), deckY + doorH / 2, closedZ);
+          doorGroup.userData = { closedZ, openZ };
+          slidingDoorPanels.push(doorGroup);
+          cabinGroup.add(doorGroup);
+        });
+
+        // Warm exterior wall sconces flanking the sliding doors
+        [-1.28, 1.28].forEach(zSconce => {
+          const mount = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.18, 0.1), materials.charcoalFrame);
+          mount.position.set(xWall + (isBow ? 0.09 : -0.09), deckY + 1.75, zSconce);
+          const bulb = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.14, 10), materials.warmBulb);
+          bulb.position.set(xWall + (isBow ? 0.12 : -0.12), deckY + 1.75, zSconce);
+          cabinGroup.add(mount, bulb);
+        });
+      }
+
+      buildEndWallWithDoors(cabMaxX, true);
+      buildEndWallWithDoors(cabMinX, false);
+
+      // === COZY INTERIOR FURNISHINGS (Clearly visible through the panoramic side windows!) ===
+      // 1. Plush L-Shaped Living Room Sofa on Starboard side
+      const sofaGroup = new THREE.Group();
+      const sofaBase = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.32, 0.95), materials.cushionCream);
+      sofaBase.position.set(0.55, deckY + 0.22, -1.65);
+      const sofaChaise = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.32, 1.65), materials.cushionCream);
+      sofaChaise.position.set(-0.35, deckY + 0.22, -1.3);
+      const sofaBack = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.48, 0.2), materials.cushionCream);
+      sofaBack.position.set(0.55, deckY + 0.56, -2.02);
+      sofaGroup.add(sofaBase, sofaChaise, sofaBack);
+
+      // Colorful interior throw pillows
+      [-0.3, 0.5, 1.35].forEach((px, i) => {
+        const pil = new THREE.Mesh(
+          new THREE.BoxGeometry(0.36, 0.32, 0.14),
+          i % 2 === 0 ? materials.cushionTerracotta : materials.cushionSage
+        );
+        pil.position.set(px, deckY + 0.52, -1.85);
+        pil.rotation.x = 0.25;
+        sofaGroup.add(pil);
+      });
+      cabinGroup.add(sofaGroup);
+
+      // 2. Oak Coffee Table in the Living Area
+      const coffeeTable = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.36, 0.65), materials.teakFurniture);
+      coffeeTable.position.set(0.75, deckY + 0.22, -0.35);
+      cabinGroup.add(coffeeTable);
+
+      // 3. Cozy Cast-Iron Wood Stove with warm glowing hearth in the corner
+      const stoveBody = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.28, 0.68, 14), materials.charcoalFrame);
+      stoveBody.position.set(2.65, deckY + 0.42, -1.85);
+      const stoveFire = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.22, 0.26), materials.warmBulb);
+      stoveFire.position.set(2.65, deckY + 0.45, -1.72);
+      const fluePipe = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 2.35, 10), materials.charcoalFrame);
+      fluePipe.position.set(2.65, deckY + 1.55, -1.85);
+      cabinGroup.add(stoveBody, stoveFire, fluePipe);
+
+      // 4. Dining Table & Chairs on the Port window side (so guests can picture dining by the water)
+      const diningTop = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.06, 0.88), materials.teakFurniture);
+      diningTop.position.set(0.95, deckY + 0.74, 1.45);
+      const diningPedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.26, 0.72, 12), materials.charcoalFrame);
+      diningPedestal.position.set(0.95, deckY + 0.36, 1.45);
+      cabinGroup.add(diningTop, diningPedestal);
+
+      [0.45, 1.45].forEach(cx => {
+        [0.92, 1.98].forEach(cz => {
+          const dChair = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.44, 0.42), materials.cushionSage);
+          dChair.position.set(cx, deckY + 0.24, cz);
+          cabinGroup.add(dChair);
+        });
+      });
+
+      // 5. Aft Kitchenette Counter & Brass Helm Station
+      const counter = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.88, 0.72), materials.creamTrim);
+      counter.position.set(-2.35, deckY + 0.44, 1.78);
+      const counterTop = new THREE.Mesh(new THREE.BoxGeometry(2.16, 0.05, 0.78), materials.teakFurniture);
+      counterTop.position.set(-2.35, deckY + 0.9, 1.78);
+      cabinGroup.add(counter, counterTop);
+
+      // Compact Captain's Helm Console at Starboard Bow corner inside cabin
+      const helmConsole = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.02, 0.65), materials.teakFurniture);
+      helmConsole.position.set(2.9, deckY + 0.51, 1.65);
+      const helmWheel = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.025, 8, 20), materials.brushedBrass);
+      helmWheel.rotation.y = Math.PI / 2;
+      helmWheel.rotation.z = -0.35;
+      helmWheel.position.set(2.58, deckY + 1.05, 1.65);
+      cabinGroup.add(helmConsole, helmWheel);
+
+      // Warm Interior Pendant Lamps hanging from ceiling
+      [-1.8, 0.65, 2.1].forEach((lx, i) => {
+        const lz = i === 1 ? -0.35 : 0.85;
+        const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.42, 6), materials.charcoalFrame);
+        cord.position.set(lx, deckY + cabH - 0.21, lz);
+        const shade = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.18, 16, 1, true), materials.wicker);
+        shade.position.set(lx, deckY + cabH - 0.42, lz);
+        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 10), materials.warmBulb);
+        bulb.position.set(lx, deckY + cabH - 0.46, lz);
+        cabinGroup.add(cord, shade, bulb);
+      });
+
+      // === EXTERIOR STAIRCASE AT THE STERN LEADING TO THE ROOF TERRACE ===
+      const stairsGroup = new THREE.Group();
+      const numSteps = 10;
+      const startX = -6.25;
+      const endX = -4.25;
+      const startY = deckY + 0.12;
+      const endY = deckY + cabH + 0.02;
+      const stairZ = 2.02;
+
+      for (let s = 0; s < numSteps; s++) {
+        const t = s / (numSteps - 1);
+        const sx = THREE.MathUtils.lerp(startX, endX, t);
+        const sy = THREE.MathUtils.lerp(startY, endY, t);
+        const tread = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.045, 0.68), materials.teakFurniture);
+        tread.position.set(sx, sy, stairZ);
+        tread.castShadow = true;
+        stairsGroup.add(tread);
+      }
+
+      // Diagonal steel stringers & handrail for the roof stairs
+      const stairLen = Math.hypot(endX - startX, endY - startY);
+      const stairAngle = Math.atan2(endY - startY, endX - startX);
+      [-0.34, 0.34].forEach(szOff => {
+        const stringer = new THREE.Mesh(new THREE.BoxGeometry(stairLen + 0.2, 0.09, 0.04), materials.charcoalFrame);
+        stringer.position.set((startX + endX) / 2, (startY + endY) / 2 - 0.04, stairZ + szOff);
+        stringer.rotation.z = stairAngle;
+        stairsGroup.add(stringer);
+
+        const handrail = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, stairLen + 0.25, 8), materials.stainlessSteel);
+        handrail.rotation.z = stairAngle - Math.PI / 2;
+        handrail.position.set((startX + endX) / 2, (startY + endY) / 2 + 0.78, stairZ + szOff);
+        stairsGroup.add(handrail);
+      });
+      cabinGroup.add(stairsGroup);
+
+      boatGroup.add(cabinGroup);
+    }
+    buildCabinAndInterior();
+    // === SECTION 5: ROOF TERRACE, RAILINGS, PERGOLA & OUTDOOR SEATING ===
+    function buildRoofTerrace() {
+      const roofGroup = new THREE.Group();
+      const roofY = 3.52;
+      const rMinX = -4.45;
+      const rMaxX = 3.85;
+      const rLen = rMaxX - rMinX; // 8.30
+      const rCenterX = (rMinX + rMaxX) / 2; // -0.30
+      const rHalfW = 2.62;
+      const rWidth = rHalfW * 2; // 5.24
+
+      // Cream architectural roof overhang fascia slab
+      const roofSlab = new THREE.Mesh(
+        new THREE.BoxGeometry(rLen, 0.16, rWidth),
+        materials.creamTrim
+      );
+      roofSlab.position.set(rCenterX, roofY - 0.08, 0);
+      roofSlab.castShadow = true;
+      roofSlab.receiveShadow = true;
+      roofGroup.add(roofSlab);
+
+      // Teak plank flooring across the entire rooftop terrace
+      const roofTeak = new THREE.Mesh(
+        new THREE.BoxGeometry(rLen - 0.14, 0.04, rWidth - 0.14),
+        materials.teakDeck
+      );
+      roofTeak.position.set(rCenterX, roofY + 0.02, 0);
+      roofTeak.receiveShadow = true;
+      roofGroup.add(roofTeak);
+
+      const deckTopY = roofY + 0.04;
+      const railH = 0.92;
+
+      // Helper to build a railing segment with stainless posts, teak top rail & glass wind-panel
+      function addRailingSpan(x1, z1, x2, z2) {
+        const dx = x2 - x1;
+        const dz = z2 - z1;
+        const spanLen = Math.hypot(dx, dz);
+        const angle = Math.atan2(dz, dx);
+        const midX = (x1 + x2) / 2;
+        const midZ = (z1 + z2) / 2;
+
+        // End posts
+        [[x1, z1], [x2, z2]].forEach(([px, pz]) => {
+          const post = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, railH, 10), materials.stainlessSteel);
+          post.position.set(px, deckTopY + railH / 2, pz);
+          post.castShadow = true;
+          roofGroup.add(post);
+        });
+
+        // Warm teak top handrail
+        const handrail = new THREE.Mesh(new THREE.BoxGeometry(spanLen + 0.06, 0.055, 0.085), materials.teakFurniture);
+        handrail.position.set(midX, deckTopY + railH, midZ);
+        handrail.rotation.y = -angle;
+        handrail.castShadow = true;
+        roofGroup.add(handrail);
+
+        // Brushed steel lower rail
+        const botRail = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, spanLen, 8), materials.stainlessSteel);
+        botRail.rotation.z = Math.PI / 2;
+        botRail.rotation.y = -angle;
+        botRail.position.set(midX, deckTopY + 0.12, midZ);
+        roofGroup.add(botRail);
+
+        // Tempered glass wind-screen panel so seated guests have panoramic views
+        const glassPanel = new THREE.Mesh(
+          new THREE.PlaneGeometry(Math.max(0.1, spanLen - 0.08), railH - 0.22),
+          materials.railingGlass
+        );
+        glassPanel.position.set(midX, deckTopY + railH * 0.5, midZ);
+        glassPanel.rotation.y = -angle;
+        roofGroup.add(glassPanel);
+      }
+
+      // Port & Starboard Side Railings (4 bays along each side)
+      const sideXStops = [-4.32, -2.28, -0.24, 1.78, 3.72];
+      [-rHalfW + 0.1, rHalfW - 0.1].forEach(zSide => {
+        for (let i = 0; i < sideXStops.length - 1; i++) {
+          addRailingSpan(sideXStops[i], zSide, sideXStops[i + 1], zSide);
+        }
+      });
+
+      // Forward (Bow-Facing) Rooftop Railing (3 bays across Z)
+      const frontZStops = [-2.52, -0.84, 0.84, 2.52];
+      for (let i = 0; i < frontZStops.length - 1; i++) {
+        addRailingSpan(3.72, frontZStops[i], 3.72, frontZStops[i + 1]);
+      }
+
+      // Aft Rooftop Railing (leaves an open gateway at z = 1.65..2.42 for the staircase landing)
+      addRailingSpan(-4.32, -2.52, -4.32, -0.5);
+      addRailingSpan(-4.32, -0.5, -4.32, 1.55);
+
+      // === FORWARD ROOFTOP LOUNGE AREA (L-Shaped Outdoor Sofa, Coffee Table, Poufs & Umbrella) ===
+      const loungeRug = new THREE.Mesh(new THREE.BoxGeometry(2.85, 0.015, 3.4), materials.wicker);
+      loungeRug.position.set(2.0, deckTopY + 0.01, -0.25);
+      loungeRug.receiveShadow = true;
+      roofGroup.add(loungeRug);
+
+      const sectionalGroup = new THREE.Group();
+      // Main sofa bench along Starboard side of roof (z = -1.75, x from 0.65 to 3.25)
+      const secBase1 = new THREE.Mesh(new THREE.BoxGeometry(2.65, 0.22, 0.92), materials.teakFurniture);
+      secBase1.position.set(1.95, 0.16, -1.72);
+      secBase1.castShadow = true;
+      const secCush1 = new THREE.Mesh(new THREE.BoxGeometry(2.55, 0.16, 0.86), materials.cushionCream);
+      secCush1.position.set(1.95, 0.34, -1.70);
+      secCush1.castShadow = true;
+      const secBack1 = new THREE.Mesh(new THREE.BoxGeometry(2.55, 0.45, 0.18), materials.cushionStripe);
+      secBack1.position.set(1.95, 0.58, -2.06);
+      secBack1.rotation.x = 0.14;
+      secBack1.castShadow = true;
+      sectionalGroup.add(secBase1, secCush1, secBack1);
+
+      // Return L-wing facing the Bow & Port (x = 3.12, z from -1.25 to +0.85)
+      const secBase2 = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.22, 2.15), materials.teakFurniture);
+      secBase2.position.set(3.05, 0.16, -0.2);
+      secBase2.castShadow = true;
+      const secCush2 = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.16, 2.08), materials.cushionCream);
+      secCush2.position.set(3.03, 0.34, -0.2);
+      secCush2.castShadow = true;
+      const secBack2 = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.45, 2.05), materials.cushionStripe);
+      secBack2.position.set(3.38, 0.58, -0.2);
+      secBack2.rotation.z = 0.14;
+      secBack2.castShadow = true;
+      sectionalGroup.add(secBase2, secCush2, secBack2);
+
+      // Cozy accent throw pillows on the rooftop sectional
+      const pillowCoords = [
+        { x: 0.95, z: -1.88, ry: 0.2, mat: materials.cushionTerracotta },
+        { x: 1.85, z: -1.88, ry: -0.15, mat: materials.cushionSage },
+        { x: 2.85, z: -1.78, ry: 0.65, mat: materials.cushionTerracotta },
+        { x: 3.18, z: -0.65, ry: 1.4, mat: materials.cushionSage },
+        { x: 3.18, z: 0.35, ry: 1.7, mat: materials.cushionTerracotta }
+      ];
+      pillowCoords.forEach(p => {
+        const pil = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.32, 0.14), p.mat);
+        pil.position.set(p.x, 0.55, p.z);
+        pil.rotation.y = p.ry;
+        pil.castShadow = true;
+        sectionalGroup.add(pil);
+      });
+
+      // Slatted Teak Coffee Table in the Rooftop Lounge
+      const rTableTop = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.06, 0.78), materials.teakFurniture);
+      rTableTop.position.set(1.68, 0.38, -0.35);
+      rTableTop.castShadow = true;
+      sectionalGroup.add(rTableTop);
+      [[-0.52, -0.3], [0.52, -0.3], [-0.52, 0.3], [0.52, 0.3]].forEach(([lx, lz]) => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.025, 0.36, 8), materials.teakFurniture);
+        leg.position.set(1.68 + lx, 0.18, -0.35 + lz);
+        sectionalGroup.add(leg);
+      });
+
+      // Decorative Tray, Fruit Bowl & Lantern on the Rooftop Coffee Table
+      const tray = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.03, 0.36), materials.wicker);
+      tray.position.set(1.68, 0.42, -0.35);
+      const rLantern = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.18, 12), materials.warmBulb);
+      rLantern.position.set(1.55, 0.51, -0.35);
+      sectionalGroup.add(tray, rLantern);
+
+      // Pair of Woven Round Pouf Ottomans opposite the sectional
+      [[1.15, 0.68], [1.95, 0.85]].forEach(([ox, oz], idx) => {
+        const pouf = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.34, 0.36, 0.32, 20),
+          idx === 0 ? materials.wicker : materials.cushionSage
+        );
+        pouf.position.set(ox, 0.16, oz);
+        pouf.castShadow = true;
+        sectionalGroup.add(pouf);
+      });
+
+      // Resort Sun Umbrella shading the forward lounge
+      const umbPole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 2.25, 12), materials.teakFurniture);
+      umbPole.position.set(2.35, 1.12, -1.15);
+      umbPole.castShadow = true;
+      const umbCanopy = new THREE.Mesh(new THREE.ConeGeometry(1.55, 0.42, 8), materials.cushionCream);
+      umbCanopy.position.set(2.35, 2.22, -1.15);
+      umbCanopy.castShadow = true;
+      sectionalGroup.add(umbPole, umbCanopy);
+
+      sectionalGroup.position.y = deckTopY;
+      roofGroup.add(sectionalGroup);
+
+      // === AFT-CENTER ROOFTOP TIMBER PERGOLA, FESTOON STRING LIGHTS & AL-FRESCO DINING ===
+      const pergolaGroup = new THREE.Group();
+      const pergMinX = -3.65;
+      const pergMaxX = -0.35;
+      const pergMinZ = -2.15;
+      const pergMaxZ = 1.25;
+      const pergH = 2.18;
+
+      // 4 Timber Pergola Corner Posts
+      [[pergMinX, pergMinZ], [pergMaxX, pergMinZ], [pergMinX, pergMaxZ], [pergMaxX, pergMaxZ]].forEach(([px, pz]) => {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.11, pergH, 0.11), materials.teakFurniture);
+        post.position.set(px, pergH / 2, pz);
+        post.castShadow = true;
+        pergolaGroup.add(post);
+      });
+
+      // Side header beams along X
+      [pergMinZ, pergMaxZ].forEach(bz => {
+        const beam = new THREE.Mesh(new THREE.BoxGeometry(pergMaxX - pergMinX + 0.35, 0.12, 0.09), materials.teakFurniture);
+        beam.position.set((pergMinX + pergMaxX) / 2, pergH - 0.04, bz);
+        beam.castShadow = true;
+        pergolaGroup.add(beam);
+      });
+
+      // 9 Slatted Pergola Shade Rafters across Z
+      const numRafters = 9;
+      for (let r = 0; r < numRafters; r++) {
+        const rx = THREE.MathUtils.lerp(pergMinX - 0.08, pergMaxX + 0.08, r / (numRafters - 1));
+        const rafter = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, pergMaxZ - pergMinZ + 0.38), materials.teakFurniture);
+        rafter.position.set(rx, pergH + 0.05, (pergMinZ + pergMaxZ) / 2);
+        rafter.castShadow = true;
+        pergolaGroup.add(rafter);
+      }
+
+      // Warm Festoon String Lights Draped Under the Pergola
+      const stringZRows = [-1.45, -0.45, 0.55];
+      stringZRows.forEach(sz => {
+        const curvePoints = [];
+        const steps = 16;
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          const sx = THREE.MathUtils.lerp(pergMinX + 0.1, pergMaxX - 0.1, t);
+          const sag = Math.sin(t * Math.PI) * 0.16;
+          curvePoints.push(new THREE.Vector3(sx, pergH - 0.08 - sag, sz));
+        }
+        const catenary = new THREE.CatmullRomCurve3(curvePoints);
+        const wireGeo = new THREE.TubeGeometry(catenary, 20, 0.008, 6, false);
+        const wireMesh = new THREE.Mesh(wireGeo, materials.charcoalFrame);
+        pergolaGroup.add(wireMesh);
+
+        // Glowing Edison bulbs along each string
+        for (let b = 1; b <= 5; b++) {
+          const pt = catenary.getPoint(b / 6);
+          const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.042, 10, 8), materials.warmBulb);
+          bulb.position.set(pt.x, pt.y - 0.04, pt.z);
+          pergolaGroup.add(bulb);
+        }
+      });
+
+      // Al-Fresco Rooftop Dining Table & 4 Woven Armchairs under the Pergola
+      const dTableX = -2.0;
+      const dTableZ = -0.45;
+      const dTop = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.06, 0.96), materials.teakFurniture);
+      dTop.position.set(dTableX, 0.74, dTableZ);
+      dTop.castShadow = true;
+      pergolaGroup.add(dTop);
+      [[-0.7, -0.38], [0.7, -0.38], [-0.7, 0.38], [0.7, 0.38]].forEach(([lx, lz]) => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.028, 0.72, 8), materials.teakFurniture);
+        leg.position.set(dTableX + lx, 0.36, dTableZ + lz);
+        pergolaGroup.add(leg);
+      });
+
+      // 4 Outdoor Dining Chairs around the table
+      [[-2.48, -1.12, 0], [-1.52, -1.12, 0], [-2.48, 0.22, Math.PI], [-1.52, 0.22, Math.PI]].forEach(([cx, cz, rot]) => {
+        const chair = new THREE.Group();
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.07, 0.48), materials.wicker);
+        seat.position.y = 0.44;
+        seat.castShadow = true;
+        const cush = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.06, 0.44), materials.cushionCream);
+        cush.position.y = 0.5;
+        const back = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.07), materials.wicker);
+        back.position.set(0, 0.66, -0.21);
+        back.castShadow = true;
+        chair.add(seat, cush, back);
+        [[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]].forEach(([lx, lz]) => {
+          const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.018, 0.44, 6), materials.teakFurniture);
+          leg.position.set(lx, 0.22, lz);
+          chair.add(leg);
+        });
+        chair.position.set(cx, 0, cz);
+        chair.rotation.y = rot;
+        pergolaGroup.add(chair);
+      });
+
+      pergolaGroup.position.y = deckTopY;
+      roofGroup.add(pergolaGroup);
+
+      // Potted Plants on the Rooftop Terrace Corners
+      [
+        [3.42, 2.15], [-4.0, -2.15], [-0.15, 2.15]
+      ].forEach(([px, pz]) => {
+        const p = createPottedPlant(0.95);
+        p.position.set(px, deckTopY, pz);
+        roofGroup.add(p);
+      });
+
+      boatGroup.add(roofGroup);
+    }
+    buildRoofTerrace();
+    // === SECTION 6: LIGHTING, INTERACTIVITY, HOTSPOTS & ANIMATION LOOP ===
+    const hemiLight = new THREE.HemisphereLight(0xffe7c7, 0x2c4b59, 0.9);
+    scene.add(hemiLight);
+
+    const sunLight = new THREE.DirectionalLight(0xffb870, 2.5);
+    sunLight.position.set(-22, 14, -24);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.set(2048, 2048);
+    sunLight.shadow.camera.near = 5;
+    sunLight.shadow.camera.far = 65;
+    const d = 12.5;
+    sunLight.shadow.camera.left = -d;
+    sunLight.shadow.camera.right = d;
+    sunLight.shadow.camera.top = d;
+    sunLight.shadow.camera.bottom = -d;
+    sunLight.shadow.bias = -0.0005;
+    scene.add(sunLight);
+
+    // Warm Point Lights attached to the boat so they move with its gentle bobbing
+    const cabinWarmLight1 = new THREE.PointLight(0xffa447, 2.2, 9.0, 1.5);
+    cabinWarmLight1.position.set(0.8, 2.7, -0.3);
+    boatGroup.add(cabinWarmLight1);
+
+    const cabinWarmLight2 = new THREE.PointLight(0xffa447, 1.8, 8.0, 1.5);
+    cabinWarmLight2.position.set(-2.0, 2.7, 0.6);
+    boatGroup.add(cabinWarmLight2);
+
+    const roofStringLight = new THREE.PointLight(0xffae52, 2.0, 9.5, 1.4);
+    roofStringLight.position.set(-1.9, 5.2, -0.4);
+    boatGroup.add(roofStringLight);
+
+    const bowLanternLight = new THREE.PointLight(0xffa838, 1.4, 6.5, 1.5);
+    bowLanternLight.position.set(5.85, 1.85, 0);
+    boatGroup.add(bowLanternLight);
+
+    const warmLights = [cabinWarmLight1, cabinWarmLight2, roofStringLight, bowLanternLight];
+
+    // Atmospheric Golden Dust / Evening Fireflies around the Cove
+    const particleCount = 65;
+    const particleGeo = new THREE.BufferGeometry();
+    const pPositions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+      pPositions[i * 3] = (Math.random() - 0.5) * 26;
+      pPositions[i * 3 + 1] = 0.6 + Math.random() * 6.2;
+      pPositions[i * 3 + 2] = (Math.random() - 0.5) * 18;
+    }
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+    const particleMat = new THREE.PointsMaterial({
+      color: 0xffd78c,
+      size: 0.11,
+      transparent: true,
+      opacity: 0.75
+    });
+    const fireflies = new THREE.Points(particleGeo, particleMat);
+    scene.add(fireflies);
+
+    // Mood / Time-of-Day Presets
+    const moodConfigs = {
+      day: {
+        skyTop: 0x2d73b8,
+        skyMid: 0x89c4f4,
+        skyBot: 0xdff1ff,
+        sunDir: new THREE.Vector3(-0.45, 0.68, -0.55).normalize(),
+        sunColor: 0xfff7e6,
+        sunIntensity: 2.9,
+        hemiSky: 0xe6f4ff,
+        hemiGround: 0x2b5f6c,
+        hemiIntensity: 1.15,
+        waterDeep: 0x0e4761,
+        waterShallow: 0x22888f,
+        waterHorizon: 0xbde0fc,
+        warmLightMult: 0.35,
+        bulbEmissive: 0.6,
+        eveningGlow: 0.08
+      },
+      sunset: {
+        skyTop: 0x284b7a,
+        skyMid: 0xe68a5c,
+        skyBot: 0xffd194,
+        sunDir: new THREE.Vector3(-0.65, 0.22, -0.72).normalize(),
+        sunColor: 0xffb870,
+        sunIntensity: 2.5,
+        hemiSky: 0xffe7c7,
+        hemiGround: 0x2c4b59,
+        hemiIntensity: 0.9,
+        waterDeep: 0x13384c,
+        waterShallow: 0x28666e,
+        waterHorizon: 0xf09d67,
+        warmLightMult: 1.15,
+        bulbEmissive: 1.9,
+        eveningGlow: 0.42
+      },
+      evening: {
+        skyTop: 0x0c1629,
+        skyMid: 0x1e3252,
+        skyBot: 0x3b4968,
+        sunDir: new THREE.Vector3(-0.65, 0.12, -0.74).normalize(),
+        sunColor: 0x6b88b8,
+        sunIntensity: 0.55,
+        hemiSky: 0x32476b,
+        hemiGround: 0x101c26,
+        hemiIntensity: 0.5,
+        waterDeep: 0x081824,
+        waterShallow: 0x12323d,
+        waterHorizon: 0x2a3954,
+        warmLightMult: 2.25,
+        bulbEmissive: 3.4,
+        eveningGlow: 0.95
+      }
+    };
+
+    function applyMood(moodKey) {
+      const cfg = moodConfigs[moodKey];
+      if (!cfg) return;
+      skyUniforms.uTopColor.value.setHex(cfg.skyTop);
+      skyUniforms.uMidColor.value.setHex(cfg.skyMid);
+      skyUniforms.uBottomColor.value.setHex(cfg.skyBot);
+      skyUniforms.uSunDir.value.copy(cfg.sunDir);
+      skyUniforms.uSunColor.value.setHex(cfg.sunColor);
+
+      sunLight.position.copy(cfg.sunDir).multiplyScalar(34);
+      sunLight.color.setHex(cfg.sunColor);
+      sunLight.intensity = cfg.sunIntensity;
+
+      hemiLight.color.setHex(cfg.hemiSky);
+      hemiLight.groundColor.setHex(cfg.hemiGround);
+      hemiLight.intensity = cfg.hemiIntensity;
+
+      waterUniforms.uSunColor.value.setHex(cfg.sunColor);
+      waterUniforms.uWaterDeep.value.setHex(cfg.waterDeep);
+      waterUniforms.uWaterShallow.value.setHex(cfg.waterShallow);
+      waterUniforms.uSkyHorizon.value.setHex(cfg.waterHorizon);
+      waterUniforms.uEveningGlow.value = cfg.eveningGlow;
+
+      materials.warmBulb.emissiveIntensity = cfg.bulbEmissive;
+      warmLights.forEach((l, idx) => {
+        const base = idx === 0 ? 2.2 : idx === 1 ? 1.8 : idx === 2 ? 2.1 : 1.4;
+        l.intensity = base * cfg.warmLightMult;
+      });
+      particleMat.opacity = moodKey === 'day' ? 0.25 : 0.85;
+      updateEnvMap();
+    }
+
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        applyMood(btn.dataset.mood);
+      });
+    });
+
+    // Camera Presets & Smooth Transition Controller
+    const cameraViews = {
+      overview: { pos: new THREE.Vector3(17.5, 9.2, 18.5), target: new THREE.Vector3(0.2, 2.3, 0) },
+      rooftop: { pos: new THREE.Vector3(7.2, 7.6, 8.2), target: new THREE.Vector3(0.4, 4.1, -0.3) },
+      bow: { pos: new THREE.Vector3(12.2, 4.3, 6.2), target: new THREE.Vector3(5.6, 1.5, 0) },
+      windows: { pos: new THREE.Vector3(1.5, 3.3, 9.8), target: new THREE.Vector3(0.2, 2.1, 0) },
+      stern: { pos: new THREE.Vector3(-13.8, 5.2, 8.8), target: new THREE.Vector3(-5.5, 1.8, 0.5) }
+    };
+
+    let camAnim = null;
+    function flyToView(viewKey) {
+      const v = cameraViews[viewKey];
+      if (!v) return;
+      camAnim = {
+        startPos: camera.position.clone(),
+        endPos: v.pos.clone(),
+        startTarget: controls.target.clone(),
+        endTarget: v.target.clone(),
+        progress: 0
+      };
+      document.querySelectorAll('.cam-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.view === viewKey);
+      });
+    }
+
+    document.querySelectorAll('.cam-btn').forEach(btn => {
+      btn.addEventListener('click', () => flyToView(btn.dataset.view));
+    });
+
+    // Stop camera auto-transition if visitor clicks/drags to explore manually
+    controls.addEventListener('start', () => { camAnim = null; });
+
+    // Interactive 3D Hotspot Pins for Guests Exploring the Listing
+    const hotspotsData = [
+      {
+        id: 1,
+        pos: new THREE.Vector3(2.1, 4.5, -1.1),
+        view: 'rooftop',
+        title: '1 · Rooftop Sunset Lounge & Railings',
+        desc: 'Spacious upper sun terrace wrapped in glass-and-teak safety railings. Features an L-shaped cushioned corner sofa, shade umbrella, and 360° lake views.'
+      },
+      {
+        id: 2,
+        pos: new THREE.Vector3(-2.0, 4.8, -0.4),
+        view: 'rooftop',
+        title: '2 · Pergola Al-Fresco Dining',
+        desc: 'Dine outdoors beneath the slatted timber pergola and warm Edison festoon string lights at the 4-seat teak dining table.'
+      },
+      {
+        id: 3,
+        pos: new THREE.Vector3(5.8, 2.0, 0.0),
+        view: 'bow',
+        title: '3 · Bow Sun Deck & Lounge Chairs',
+        desc: 'Front timber deck right above the water with two reclined striped resort loungers, drinks table, brass lantern, and safety cable railings.'
+      },
+      {
+        id: 4,
+        pos: new THREE.Vector3(0.5, 2.35, 2.55),
+        view: 'windows',
+        title: '4 · Dual-Side Panoramic Windows',
+        desc: 'Four oversized picture windows along both port and starboard sides flood the open-plan living room, wood stove, and dining nook with water views.'
+      },
+      {
+        id: 5,
+        pos: new THREE.Vector3(-5.6, 2.1, 1.9),
+        view: 'stern',
+        title: '5 · Aft Swim Deck, Roof Stairs & Pier',
+        desc: 'Step straight off the wooden mooring pier onto the wide stern deck, take the open-tread stairs to the roof, or dip into the lake via the swim ladder.'
+      }
+    ];
+
+    const hotspotsLayer = document.getElementById('hotspots-layer');
+    const hotspotCard = document.getElementById('hotspot-card');
+    const hotspotTitle = document.getElementById('hotspot-title');
+    const hotspotDesc = document.getElementById('hotspot-desc');
+    const pinElements = [];
+
+    hotspotsData.forEach(h => {
+      const el = document.createElement('button');
+      el.className = 'hotspot-pin';
+      el.textContent = h.id;
+      el.title = h.title;
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        pinElements.forEach(p => p.el.classList.remove('active'));
+        el.classList.add('active');
+        hotspotTitle.textContent = h.title;
+        hotspotDesc.textContent = h.desc;
+        hotspotCard.classList.add('visible');
+        flyToView(h.view);
+      });
+      hotspotsLayer.appendChild(el);
+      pinElements.push({ el, data: h });
+    });
+
+    document.getElementById('hotspot-close').addEventListener('click', () => {
+      hotspotCard.classList.remove('visible');
+      pinElements.forEach(p => p.el.classList.remove('active'));
+    });
+
+    // Toggle Sliding Patio Doors (Bow & Stern)
+    let doorsOpen = false;
+    const toggleDoorsBtn = document.getElementById('toggle-doors-btn');
+    toggleDoorsBtn.addEventListener('click', () => {
+      doorsOpen = !doorsOpen;
+      toggleDoorsBtn.classList.toggle('active', doorsOpen);
+      toggleDoorsBtn.textContent = doorsOpen ? '🚪 Close Deck Doors' : '🚪 Open Deck Doors';
+    });
+
+    // Toggle Hotspot Tour Pins Visibility
+    let showHotspots = true;
+    const toggleHotspotsBtn = document.getElementById('toggle-hotspots-btn');
+    toggleHotspotsBtn.addEventListener('click', () => {
+      showHotspots = !showHotspots;
+      toggleHotspotsBtn.classList.toggle('active', showHotspots);
+      hotspotsLayer.style.display = showHotspots ? 'block' : 'none';
+      if (!showHotspots) hotspotCard.classList.remove('visible');
+    });
+
+    // Responsive Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Main Animation Loop
+    const clock = new THREE.Clock();
+    const tempVec = new THREE.Vector3();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      // Update water shader time
+      waterUniforms.uTime.value = elapsed;
+
+      // Gentle, realistic flat-bottomed houseboat hydro-bobbing & roll
+      boatGroup.position.y = Math.sin(elapsed * 1.15) * 0.028;
+      boatGroup.rotation.z = Math.sin(elapsed * 0.85) * 0.0055;
+      boatGroup.rotation.x = Math.cos(elapsed * 0.72) * 0.0065;
+
+      // Smoothly animate bow & stern sliding glass doors
+      slidingDoorPanels.forEach(panel => {
+        const targetZ = doorsOpen ? panel.userData.openZ : panel.userData.closedZ;
+        panel.position.z += (targetZ - panel.position.z) * 0.09;
+      });
+
+      // Gentle floating fireflies / dust motes
+      fireflies.rotation.y = elapsed * 0.03;
+      fireflies.position.y = Math.sin(elapsed * 0.9) * 0.12;
+
+      // Smooth camera preset transition
+      if (camAnim) {
+        camAnim.progress = Math.min(1, camAnim.progress + 0.028);
+        const t = 1 - Math.pow(1 - camAnim.progress, 3); // Cubic ease-out
+        camera.position.lerpVectors(camAnim.startPos, camAnim.endPos, t);
+        controls.target.lerpVectors(camAnim.startTarget, camAnim.endTarget, t);
+        if (camAnim.progress >= 1) camAnim = null;
+      }
+
+      controls.update();
+
+      // Project 3D hotspot coordinates to 2D screen overlay
+      if (showHotspots) {
+        pinElements.forEach(({ el, data }) => {
+          tempVec.copy(data.pos);
+          boatGroup.localToWorld(tempVec);
+          tempVec.project(camera);
+          if (tempVec.z > 1) {
+            el.style.display = 'none';
+          } else {
+            const x = (tempVec.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (-(tempVec.y * 0.5) + 0.5) * window.innerHeight;
+            el.style.display = 'flex';
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
+          }
+        });
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

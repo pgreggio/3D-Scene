@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Evening Beach Camper Van — 3D Simulation</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0b0c1a;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: #f6efe2;
+    }
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    #ui-panel {
+      position: fixed;
+      top: 18px;
+      left: 18px;
+      z-index: 10;
+      width: 290px;
+      background: rgba(15, 19, 34, 0.76);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 200, 130, 0.24);
+      border-radius: 14px;
+      padding: 16px 18px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    #ui-panel h1 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: #ffd39b;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #ui-panel p.subtitle {
+      font-size: 0.76rem;
+      color: rgba(246, 239, 226, 0.72);
+      margin-bottom: 12px;
+      line-height: 1.35;
+    }
+    .control-group {
+      margin-bottom: 11px;
+    }
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.76rem;
+      color: #f3dec0;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: #ff9e44;
+      cursor: pointer;
+      height: 5px;
+      border-radius: 4px;
+    }
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      margin-top: 8px;
+    }
+    .btn {
+      background: rgba(255, 175, 95, 0.14);
+      border: 1px solid rgba(255, 190, 120, 0.32);
+      color: #ffe8c8;
+      padding: 7px 9px;
+      border-radius: 8px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      text-align: center;
+    }
+    .btn:hover {
+      background: rgba(255, 175, 95, 0.28);
+      border-color: rgba(255, 205, 145, 0.65);
+      transform: translateY(-1px);
+    }
+    .btn.active {
+      background: linear-gradient(135deg, rgba(255, 148, 54, 0.48), rgba(255, 102, 68, 0.42));
+      border-color: #ffb86c;
+      color: #fff;
+      box-shadow: 0 0 12px rgba(255, 152, 56, 0.35);
+    }
+    .camera-bar {
+      display: flex;
+      gap: 5px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 210, 160, 0.15);
+    }
+    .cam-btn {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #e6d8c5;
+      padding: 5px 4px;
+      border-radius: 6px;
+      font-size: 0.69rem;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+    .cam-btn:hover, .cam-btn.active {
+      background: rgba(255, 185, 105, 0.28);
+      border-color: #ffbe76;
+      color: #fff;
+    }
+    #hint-pill {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      background: rgba(14, 18, 32, 0.74);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 200, 130, 0.24);
+      padding: 7px 16px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      color: rgba(255, 236, 210, 0.88);
+      pointer-events: none;
+      white-space: nowrap;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+    }
+    @media (max-width: 640px) {
+      #ui-panel {
+        width: 245px;
+        padding: 12px 14px;
+        top: 10px;
+        left: 10px;
+      }
+      #hint-pill {
+        font-size: 0.68rem;
+        padding: 5px 12px;
+        bottom: 10px;
+      }
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <div id="ui-panel">
+    <h1>
+      <span>Coastal Camper Evening</span>
+    </h1>
+    <p class="subtitle">Interactive 3D coastal scene — click the table lamp, camper door, or headlights directly in 3D.</p>
+
+    <div class="control-group">
+      <div class="control-label">
+        <span>Table Lamp Glow</span>
+        <span id="lamp-val">100%</span>
+      </div>
+      <input type="range" id="lamp-slider" min="0" max="160" value="100" />
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">
+        <span>Evening Twilight Depth</span>
+        <span id="dusk-val">Golden Dusk</span>
+      </div>
+      <input type="range" id="dusk-slider" min="0" max="100" value="38" />
+    </div>
+
+    <div class="btn-grid">
+      <button class="btn active" id="btn-door">Door: Open</button>
+      <button class="btn active" id="btn-lamp">Table Lamp: On</button>
+      <button class="btn active" id="btn-string">Awning Lights</button>
+      <button class="btn active" id="btn-headlights">Headlights</button>
+    </div>
+
+    <div class="camera-bar">
+      <button class="cam-btn active" data-cam="overview">Camp View</button>
+      <button class="cam-btn" data-cam="table">Table &amp; Door</button>
+      <button class="cam-btn" data-cam="shore">Shoreline</button>
+      <button class="cam-btn" data-cam="interior">Interior</button>
+    </div>
+  </div>
+
+  <div id="hint-pill">Drag to orbit &bull; Scroll to zoom &bull; Click lamp, van doors, or campfire to interact</div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+    import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+    // --- CORE SCENE, CAMERA, RENDERER ---
+    const container = document.getElementById('canvas-container');
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x211b30, 0.0065);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 400);
+    camera.position.set(6.6, 3.35, 7.6);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0.15, 1.85, 1.15);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxPolarAngle = Math.PI * 0.485;
+    controls.minDistance = 2.0;
+    controls.maxDistance = 42.0;
+    controls.update();
+
+    // Post-processing for warm evening bloom
+    const composer = new EffectComposer(renderer);
+    const renderPass = new RenderPass(scene, camera);
+    composer.addPass(renderPass);
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      0.42, // strength
+      0.55, // radius
+      0.78  // threshold
+    );
+    composer.addPass(bloomPass);
+    const outputPass = new OutputPass();
+    composer.addPass(outputPass);
+
+    // Interactive state
+    const state = {
+      doorOpen: true,
+      doorAngle: 1.0, // 0 = closed, 1 = open
+      lampOn: true,
+      lampIntensity: 1.0,
+      stringLightsOn: true,
+      headlightsOn: true,
+      duskFactor: 0.38,
+      cameraTransition: null
+    };
+    const interactiveMeshes = [];
+
+    // --- DETERMINISTIC NOISE & TERRAIN MATH ---
+    function hash2D(x, z) {
+      const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453123;
+      return s - Math.floor(s);
+    }
+
+    function valueNoise(x, z) {
+      const ix = Math.floor(x);
+      const iz = Math.floor(z);
+      const fx = x - ix;
+      const fz = z - iz;
+      const ux = fx * fx * (3.0 - 2.0 * fx);
+      const uz = fz * fz * (3.0 - 2.0 * fz);
+      const a = hash2D(ix, iz);
+      const b = hash2D(ix + 1, iz);
+      const c = hash2D(ix, iz + 1);
+      const d = hash2D(ix + 1, iz + 1);
+      return a + (b - a) * ux + (c - a) * uz + (a - b - c + d) * ux * uz;
+    }
+
+    function fbm(x, z) {
+      let v = 0.0;
+      let amp = 0.5;
+      let freq = 1.0;
+      for (let i = 0; i < 4; i++) {
+        v += amp * valueNoise(x * freq, z * freq);
+        freq *= 2.03;
+        amp *= 0.5;
+      }
+      return v;
+    }
+
+    // Shoreline runs diagonally so ocean is in (-Z, -X) background and dunes rise toward (+Z, +X)
+    function getShoreDistance(x, z) {
+      const waveCurve = Math.sin(x * 0.065) * 2.4 + Math.cos(z * 0.05) * 1.2;
+      return (z + 5.8) + x * 0.28 + waveCurve;
+    }
+
+    function getTerrainHeight(x, z) {
+      const shoreDist = getShoreDistance(x, z);
+      // Base slope from seabed (-2.2) up to beach shelf (1.35) and inland dunes
+      let h = 0.0;
+      if (shoreDist < 0) {
+        h = Math.max(-2.6, shoreDist * 0.16);
+      } else {
+        // Smooth rise from shoreline to beach plateau at ~1.35
+        const beachRise = 1.35 * (1.0 - Math.exp(-shoreDist * 0.24));
+        // Inland dune hills starting past shoreDist > 10
+        const duneFactor = Math.max(0.0, (shoreDist - 10.5) * 0.14);
+        const duneNoise = fbm(x * 0.07 + 3.1, z * 0.07 + 1.7) * 3.8;
+        h = beachRise + Math.min(5.5, duneFactor * duneNoise);
+      }
+      // Subtle sand ripples and micro-relief
+      const micro = (fbm(x * 0.22, z * 0.22) - 0.5) * 0.22;
+      h += micro * Math.min(1.0, Math.max(0.0, shoreDist * 0.15));
+
+      // Flatten campsite pad around (-0.4, 1.8) so camper van, table, and chairs sit naturally
+      const dx = x - (-0.4);
+      const dz = z - 1.8;
+      const distCamp = Math.sqrt(dx * dx + dz * dz);
+      const flatWeight = Math.max(0.0, Math.min(1.0, (7.2 - distCamp) / 3.2));
+      const smoothFlat = flatWeight * flatWeight * (3.0 - 2.0 * flatWeight);
+      const campPadHeight = 1.35;
+      return h * (1.0 - smoothFlat) + campPadHeight * smoothFlat;
+    }
+
+    // Returns 0.0 for pure sand, 1.0 for lush coastal grass
+    function getGrassWeight(x, z, y) {
+      if (y < 0.92) return 0.0;
+      const shoreDist = getShoreDistance(x, z);
+      if (shoreDist < 4.2) return 0.0;
+      const n = fbm(x * 0.18 + 11.4, z * 0.18 - 7.2);
+      const nDetail = valueNoise(x * 0.55, z * 0.55);
+      // Create organic grass patches around the campsite and denser grass inland
+      const base = (shoreDist - 5.2) * 0.085 + (n - 0.44) * 1.45 + (nDetail - 0.5) * 0.35;
+      // Keep a natural sandy track under the van tires while allowing grass tufts near the table & van
+      const tireDist = Math.exp(-((x + 1.3) * (x + 1.3) + (z - 0.6) * (z - 0.6)) * 0.22);
+      const w = Math.max(0.0, Math.min(1.0, base - tireDist * 0.42));
+      return w * w * (3.0 - 2.0 * w);
+    }
+
+    // --- PROCEDURAL CANVAS TEXTURES ---
+    function createWoodTexture(baseHex = '#a66a38', plankCount = 8) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = baseHex;
+      ctx.fillRect(0, 0, 512, 512);
+
+      const plankH = 512 / plankCount;
+      for (let p = 0; p < plankCount; p++) {
+        const y0 = p * plankH;
+        const shade = (hash2D(p, 4.2) - 0.5) * 22;
+        ctx.fillStyle = `rgba(${shade > 0 ? 255 : 0}, ${shade > 0 ? 220 : 0}, ${shade > 0 ? 180 : 0}, ${Math.abs(shade) / 255})`;
+        ctx.fillRect(0, y0, 512, plankH);
+
+        // Wood grain lines
+        for (let i = 0; i < 42; i++) {
+          const gy = y0 + (i / 42) * plankH;
+          ctx.strokeStyle = i % 5 === 0 ? 'rgba(45, 22, 8, 0.16)' : 'rgba(255, 220, 175, 0.06)';
+          ctx.lineWidth = 1 + (i % 3) * 0.6;
+          ctx.beginPath();
+          for (let x = 0; x <= 512; x += 32) {
+            const wy = gy + Math.sin(x * 0.025 + p * 2.1 + i * 0.3) * 2.4;
+            if (x === 0) ctx.moveTo(x, wy);
+            else ctx.lineTo(x, wy);
+          }
+          ctx.stroke();
+        }
+        // Plank seam
+        ctx.fillStyle = 'rgba(28, 14, 5, 0.55)';
+        ctx.fillRect(0, y0, 512, 2.5);
+      }
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createStripeFabricTexture(c1 = '#f5ead6', c2 = '#d96b43', c3 = '#2d6e7e') {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      const stripes = [c1, c2, c1, c3, c1, c2];
+      const sw = 256 / stripes.length;
+      for (let i = 0; i < stripes.length; i++) {
+        ctx.fillStyle = stripes[i];
+        ctx.fillRect(i * sw, 0, sw + 1, 256);
+      }
+      // Subtle canvas weave
+      ctx.fillStyle = 'rgba(0,0,0,0.05)';
+      for (let y = 0; y < 256; y += 4) {
+        ctx.fillRect(0, y, 256, 1.5);
+      }
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createSandDetailTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+      const img = ctx.createImageData(512, 512);
+      const data = img.data;
+      for (let y = 0; y < 512; y++) {
+        for (let x = 0; x < 512; x++) {
+          const idx = (y * 512 + x) * 4;
+          const ripple = Math.sin(x * 0.09 + Math.sin(y * 0.04) * 2.5) * 0.5 + 0.5;
+          const grain = hash2D(x * 0.7, y * 0.7);
+          const v = Math.floor((ripple * 0.65 + grain * 0.35) * 255);
+          data[idx] = v;
+          data[idx + 1] = v;
+          data[idx + 2] = v;
+          data[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(28, 28);
+      return tex;
+    }
+
+    const woodTex = createWoodTexture('#b57542', 10);
+    const darkWoodTex = createWoodTexture('#7c4b27', 8);
+    const awningTex = createStripeFabricTexture('#f6ecda', '#e06d44', '#337687');
+    const sandBumpTex = createSandDetailTexture();
+
+    // --- EVENING SKY DOME, SUNSET HORIZON, STARS & CRESCENT MOON ---
+    const sunDirection = new THREE.Vector3(-0.46, 0.075, -0.885).normalize();
+
+    const skyUniforms = {
+      uTime: { value: 0 },
+      uSunDir: { value: sunDirection.clone() },
+      uDusk: { value: state.duskFactor }
+    };
+
+    const skyGeo = new THREE.SphereGeometry(240, 64, 32);
+    const skyMat = new THREE.ShaderMaterial({
+      side: THREE.BackSide,
+      depthWrite: false,
+      uniforms: skyUniforms,
+      vertexShader: `
+        varying vec3 vWorldPos;
+        void main() {
+          vec4 wp = modelMatrix * vec4(position, 1.0);
+          vWorldPos = wp.xyz;
+          gl_Position = projectionMatrix * viewMatrix * wp;
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vWorldPos;
+        uniform float uTime;
+        uniform vec3 uSunDir;
+        uniform float uDusk;
+
+        float hash(vec3 p) {
+          p = fract(p * 0.3183099 + 0.1);
+          p *= 17.0;
+          return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+        }
+
+        float cloudNoise(vec2 uv) {
+          vec2 i = floor(uv);
+          vec2 f = fract(uv);
+          f = f * f * (3.0 - 2.0 * f);
+          float a = hash(vec3(i, 0.0));
+          float b = hash(vec3(i + vec2(1.0, 0.0), 0.0));
+          float c = hash(vec3(i + vec2(0.0, 1.0), 0.0));
+          float d = hash(vec3(i + vec2(1.0, 1.0), 0.0));
+          return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+        }
+
+        void main() {
+          vec3 dir = normalize(vWorldPos);
+          float h = clamp(dir.y, 0.0, 1.0);
+
+          // Evening palette shifting with uDusk
+          vec3 zenithCol = mix(vec3(0.08, 0.10, 0.24), vec3(0.03, 0.04, 0.11), uDusk);
+          vec3 midSkyCol = mix(vec3(0.36, 0.22, 0.42), vec3(0.16, 0.11, 0.26), uDusk);
+          vec3 horizonCol = mix(vec3(0.96, 0.46, 0.25), vec3(0.68, 0.26, 0.22), uDusk);
+
+          vec3 col = mix(horizonCol, midSkyCol, pow(h, 0.38));
+          col = mix(col, zenithCol, pow(h, 0.78));
+
+          // Sunset glow around sunDir
+          float sunAmt = max(dot(dir, uSunDir), 0.0);
+          col += vec3(1.0, 0.56, 0.22) * pow(sunAmt, 7.0) * (0.65 - uDusk * 0.28);
+          col += vec3(1.0, 0.85, 0.55) * smoothstep(0.9965, 0.9996, sunAmt) * (1.2 - uDusk * 0.5);
+
+          // Soft evening cloud bands near horizon
+          if (dir.y > 0.01 && dir.y < 0.48) {
+            vec2 cuv = dir.xz / (dir.y + 0.12) * 1.4 + vec2(uTime * 0.008, 0.0);
+            float cn = cloudNoise(cuv * 2.2) * 0.6 + cloudNoise(cuv * 5.0) * 0.4;
+            float cloudMask = smoothstep(0.47, 0.72, cn) * smoothstep(0.01, 0.09, dir.y) * smoothstep(0.45, 0.14, dir.y);
+            vec3 cloudLit = mix(vec3(0.22, 0.15, 0.30), vec3(1.0, 0.58, 0.32), pow(sunAmt, 2.0));
+            col = mix(col, cloudLit, cloudMask * 0.55);
+          }
+
+          // Crescent moon in upper sky
+          vec3 moonDir = normalize(vec3(0.45, 0.52, -0.72));
+          float moonDist = length(dir - moonDir);
+          float moonCircle = smoothstep(0.024, 0.021, moonDist);
+          float moonCut = smoothstep(0.022, 0.019, length(dir - normalize(moonDir + vec3(-0.011, 0.005, 0.0))));
+          float crescent = clamp(moonCircle - moonCut, 0.0, 1.0);
+          col += vec3(1.0, 0.95, 0.82) * crescent * 1.4;
+          col += vec3(0.65, 0.72, 0.95) * exp(-moonDist * 22.0) * 0.16;
+
+          // Twinkling evening stars in upper dome
+          if (h > 0.15) {
+            vec3 starCell = floor(dir * 260.0);
+            float sh = hash(starCell);
+            if (sh > 0.9935) {
+              float twinkle = 0.55 + 0.45 * sin(uTime * 2.8 + sh * 120.0);
+              float starVis = smoothstep(0.15, 0.55, h) * (0.45 + uDusk * 0.55);
+              col += vec3(0.95, 0.93, 1.0) * twinkle * starVis * 0.9;
+            }
+          }
+
+          gl_FragColor = vec4(col, 1.0);
+        }
+      `
+    });
+    const skyMesh = new THREE.Mesh(skyGeo, skyMat);
+    scene.add(skyMesh);
+
+    // --- EVENING LIGHTING ---
+    const hemiLight = new THREE.HemisphereLight(0x6e68a8, 0x4b382a, 0.72);
+    hemiLight.position.set(0, 40, 0);
+    scene.add(hemiLight);
+
+    const sunLight = new THREE.DirectionalLight(0xff8f4b, 1.45);
+    sunLight.position.copy(sunDirection).multiplyScalar(65);
+    sunLight.position.y = 14.5;
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 10;
+    sunLight.shadow.camera.far = 140;
+    const d = 18;
+    sunLight.shadow.camera.left = -d;
+    sunLight.shadow.camera.right = d;
+    sunLight.shadow.camera.top = d;
+    sunLight.shadow.camera.bottom = -d;
+    sunLight.shadow.bias = -0.0005;
+    scene.add(sunLight);
+
+    // Soft cool twilight rim light from opposite sky
+    const rimLight = new THREE.DirectionalLight(0x5268b8, 0.38);
+    rimLight.position.set(25, 18, 30);
+    scene.add(rimLight);
+
+    // --- BEACH TERRAIN (SAND & GRASS) ---
+    const terrainSize = 150;
+    const terrainSegs = 200;
+    const terrainGeo = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegs, terrainSegs);
+    terrainGeo.rotateX(-Math.PI / 2);
+
+    const posAttr = terrainGeo.attributes.position;
+    const colors = new Float32Array(posAttr.count * 3);
+    const normals = new Float32Array(posAttr.count * 3);
+
+    const wetSandCol = new THREE.Color(0x6e553e);
+    const drySandCol = new THREE.Color(0xdcb786);
+    const warmSandCol = new THREE.Color(0xc99f6c);
+    const grassColA = new THREE.Color(0x3b6939);
+    const grassColB = new THREE.Color(0x557d42);
+    const tempCol = new THREE.Color();
+    const grassTemp = new THREE.Color();
+
+    const eps = 0.25;
+    for (let i = 0; i < posAttr.count; i++) {
+      const x = posAttr.getX(i);
+      const z = posAttr.getZ(i);
+      const y = getTerrainHeight(x, z);
+      posAttr.setY(i, y);
+
+      // Finite difference normal
+      const hx = getTerrainHeight(x + eps, z) - getTerrainHeight(x - eps, z);
+      const hz = getTerrainHeight(x, z + eps) - getTerrainHeight(x, z - eps);
+      const nx = -hx / (2 * eps);
+      const ny = 1.0;
+      const nz = -hz / (2 * eps);
+      const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+      normals[i * 3] = nx / len;
+      normals[i * 3 + 1] = ny / len;
+      normals[i * 3 + 2] = nz / len;
+
+      // Sand vs Grass vertex color blend
+      const nVal = valueNoise(x * 0.35, z * 0.35);
+      tempCol.copy(drySandCol).lerp(warmSandCol, nVal);
+
+      // Wet shoreline darkening
+      const wetFactor = 1.0 - Math.min(1.0, Math.max(0.0, (y - 0.02) / 0.52));
+      tempCol.lerp(wetSandCol, wetFactor * 0.85);
+
+      // Grass blending
+      const gWeight = getGrassWeight(x, z, y);
+      if (gWeight > 0.001) {
+        grassTemp.copy(grassColA).lerp(grassColB, valueNoise(x * 0.6 + 2.0, z * 0.6));
+        tempCol.lerp(grassTemp, gWeight);
+      }
+
+      colors[i * 3] = tempCol.r;
+      colors[i * 3 + 1] = tempCol.g;
+      colors[i * 3 + 2] = tempCol.b;
+    }
+
+    terrainGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    terrainGeo.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+
+    const terrainMat = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      bumpMap: sandBumpTex,
+      bumpScale: 0.045,
+      roughness: 0.86,
+      metalness: 0.04
+    });
+
+    const terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
+    terrainMesh.receiveShadow = true;
+    scene.add(terrainMesh);
+
+    // --- ANIMATED EVENING OCEAN & SHORELINE FOAM ---
+    const oceanUniforms = {
+      uTime: { value: 0 },
+      uSunDir: { value: sunDirection.clone() },
+      uDusk: { value: state.duskFactor },
+      uCamPos: { value: camera.position }
+    };
+
+    const oceanGeo = new THREE.PlaneGeometry(180, 180, 150, 150);
+    oceanGeo.rotateX(-Math.PI / 2);
+
+    const oceanMat = new THREE.ShaderMaterial({
+      transparent: true,
+      uniforms: oceanUniforms,
+      vertexShader: `
+        uniform float uTime;
+        varying vec3 vWorldPos;
+        varying float vShoreDist;
+        varying float vWaveHeight;
+
+        float getShore(vec2 p) {
+          float waveCurve = sin(p.x * 0.065) * 2.4 + cos(p.y * 0.05) * 1.2;
+          return (p.y + 5.8) + p.x * 0.28 + waveCurve;
+        }
+
+        void main() {
+          vec4 wp = modelMatrix * vec4(position, 1.0);
+          float sd = getShore(wp.xz);
+          vShoreDist = sd;
+
+          float damp = clamp(-sd * 0.18, 0.0, 1.0);
+          float w1 = sin(wp.x * 0.35 + wp.z * 0.45 + uTime * 1.65) * 0.11;
+          float w2 = cos(wp.x * 0.7 - wp.z * 0.55 + uTime * 2.1) * 0.05;
+          float w3 = sin((sd) * 1.35 + uTime * 2.4) * 0.06;
+          float h = (w1 + w2) * damp + w3 * clamp(1.0 - abs(sd) * 0.12, 0.0, 1.0);
+
+          wp.y += h;
+          vWaveHeight = h;
+          vWorldPos = wp.xyz;
+          gl_Position = projectionMatrix * viewMatrix * wp;
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform vec3 uSunDir;
+        uniform float uDusk;
+        uniform vec3 uCamPos;
+        varying vec3 vWorldPos;
+        varying float vShoreDist;
+        varying float vWaveHeight;
+
+        void main() {
+          // Shoreline swash oscillation
+          float swash = sin(uTime * 1.8 + vWorldPos.x * 0.25) * 0.55;
+          float effectiveShore = vShoreDist + swash;
+          if (effectiveShore > 0.65) discard;
+
+          // Procedural wave normal
+          float nx = cos(vWorldPos.x * 0.9 + vWorldPos.z * 0.7 + uTime * 2.1) * 0.16
+                   + sin(vWorldPos.x * 2.1 - uTime * 1.6) * 0.08;
+          float nz = sin(vWorldPos.z * 1.1 - vWorldPos.x * 0.5 + uTime * 1.9) * 0.16
+                   + cos(vWorldPos.z * 2.4 + uTime * 2.3) * 0.08;
+          vec3 N = normalize(vec3(nx, 1.0, nz));
+
+          vec3 V = normalize(uCamPos - vWorldPos);
+          vec3 R = reflect(-V, N);
+          float fresnel = pow(1.0 - max(dot(N, V), 0.0), 3.6);
+
+          // Water base colors (deep evening teal to shallow turquoise-amber)
+          vec3 deepCol = mix(vec3(0.05, 0.13, 0.22), vec3(0.02, 0.06, 0.13), uDusk);
+          vec3 shallowCol = mix(vec3(0.12, 0.30, 0.34), vec3(0.06, 0.16, 0.22), uDusk);
+          float shallowMask = clamp(1.0 - (-effectiveShore) * 0.08, 0.0, 1.0);
+          vec3 waterCol = mix(deepCol, shallowCol, shallowMask);
+
+          // Sky reflection color
+          vec3 skyRef = mix(vec3(0.75, 0.40, 0.34), vec3(0.20, 0.16, 0.32), clamp(R.y * 1.6 + uDusk * 0.4, 0.0, 1.0));
+          vec3 col = mix(waterCol, skyRef, fresnel * 0.78);
+
+          // Sunset specular shimmer path on the waves
+          vec3 H = normalize(V + normalize(vec3(uSunDir.x, 0.16, uSunDir.z)));
+          float spec = pow(max(dot(N, H), 0.0), 90.0);
+          float glitter = pow(max(dot(N, H), 0.0), 18.0);
+          vec3 sunSpecCol = mix(vec3(1.0, 0.62, 0.28), vec3(0.95, 0.42, 0.22), uDusk);
+          col += sunSpecCol * (spec * 2.2 + glitter * 0.38) * (1.0 - uDusk * 0.35);
+
+          // Shoreline whitewash & foam bands
+          float foamEdge = smoothstep(-1.8, 0.35, effectiveShore);
+          float foamWaves = sin(effectiveShore * 5.2 + uTime * 3.1 + sin(vWorldPos.x * 0.8) * 1.5);
+          float foamBand = smoothstep(0.45, 0.88, foamWaves) * smoothstep(-5.5, 0.2, effectiveShore);
+          float foam = clamp(foamEdge * 0.85 + foamBand * 0.65, 0.0, 1.0);
+          vec3 foamCol = mix(vec3(0.96, 0.88, 0.80), vec3(0.65, 0.62, 0.72), uDusk);
+          col = mix(col, foamCol, foam);
+
+          float alpha = smoothstep(0.65, -0.35, effectiveShore);
+          gl_FragColor = vec4(col, alpha);
+        }
+      `
+    });
+
+    const oceanMesh = new THREE.Mesh(oceanGeo, oceanMat);
+    oceanMesh.position.y = 0.08;
+    scene.add(oceanMesh);
+
+    // --- COASTAL ROCKS & DRIFTWOOD ---
+    const rockMat = new THREE.MeshStandardMaterial({
+      color: 0x56535c,
+      roughness: 0.88,
+      metalness: 0.06
+    });
+
+    function createCoastalRock(x, z, scaleX, scaleY, scaleZ, seed) {
+      const geo = new THREE.DodecahedronGeometry(1.0, 2);
+      const p = geo.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        const vx = p.getX(i);
+        const vy = p.getY(i);
+        const vz = p.getZ(i);
+        const n = valueNoise(vx * 1.8 + seed, vz * 1.8 + vy * 1.4);
+        const disp = 0.78 + n * 0.38;
+        p.setXYZ(i, vx * disp * scaleX, vy * disp * scaleY, vz * disp * scaleZ);
+      }
+      geo.computeVertexNormals();
+      const mesh = new THREE.Mesh(geo, rockMat);
+      const y = getTerrainHeight(x, z);
+      mesh.position.set(x, y + scaleY * 0.25, z);
+      mesh.rotation.set(seed * 0.5, seed * 1.7, seed * 0.3);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+    }
+
+    // Cluster of coastal boulders near the water and dune flanks
+    const rockConfigs = [
+      [-10.5, -1.2, 2.2, 1.3, 1.8, 1.1],
+      [-8.6, -2.0, 1.3, 0.85, 1.2, 2.4],
+      [-12.2, -3.5, 2.8, 1.6, 2.1, 3.7],
+      [9.5, -6.5, 1.9, 1.1, 1.6, 5.2],
+      [11.2, -5.2, 1.2, 0.75, 1.1, 6.8],
+      [-7.2, 6.4, 1.5, 0.9, 1.3, 8.1],
+      [7.8, 5.8, 1.7, 1.0, 1.4, 9.4]
+    ];
+    for (const rc of rockConfigs) {
+      createCoastalRock(rc[0], rc[1], rc[2], rc[3], rc[4], rc[5]);
+    }
+
+    // Bleached coastal driftwood log near shoreline
+    const driftMat = new THREE.MeshStandardMaterial({
+      map: woodTex,
+      color: 0xa89988,
+      roughness: 0.92
+    });
+    const driftLog = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.19, 3.2, 10), driftMat);
+    const driftX = -5.2, driftZ = -1.6;
+    driftLog.position.set(driftX, getTerrainHeight(driftX, driftZ) + 0.11, driftZ);
+    driftLog.rotation.set(Math.PI / 2 - 0.06, 0.4, 0.55);
+    driftLog.castShadow = true;
+    driftLog.receiveShadow = true;
+    scene.add(driftLog);
+
+    // --- RETRO CAMPER VAN WITH OPEN DOOR & DETAILED INTERIOR ---
+    const vanGroup = new THREE.Group();
+    const vanX = -1.45, vanZ = 0.85;
+    vanGroup.position.set(vanX, getTerrainHeight(vanX, vanZ), vanZ);
+    vanGroup.rotation.y = 0.36;
+    scene.add(vanGroup);
+
+    // Materials for the Camper Van
+    const paintLowerMat = new THREE.MeshStandardMaterial({
+      color: 0xd95b38, // Vintage sunset coral-terracotta
+      roughness: 0.28,
+      metalness: 0.15
+    });
+    const paintUpperMat = new THREE.MeshStandardMaterial({
+      color: 0xf7eedc, // Classic warm cream
+      roughness: 0.32,
+      metalness: 0.08
+    });
+    const chromeMat = new THREE.MeshStandardMaterial({
+      color: 0xe8edf2,
+      roughness: 0.14,
+      metalness: 0.92
+    });
+    const darkMetalMat = new THREE.MeshStandardMaterial({
+      color: 0x22252a,
+      roughness: 0.65,
+      metalness: 0.55
+    });
+    const tireMat = new THREE.MeshStandardMaterial({
+      color: 0x1b1c20,
+      roughness: 0.88,
+      metalness: 0.05
+    });
+    const glassMat = new THREE.MeshPhysicalMaterial({
+      color: 0xdff0ff,
+      transparent: true,
+      opacity: 0.32,
+      roughness: 0.08,
+      metalness: 0.1,
+      transmission: 0.6
+    });
+    const interiorWoodMat = new THREE.MeshStandardMaterial({
+      map: woodTex,
+      roughness: 0.62,
+      metalness: 0.05
+    });
+    const cabinetWoodMat = new THREE.MeshStandardMaterial({
+      map: darkWoodTex,
+      roughness: 0.55,
+      metalness: 0.06
+    });
+
+    // Helper to add mesh to a parent
+    function addPart(parent, geo, mat, x, y, z, rx = 0, ry = 0, rz = 0, cast = true) {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, z);
+      m.rotation.set(rx, ry, rz);
+      m.castShadow = cast;
+      m.receiveShadow = true;
+      parent.add(m);
+      return m;
+    }
+
+    // 1. Wheels (4 road wheels + 1 rear spare)
+    const wheelPositions = [
+      [-1.38, 0.38, 0.96],
+      [ 1.38, 0.38, 0.96],
+      [-1.38, 0.38, -0.96],
+      [ 1.38, 0.38, -0.96]
+    ];
+    for (const [wx, wy, wz] of wheelPositions) {
+      const wGroup = new THREE.Group();
+      wGroup.position.set(wx, wy, wz);
+      const sideSign = wz > 0 ? 1 : -1;
+      addPart(wGroup, new THREE.CylinderGeometry(0.38, 0.38, 0.24, 24), tireMat, 0, 0, 0, Math.PI / 2, 0, 0);
+      addPart(wGroup, new THREE.CylinderGeometry(0.27, 0.27, 0.25, 24), paintUpperMat, 0, 0, 0, Math.PI / 2, 0, 0);
+      addPart(wGroup, new THREE.SphereGeometry(0.18, 20, 12), chromeMat, 0, 0, sideSign * 0.06).scale.set(1, 1, 0.45);
+      vanGroup.add(wGroup);
+    }
+
+    // 2. Chassis & Floor
+    addPart(vanGroup, new THREE.BoxGeometry(4.48, 0.12, 1.96), darkMetalMat, 0, 0.46, 0);
+    addPart(vanGroup, new THREE.BoxGeometry(4.36, 0.04, 1.88), interiorWoodMat, 0, 0.53, 0);
+    // Pull-out entry step below the open doorway
+    addPart(vanGroup, new THREE.BoxGeometry(0.95, 0.04, 0.32), chromeMat, 0.06, 0.32, 1.12);
+    addPart(vanGroup, new THREE.BoxGeometry(0.88, 0.02, 0.26), darkWoodTex ? cabinetWoodMat : darkMetalMat, 0.06, 0.345, 1.12);
+
+    // 3. Driver Side Wall (z = -0.96, closed side)
+    addPart(vanGroup, new THREE.BoxGeometry(4.32, 0.88, 0.08), paintLowerMat, -0.05, 0.94, -0.96);
+    addPart(vanGroup, new THREE.BoxGeometry(4.32, 0.05, 0.11), chromeMat, -0.05, 1.39, -0.96);
+    // Upper pillars along driver side
+    const pillarXs = [-2.12, -1.05, 0.05, 0.92, 1.88];
+    for (const px of pillarXs) {
+      addPart(vanGroup, new THREE.BoxGeometry(0.18, 0.82, 0.08), paintUpperMat, px, 1.81, -0.96);
+    }
+    addPart(vanGroup, new THREE.BoxGeometry(4.24, 0.12, 0.08), paintUpperMat, -0.05, 2.20, -0.96);
+    addPart(vanGroup, new THREE.BoxGeometry(3.95, 0.72, 0.02), glassMat, -0.1, 1.80, -0.96, 0, 0, 0, false);
+
+    // 4. Rear Wall (x = -2.20)
+    addPart(vanGroup, new THREE.BoxGeometry(0.08, 0.88, 1.98), paintLowerMat, -2.18, 0.94, 0);
+    addPart(vanGroup, new THREE.BoxGeometry(0.11, 0.05, 2.02), chromeMat, -2.18, 1.39, 0);
+    addPart(vanGroup, new THREE.BoxGeometry(0.08, 0.82, 0.36), paintUpperMat, -2.18, 1.81, -0.80);
+    addPart(vanGroup, new THREE.BoxGeometry(0.08, 0.82, 0.36), paintUpperMat, -2.18, 1.81, 0.80);
+    addPart(vanGroup, new THREE.BoxGeometry(0.08, 0.16, 1.96), paintUpperMat, -2.18, 2.18, 0);
+    addPart(vanGroup, new THREE.BoxGeometry(0.02, 0.68, 1.28), glassMat, -2.18, 1.80, 0, 0, 0, 0, false);
+    // Rear bumper & spare tire
+    addPart(vanGroup, new THREE.BoxGeometry(0.16, 0.14, 2.12), chromeMat, -2.30, 0.50, 0);
+    addPart(vanGroup, new THREE.CylinderGeometry(0.34, 0.34, 0.20, 22), paintUpperMat, -2.30, 1.05, 0, 0, 0, Math.PI / 2);
+    // Taillights
+    const tailMat = new THREE.MeshStandardMaterial({ color: 0xff2211, emissive: 0xff1e00, emissiveIntensity: 1.6, roughness: 0.2 });
+    addPart(vanGroup, new THREE.BoxGeometry(0.06, 0.20, 0.12), tailMat, -2.22, 0.82, 0.78);
+    addPart(vanGroup, new THREE.BoxGeometry(0.06, 0.20, 0.12), tailMat, -2.22, 0.82, -0.78);
+
+    // 5. Front Nose & Cab (x = +1.95 to +2.26)
+    addPart(vanGroup, new THREE.BoxGeometry(0.12, 0.88, 1.98), paintLowerMat, 2.14, 0.94, 0);
+    addPart(vanGroup, new THREE.BoxGeometry(0.14, 0.05, 2.02), chromeMat, 2.15, 1.39, 0);
+    // Sloped windshield frame
+    const wsGroup = new THREE.Group();
+    wsGroup.position.set(2.04, 1.80, 0);
+    wsGroup.rotation.z = 0.22;
+    addPart(wsGroup, new THREE.BoxGeometry(0.08, 0.84, 0.14), paintUpperMat, 0, 0, -0.92);
+    addPart(wsGroup, new THREE.BoxGeometry(0.08, 0.84, 0.14), paintUpperMat, 0, 0, 0.92);
+    addPart(wsGroup, new THREE.BoxGeometry(0.08, 0.84, 0.07), paintUpperMat, 0, 0, 0); // Split window center bar
+    addPart(wsGroup, new THREE.BoxGeometry(0.08, 0.14, 1.96), paintUpperMat, 0, 0.38, 0);
+    addPart(wsGroup, new THREE.BoxGeometry(0.02, 0.70, 1.76), glassMat, 0, 0, 0, 0, 0, 0, false);
+    vanGroup.add(wsGroup);
+
+    // Front bumper, classic chrome badge & headlights
+    addPart(vanGroup, new THREE.BoxGeometry(0.18, 0.14, 2.14), chromeMat, 2.28, 0.50, 0);
+    addPart(vanGroup, new THREE.CylinderGeometry(0.19, 0.19, 0.04, 24), chromeMat, 2.21, 1.18, 0, 0, 0, Math.PI / 2);
+
+    const headlightMat = new THREE.MeshStandardMaterial({
+      color: 0xfff8e0,
+      emissive: 0xffd27d,
+      emissiveIntensity: 2.8,
+      roughness: 0.1
+    });
+    for (const hz of [-0.66, 0.66]) {
+      addPart(vanGroup, new THREE.CylinderGeometry(0.15, 0.15, 0.06, 20), chromeMat, 2.20, 0.95, hz, 0, 0, Math.PI / 2);
+      const hlMesh = addPart(vanGroup, new THREE.SphereGeometry(0.12, 16, 12), headlightMat, 2.21, 0.95, hz);
+      hlMesh.scale.set(0.45, 1, 1);
+      hlMesh.userData.interactiveType = 'headlights';
+      interactiveMeshes.push(hlMesh);
+    }
+
+    // Headlight SpotLight casting warm beam onto sandy path ahead
+    const headlightSpot = new THREE.SpotLight(0xffcf82, 2.4, 18, Math.PI * 0.28, 0.55, 1.4);
+    headlightSpot.position.set(2.25, 0.95, 0);
+    headlightSpot.target.position.set(8.5, 0.2, 0);
+    vanGroup.add(headlightSpot);
+    vanGroup.add(headlightSpot.target);
+
+    // 6. Passenger / Camp Side Wall (z = +0.96) WITH OPEN DOORWAY (-0.68 to +0.82)
+    // Rear passenger panel (-2.18 to -0.68)
+    addPart(vanGroup, new THREE.BoxGeometry(1.50, 0.88, 0.08), paintLowerMat, -1.43, 0.94, 0.96);
+    addPart(vanGroup, new THREE.BoxGeometry(1.50, 0.05, 0.11), chromeMat, -1.43, 1.39, 0.96);
+    addPart(vanGroup, new THREE.BoxGeometry(0.16, 0.82, 0.08), paintUpperMat, -2.10, 1.81, 0.96);
+    addPart(vanGroup, new THREE.BoxGeometry(0.16, 0.82, 0.08), paintUpperMat, -0.74, 1.81, 0.96);
+    addPart(vanGroup, new THREE.BoxGeometry(1.24, 0.70, 0.02), glassMat, -1.42, 1.80, 0.96, 0, 0, 0, false);
+
+    // Front cab passenger side (+0.82 to +2.10)
+    addPart(vanGroup, new THREE.BoxGeometry(1.28, 0.88, 0.08), paintLowerMat, 1.46, 0.94, 0.96);
+    addPart(vanGroup, new THREE.BoxGeometry(1.28, 0.05, 0.11), chromeMat, 1.46, 1.39, 0.96);
+    addPart(vanGroup, new THREE.BoxGeometry(0.16, 0.82, 0.08), paintUpperMat, 0.88, 1.81, 0.96);
+    addPart(vanGroup, new THREE.BoxGeometry(1.02, 0.70, 0.02), glassMat, 1.44, 1.80, 0.96, 0, 0, 0, false);
+    // Upper header beam across passenger side
+    addPart(vanGroup, new THREE.BoxGeometry(4.24, 0.12, 0.08), paintUpperMat, -0.05, 2.20, 0.96);
+
+    // 7. HINGED DOUBLE CAMPER DOORS (Interactive Open/Close)
+    // Left main camper door (hinged at x = -0.66, z = 0.98, width = 0.90)
+    const doorPivotLeft = new THREE.Group();
+    doorPivotLeft.position.set(-0.66, 0.54, 0.98);
+    vanGroup.add(doorPivotLeft);
+
+    // Right camper door (hinged at x = +0.80, z = 0.98, width = 0.56)
+    const doorPivotRight = new THREE.Group();
+    doorPivotRight.position.set(0.80, 0.54, 0.98);
+    vanGroup.add(doorPivotRight);
+
+    function populateDoorLeaf(pivot, width, dirSign) {
+      const cx = dirSign * (width * 0.5);
+      const lower = addPart(pivot, new THREE.BoxGeometry(width, 0.84, 0.07), paintLowerMat, cx, 0.42, 0);
+      const innerPanel = addPart(pivot, new THREE.BoxGeometry(width - 0.08, 0.74, 0.02), interiorWoodMat, cx, 0.42, -0.04);
+      const trim = addPart(pivot, new THREE.BoxGeometry(width, 0.05, 0.09), chromeMat, cx, 0.85, 0);
+      const frameL = addPart(pivot, new THREE.BoxGeometry(0.10, 0.76, 0.07), paintUpperMat, dirSign * 0.05, 1.24, 0);
+      const frameR = addPart(pivot, new THREE.BoxGeometry(0.10, 0.76, 0.07), paintUpperMat, dirSign * (width - 0.05), 1.24, 0);
+      const frameT = addPart(pivot, new THREE.BoxGeometry(width, 0.10, 0.07), paintUpperMat, cx, 1.58, 0);
+      const win = addPart(pivot, new THREE.BoxGeometry(width - 0.18, 0.64, 0.02), glassMat, cx, 1.23, 0, 0, 0, 0, false);
+      const handle = addPart(pivot, new THREE.BoxGeometry(0.12, 0.04, 0.08), chromeMat, dirSign * (width - 0.14), 0.76, 0.05);
+      for (const m of [lower, innerPanel, trim, frameL, frameR, frameT, win, handle]) {
+        m.userData.interactiveType = 'door';
+        interactiveMeshes.push(m);
+      }
+    }
+    populateDoorLeaf(doorPivotLeft, 0.90, 1);
+    populateDoorLeaf(doorPivotRight, 0.56, -1);
+
+    // Set initial open door angles
+    doorPivotLeft.rotation.y = -2.18;  // Swung wide open (~125 deg)
+    doorPivotRight.rotation.y = 1.95;  // Swung wide open (~112 deg)
+
+    // 8. Roof Cap, Roof Rack & Surfboard
+    addPart(vanGroup, new THREE.BoxGeometry(4.18, 0.12, 1.94), paintUpperMat, -0.08, 2.29, 0);
+    // Pop-top raised camper roof section
+    addPart(vanGroup, new THREE.BoxGeometry(2.55, 0.14, 1.48), paintUpperMat, -0.35, 2.40, 0);
+    // Chrome roof rack rails at rear
+    addPart(vanGroup, new THREE.BoxGeometry(1.35, 0.08, 1.56), chromeMat, -1.45, 2.38, 0);
+    // Classic Longboard Surfboard on the roof
+    const surfGroup = new THREE.Group();
+    surfGroup.position.set(-0.25, 2.50, -0.25);
+    surfGroup.rotation.y = 0.06;
+    const surfGeo = new THREE.SphereGeometry(1.0, 24, 16);
+    surfGeo.scale(1.55, 0.045, 0.34);
+    addPart(surfGroup, surfGeo, paintUpperMat, 0, 0, 0);
+    const stripeGeo = new THREE.BoxGeometry(2.85, 0.095, 0.10);
+    addPart(surfGroup, stripeGeo, paintLowerMat, 0, 0, 0);
+    vanGroup.add(surfGroup);
+
+    // 9. Detailed Camper Interior (Bed, Kitchenette, Cabinets, Warm Dome Light)
+    const blanketMat = new THREE.MeshStandardMaterial({ map: awningTex, roughness: 0.78 });
+    const mattressMat = new THREE.MeshStandardMaterial({ color: 0xefe6d5, roughness: 0.8 });
+    // Rear bed platform & bedding
+    addPart(vanGroup, new THREE.BoxGeometry(1.32, 0.32, 1.82), cabinetWoodMat, -1.48, 0.70, 0);
+    addPart(vanGroup, new THREE.BoxGeometry(1.28, 0.14, 1.78), mattressMat, -1.46, 0.92, 0);
+    addPart(vanGroup, new THREE.BoxGeometry(0.78, 0.15, 1.76), blanketMat, -1.68, 0.94, 0);
+    // Pillows
+    addPart(vanGroup, new THREE.BoxGeometry(0.28, 0.12, 0.56), paintLowerMat, -1.92, 1.05, -0.45, 0, 0.1, 0.15);
+    addPart(vanGroup, new THREE.BoxGeometry(0.28, 0.12, 0.56), paintUpperMat, -1.92, 1.05, 0.45, 0, -0.1, 0.15);
+
+    // Kitchenette & counter along inner driver wall (visible right through the open door!)
+    addPart(vanGroup, new THREE.BoxGeometry(1.42, 0.68, 0.58), cabinetWoodMat, 0.02, 0.88, -0.60);
+    addPart(vanGroup, new THREE.BoxGeometry(1.46, 0.05, 0.62), paintUpperMat, 0.02, 1.24, -0.59); // Countertop
+    // Mini sink & chrome faucet
+    addPart(vanGroup, new THREE.CylinderGeometry(0.14, 0.12, 0.06, 16), chromeMat, -0.25, 1.25, -0.56);
+    addPart(vanGroup, new THREE.TorusGeometry(0.07, 0.015, 8, 16, Math.PI), chromeMat, -0.25, 1.32, -0.66, 0, Math.PI / 2, 0);
+    // Overhead wood storage locker
+    addPart(vanGroup, new THREE.BoxGeometry(1.85, 0.28, 0.44), cabinetWoodMat, -0.25, 2.04, -0.66);
+
+    // Front cab seats & steering wheel
+    addPart(vanGroup, new THREE.BoxGeometry(0.46, 0.48, 0.52), cabinetWoodMat, 1.35, 0.78, -0.48);
+    addPart(vanGroup, new THREE.BoxGeometry(0.12, 0.55, 0.48), cabinetWoodMat, 1.15, 1.22, -0.48);
+    addPart(vanGroup, new THREE.BoxGeometry(0.46, 0.48, 0.52), cabinetWoodMat, 1.35, 0.78, 0.48);
+    addPart(vanGroup, new THREE.BoxGeometry(0.12, 0.55, 0.48), cabinetWoodMat, 1.15, 1.22, 0.48);
+    addPart(vanGroup, new THREE.BoxGeometry(0.38, 0.36, 1.82), paintLowerMat, 1.92, 1.12, 0); // Dashboard
+    addPart(vanGroup, new THREE.TorusGeometry(0.18, 0.022, 10, 20), darkMetalMat, 1.66, 1.34, -0.48, 0.35, Math.PI / 2, 0);
+
+    // Warm Interior Ceiling Dome Light
+    const domeEmissiveMat = new THREE.MeshStandardMaterial({
+      color: 0xfff2cc,
+      emissive: 0xffaa44,
+      emissiveIntensity: 2.5
+    });
+    addPart(vanGroup, new THREE.BoxGeometry(0.36, 0.04, 0.22), domeEmissiveMat, 0.0, 2.21, 0.1, 0, 0, 0, false);
+    const vanInteriorLight = new THREE.PointLight(0xffa448, 2.2, 7.5, 1.6);
+    vanInteriorLight.position.set(0.05, 1.95, 0.25);
+    vanGroup.add(vanInteriorLight);
+
+    // 10. Retractable Striped Awning & Fairy String Lights
+    const awningMat = new THREE.MeshStandardMaterial({
+      map: awningTex,
+      side: THREE.DoubleSide,
+      roughness: 0.75
+    });
+    const awningCanopy = addPart(vanGroup, new THREE.BoxGeometry(2.75, 0.03, 1.55), awningMat, -0.15, 2.16, 1.72, 0.11, 0, 0);
+    // Support poles from awning corners down to van lower trim
+    addPart(vanGroup, new THREE.CylinderGeometry(0.022, 0.022, 1.95, 8), chromeMat, -1.48, 1.20, 1.70, -0.42, 0, 0);
+    addPart(vanGroup, new THREE.CylinderGeometry(0.022, 0.022, 1.95, 8), chromeMat, 1.18, 1.20, 1.70, -0.42, 0, 0);
+
+    // Warm Fairy String Lights under Awning Edge
+    const stringBulbMat = new THREE.MeshStandardMaterial({
+      color: 0xfff5d6,
+      emissive: 0xffae42,
+      emissiveIntensity: 3.0,
+      roughness: 0.2
+    });
+    const bulbGeo = new THREE.SphereGeometry(0.036, 10, 8);
+    for (let i = 0; i < 9; i++) {
+      const bx = -1.35 + i * 0.30;
+      const sag = Math.sin((i / 8) * Math.PI) * 0.05;
+      const bulb = addPart(vanGroup, bulbGeo, stringBulbMat, bx, 2.02 - sag, 2.46, 0, 0, 0, false);
+      bulb.userData.interactiveType = 'stringLights';
+      interactiveMeshes.push(bulb);
+    }
+    const awningStringLight = new THREE.PointLight(0xffae52, 1.15, 6.0, 1.8);
+    awningStringLight.position.set(-0.15, 1.95, 2.35);
+    vanGroup.add(awningStringLight);
+
+    // --- OUTDOOR SMALL TABLE WITH GLOWING LAMP, MUGS & CAMP CHAIRS ---
+    const tableGroup = new THREE.Group();
+    const tableX = 0.65, tableZ = 2.65;
+    tableGroup.position.set(tableX, getTerrainHeight(tableX, tableZ), tableZ);
+    tableGroup.rotation.y = 0.22;
+    scene.add(tableGroup);
+
+    const tableH = 0.68;
+    // Folding X-legs on left and right ends
+    for (const sideX of [-0.42, 0.42]) {
+      addPart(tableGroup, new THREE.BoxGeometry(0.035, 0.78, 0.035), darkMetalMat, sideX, tableH * 0.5, 0, 0.42, 0, 0);
+      addPart(tableGroup, new THREE.BoxGeometry(0.035, 0.78, 0.035), darkMetalMat, sideX, tableH * 0.5, 0, -0.42, 0, 0);
+    }
+    // Cross support bars
+    addPart(tableGroup, new THREE.CylinderGeometry(0.016, 0.016, 0.88, 8), darkMetalMat, 0, tableH * 0.5, 0, 0, 0, Math.PI / 2);
+    addPart(tableGroup, new THREE.BoxGeometry(0.92, 0.03, 0.03), interiorWoodMat, 0, tableH - 0.02, -0.26);
+    addPart(tableGroup, new THREE.BoxGeometry(0.92, 0.03, 0.03), interiorWoodMat, 0, tableH - 0.02, 0.26);
+
+    // Slatted wooden tabletop (7 individual wood slats)
+    const slatCount = 7;
+    for (let s = 0; s < slatCount; s++) {
+      const sz = -0.27 + s * 0.09;
+      addPart(tableGroup, new THREE.BoxGeometry(1.06, 0.026, 0.078), interiorWoodMat, 0, tableH, sz);
+    }
+
+    // --- VINTAGE CAMP LAMP / LANTERN ON THE TABLE ---
+    const lampGroup = new THREE.Group();
+    lampGroup.position.set(-0.06, tableH + 0.013, -0.02);
+    tableGroup.add(lampGroup);
+
+    const brassMat = new THREE.MeshStandardMaterial({
+      color: 0xd49b4b,
+      roughness: 0.25,
+      metalness: 0.82
+    });
+    const lampHoodMat = new THREE.MeshStandardMaterial({
+      color: 0x28544b, // Classic forest-teal enamel lantern hood
+      roughness: 0.30,
+      metalness: 0.35
+    });
+    const lampCoreMat = new THREE.MeshStandardMaterial({
+      color: 0xfff8e7,
+      emissive: 0xffaa33,
+      emissiveIntensity: 4.5,
+      roughness: 0.1
+    });
+
+    // Lamp base fount
+    const lampBase = addPart(lampGroup, new THREE.CylinderGeometry(0.095, 0.115, 0.075, 24), lampHoodMat, 0, 0.038, 0);
+    const lampCollar = addPart(lampGroup, new THREE.CylinderGeometry(0.078, 0.092, 0.035, 20), brassMat, 0, 0.09, 0);
+    // Dimmer knob
+    addPart(lampGroup, new THREE.CylinderGeometry(0.016, 0.016, 0.04, 12), brassMat, 0.09, 0.05, 0.04, 0, 0, Math.PI / 2);
+    // Glowing mantle core inside glass globe
+    const lampMantle = addPart(lampGroup, new THREE.SphereGeometry(0.045, 16, 14), lampCoreMat, 0, 0.185, 0, 0, 0, 0, false);
+    lampMantle.scale.set(0.85, 1.35, 0.85);
+    // Transparent glass globe
+    const lampGlobe = addPart(lampGroup, new THREE.CylinderGeometry(0.082, 0.075, 0.16, 24, 1, true), glassMat, 0, 0.185, 0, 0, 0, 0, false);
+    // 4 brass protector struts around globe
+    for (let i = 0; i < 4; i++) {
+      const ang = (i / 4) * Math.PI * 2 + 0.4;
+      addPart(
+        lampGroup,
+        new THREE.CylinderGeometry(0.004, 0.004, 0.17, 6),
+        brassMat,
+        Math.cos(ang) * 0.086,
+        0.185,
+        Math.sin(ang) * 0.086,
+        0, 0, 0, false
+      );
+    }
+    // Ventilator cap & conical brim
+    const lampCap = addPart(lampGroup, new THREE.ConeGeometry(0.125, 0.065, 24), lampHoodMat, 0, 0.285, 0);
+    const lampTopFinial = addPart(lampGroup, new THREE.CylinderGeometry(0.018, 0.025, 0.025, 12), brassMat, 0, 0.325, 0);
+    // Wire bail handle
+    addPart(lampGroup, new THREE.TorusGeometry(0.095, 0.005, 8, 20, Math.PI), brassMat, 0, 0.26, 0, 0, 0, 0.25, false);
+
+    // Register lamp parts for click interaction
+    for (const m of [lampBase, lampCollar, lampMantle, lampGlobe, lampCap, lampTopFinial]) {
+      m.userData.interactiveType = 'lamp';
+      interactiveMeshes.push(m);
+    }
+
+    // Primary Dynamic PointLight inside the Table Lamp (casts warm evening shadows)
+    const tableLampLight = new THREE.PointLight(0xffa43b, 3.8, 12.5, 1.45);
+    tableLampLight.position.set(0, 0.22, 0);
+    tableLampLight.castShadow = true;
+    tableLampLight.shadow.mapSize.width = 1024;
+    tableLampLight.shadow.mapSize.height = 1024;
+    tableLampLight.shadow.bias = -0.002;
+    lampGroup.add(tableLampLight);
+
+    // Two Enamel Coffee Mugs & Open Book on the Table next to the Lamp
+    function createMug(x, z, rotY, colorHex) {
+      const mugG = new THREE.Group();
+      mugG.position.set(x, tableH + 0.013, z);
+      mugG.rotation.y = rotY;
+      const mMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.28, metalness: 0.15 });
+      addPart(mugG, new THREE.CylinderGeometry(0.042, 0.038, 0.088, 16), mMat, 0, 0.044, 0);
+      addPart(mugG, new THREE.TorusGeometry(0.026, 0.006, 8, 14, Math.PI), mMat, 0.042, 0.045, 0, 0, 0, -Math.PI / 2);
+      tableGroup.add(mugG);
+    }
+    createMug(0.24, 0.12, 0.8, 0xe86b42);
+    createMug(0.34, -0.08, -0.5, 0xf2ead8);
+
+    // Open field notebook on table
+    addPart(tableGroup, new THREE.BoxGeometry(0.24, 0.016, 0.17), paintUpperMat, -0.32, tableH + 0.02, 0.14, 0, 0.28, 0);
+
+    // --- FOLDING CAMP CHAIRS & RETRO COOLER ---
+    function createCampChair(x, z, rotY) {
+      const chairG = new THREE.Group();
+      chairG.position.set(x, getTerrainHeight(x, z), z);
+      chairG.rotation.y = rotY;
+
+      // Frame legs
+      for (const sx of [-0.26, 0.26]) {
+        addPart(chairG, new THREE.CylinderGeometry(0.015, 0.015, 0.52, 8), chromeMat, sx, 0.24, 0, 0.35, 0, 0);
+        addPart(chairG, new THREE.CylinderGeometry(0.015, 0.015, 0.52, 8), chromeMat, sx, 0.24, 0, -0.35, 0, 0);
+        // Armrests (wooden)
+        addPart(chairG, new THREE.BoxGeometry(0.05, 0.022, 0.48), interiorWoodMat, sx, 0.56, -0.02);
+        addPart(chairG, new THREE.CylinderGeometry(0.014, 0.014, 0.38, 8), chromeMat, sx, 0.38, 0.18);
+      }
+      // Backrest posts
+      addPart(chairG, new THREE.CylinderGeometry(0.015, 0.015, 0.56, 8), chromeMat, -0.26, 0.64, -0.20, -0.22, 0, 0);
+      addPart(chairG, new THREE.CylinderGeometry(0.015, 0.015, 0.56, 8), chromeMat, 0.26, 0.64, -0.20, -0.22, 0, 0);
+      // Striped canvas seat & backrest
+      addPart(chairG, new THREE.BoxGeometry(0.50, 0.025, 0.44), awningMat, 0, 0.41, 0.02, 0.06, 0, 0);
+      addPart(chairG, new THREE.BoxGeometry(0.50, 0.36, 0.025), awningMat, 0, 0.72, -0.22, -0.22, 0, 0);
+      scene.add(chairG);
+    }
+
+    createCampChair(1.92, 2.35, -1.15);
+    createCampChair(-0.55, 3.45, 2.15);
+
+    // Vintage camp cooler near the van step
+    const coolerG = new THREE.Group();
+    const cx = -2.25, cz = 2.45;
+    coolerG.position.set(cx, getTerrainHeight(cx, cz), cz);
+    coolerG.rotation.y = 0.58;
+    const coolerBodyMat = new THREE.MeshStandardMaterial({ color: 0x337687, roughness: 0.35, metalness: 0.2 });
+    addPart(coolerG, new THREE.BoxGeometry(0.58, 0.38, 0.38), coolerBodyMat, 0, 0.19, 0);
+    addPart(coolerG, new THREE.BoxGeometry(0.60, 0.06, 0.40), paintUpperMat, 0, 0.40, 0);
+    addPart(coolerG, new THREE.BoxGeometry(0.08, 0.08, 0.03), chromeMat, 0, 0.36, 0.20);
+    scene.add(coolerG);
+
+    // --- INSTANCED SWAYING COASTAL BEACH GRASS ---
+    // Custom curved tapered grass blade geometry
+    function createGrassBladeGeometry() {
+      const geo = new THREE.BufferGeometry();
+      const segs = 4;
+      const verts = [];
+      const uvs = [];
+      const indices = [];
+      const baseW = 0.042;
+      const height = 0.62;
+
+      for (let i = 0; i <= segs; i++) {
+        const t = i / segs;
+        const w = baseW * (1.0 - t * 0.92);
+        const y = t * height;
+        const bendZ = t * t * 0.14;
+        verts.push(-w, y, bendZ);
+        verts.push( w, y, bendZ);
+        uvs.push(0, t);
+        uvs.push(1, t);
+        if (i < segs) {
+          const r = i * 2;
+          indices.push(r, r + 1, r + 2);
+          indices.push(r + 1, r + 3, r + 2);
+        }
+      }
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+      geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      return geo;
+    }
+
+    const grassBladeGeo = createGrassBladeGeometry();
+    const grassUniformTime = { value: 0 };
+
+    const grassMat = new THREE.MeshStandardMaterial({
+      color: 0x5c8b48,
+      roughness: 0.68,
+      metalness: 0.05,
+      side: THREE.DoubleSide
+    });
+
+    grassMat.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = grassUniformTime;
+      shader.vertexShader = `
+        uniform float uTime;
+        varying float vBladeH;
+      ` + shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `
+        #include <begin_vertex>
+        vBladeH = uv.y;
+        vec4 worldInstancePos = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+        float breeze = sin(uTime * 2.1 + worldInstancePos.x * 0.45 + worldInstancePos.z * 0.35) * 0.16
+                     + cos(uTime * 3.4 + worldInstancePos.x * 0.9) * 0.06;
+        transformed.x += breeze * uv.y * uv.y;
+        transformed.z += breeze * 0.6 * uv.y * uv.y;
+        `
+      );
+      shader.fragmentShader = `
+        varying float vBladeH;
+      ` + shader.fragmentShader.replace(
+        '#include <color_fragment>',
+        `
+        #include <color_fragment>
+        vec3 rootCol = vec3(0.18, 0.32, 0.16);
+        vec3 tipCol  = vec3(0.68, 0.76, 0.38);
+        diffuseColor.rgb = mix(rootCol, tipCol, pow(vBladeH, 0.85));
+        `
+      );
+    };
+
+    const maxGrassCount = 4600;
+    const grassInstanced = new THREE.InstancedMesh(grassBladeGeo, grassMat, maxGrassCount);
+    grassInstanced.castShadow = true;
+    grassInstanced.receiveShadow = true;
+
+    const dummy = new THREE.Object3D();
+    let placedGrass = 0;
+
+    for (let attempt = 0; attempt < 15000 && placedGrass < maxGrassCount; attempt++) {
+      // Sample around the campsite, table, and coastal dunes
+      const spread = attempt < 5000 ? 18.0 : 48.0;
+      const gx = (hash2D(attempt, 1.13) - 0.46) * spread;
+      const gz = (hash2D(attempt, 2.71) - 0.32) * spread;
+      const gy = getTerrainHeight(gx, gz);
+      const gw = getGrassWeight(gx, gz, gy);
+
+      // Avoid spawning directly inside the camper van body footprint
+      const dxVan = gx - vanX;
+      const dzVan = gz - vanZ;
+      const distVanSq = dxVan * dxVan + dzVan * dzVan;
+      if (distVanSq < 4.6) continue;
+
+      if (gw > 0.14 && hash2D(attempt, 5.3) < gw * 1.15) {
+        dummy.position.set(gx, gy - 0.02, gz);
+        dummy.rotation.set(
+          (hash2D(attempt, 6.1) - 0.5) * 0.25,
+          hash2D(attempt, 7.4) * Math.PI * 2,
+          (hash2D(attempt, 8.8) - 0.5) * 0.25
+        );
+        const s = (0.65 + hash2D(attempt, 9.2) * 0.85) * (0.55 + gw * 0.65);
+        dummy.scale.set(s, s * (0.85 + hash2D(attempt, 3.7) * 0.45), s);
+        dummy.updateMatrix();
+        grassInstanced.setMatrixAt(placedGrass, dummy.matrix);
+        placedGrass++;
+      }
+    }
+    grassInstanced.count = placedGrass;
+    grassInstanced.instanceMatrix.needsUpdate = true;
+    scene.add(grassInstanced);
+
+    // --- BEACH CAMPFIRE, FIREFLIES & SOARING SEAGULLS ---
+    const fireGroup = new THREE.Group();
+    const fireX = 3.15, fireZ = 0.75;
+    fireGroup.position.set(fireX, getTerrainHeight(fireX, fireZ), fireZ);
+    scene.add(fireGroup);
+
+    // Ring of beach stones
+    for (let i = 0; i < 11; i++) {
+      const ang = (i / 11) * Math.PI * 2;
+      const r = 0.42 + (hash2D(i, 3.1) - 0.5) * 0.05;
+      const stone = addPart(
+        fireGroup,
+        new THREE.DodecahedronGeometry(0.10 + hash2D(i, 4.4) * 0.03, 1),
+        rockMat,
+        Math.cos(ang) * r,
+        0.05,
+        Math.sin(ang) * r,
+        i, i * 0.7, 0
+      );
+      stone.scale.set(1.2, 0.7, 1.0);
+    }
+    // Charred campfire logs
+    for (let i = 0; i < 4; i++) {
+      const ang = (i / 4) * Math.PI + 0.3;
+      const logMesh = addPart(
+        fireGroup,
+        new THREE.CylinderGeometry(0.048, 0.055, 0.62, 8),
+        cabinetWoodMat,
+        Math.cos(ang) * 0.06,
+        0.09,
+        Math.sin(ang) * 0.06,
+        Math.PI / 2 - 0.28,
+        ang,
+        0
+      );
+      logMesh.userData.interactiveType = 'fire';
+      interactiveMeshes.push(logMesh);
+    }
+
+    const flameOuterMat = new THREE.MeshBasicMaterial({
+      color: 0xff6a1a,
+      transparent: true,
+      opacity: 0.86
+    });
+    const flameInnerMat = new THREE.MeshBasicMaterial({
+      color: 0xffdf66,
+      transparent: true,
+      opacity: 0.94
+    });
+    const flameOuter = addPart(fireGroup, new THREE.ConeGeometry(0.18, 0.46, 10), flameOuterMat, 0, 0.25, 0, 0, 0, 0, false);
+    const flameInner = addPart(fireGroup, new THREE.ConeGeometry(0.10, 0.32, 10), flameInnerMat, 0, 0.21, 0, 0, 0, 0, false);
+    flameOuter.userData.interactiveType = 'fire';
+    flameInner.userData.interactiveType = 'fire';
+    interactiveMeshes.push(flameOuter, flameInner);
+
+    const fireLight = new THREE.PointLight(0xff7722, 1.85, 8.5, 1.6);
+    fireLight.position.set(0, 0.38, 0);
+    fireGroup.add(fireLight);
+    state.fireOn = true;
+
+    // Warm Floating Evening Fireflies & Embers
+    const particleCount = 90;
+    const pGeo = new THREE.BufferGeometry();
+    const pPos = new Float32Array(particleCount * 3);
+    const pPhase = new Float32Array(particleCount);
+    for (let i = 0; i < particleCount; i++) {
+      pPos[i * 3] = (hash2D(i, 10.1) - 0.45) * 18.0;
+      pPos[i * 3 + 1] = 1.5 + hash2D(i, 11.2) * 2.6;
+      pPos[i * 3 + 2] = (hash2D(i, 12.3) - 0.35) * 16.0;
+      pPhase[i] = hash2D(i, 13.7) * Math.PI * 2;
+    }
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+    const pMat = new THREE.PointsMaterial({
+      color: 0xffcf6e,
+      size: 0.085,
+      transparent: true,
+      opacity: 0.82,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const fireflies = new THREE.Points(pGeo, pMat);
+    scene.add(fireflies);
+
+    // Distant Coastal Seagulls Gliding Over the Sunset Water
+    const gulls = [];
+    const gullMat = new THREE.MeshBasicMaterial({ color: 0x1e1829, side: THREE.DoubleSide });
+    for (let i = 0; i < 5; i++) {
+      const gGroup = new THREE.Group();
+      const wingL = new THREE.Mesh(new THREE.PlaneGeometry(0.38, 0.11), gullMat);
+      wingL.position.x = -0.18;
+      const wingR = new THREE.Mesh(new THREE.PlaneGeometry(0.38, 0.11), gullMat);
+      wingR.position.x = 0.18;
+      gGroup.add(wingL, wingR);
+      gGroup.position.set(-14 + i * 5.5, 7.5 + (i % 3) * 1.4, -24 - i * 4.0);
+      scene.add(gGroup);
+      gulls.push({ group: gGroup, wingL, wingR, speed: 0.8 + i * 0.12, phase: i * 1.4, baseZ: gGroup.position.z });
+    }
+
+    // --- UI CONTROLS & INTERACTION HANDLERS ---
+    const btnDoor = document.getElementById('btn-door');
+    const btnLamp = document.getElementById('btn-lamp');
+    const btnString = document.getElementById('btn-string');
+    const btnHeadlights = document.getElementById('btn-headlights');
+    const lampSlider = document.getElementById('lamp-slider');
+    const lampVal = document.getElementById('lamp-val');
+    const duskSlider = document.getElementById('dusk-slider');
+    const duskVal = document.getElementById('dusk-val');
+
+    function syncUI() {
+      btnDoor.textContent = state.doorOpen ? 'Door: Open' : 'Door: Closed';
+      btnDoor.classList.toggle('active', state.doorOpen);
+
+      btnLamp.textContent = state.lampOn ? 'Table Lamp: On' : 'Table Lamp: Off';
+      btnLamp.classList.toggle('active', state.lampOn);
+
+      btnString.classList.toggle('active', state.stringLightsOn);
+      btnHeadlights.classList.toggle('active', state.headlightsOn);
+    }
+
+    function toggleDoor() {
+      state.doorOpen = !state.doorOpen;
+      syncUI();
+    }
+
+    function toggleLamp() {
+      state.lampOn = !state.lampOn;
+      if (state.lampOn && state.lampIntensity < 0.1) {
+        state.lampIntensity = 1.0;
+        lampSlider.value = 100;
+        lampVal.textContent = '100%';
+      }
+      syncUI();
+    }
+
+    function toggleStringLights() {
+      state.stringLightsOn = !state.stringLightsOn;
+      stringBulbMat.emissiveIntensity = state.stringLightsOn ? 3.0 : 0.0;
+      awningStringLight.intensity = state.stringLightsOn ? 1.15 : 0.0;
+      syncUI();
+    }
+
+    function toggleHeadlights() {
+      state.headlightsOn = !state.headlightsOn;
+      headlightMat.emissiveIntensity = state.headlightsOn ? 2.8 : 0.05;
+      headlightSpot.intensity = state.headlightsOn ? 2.4 : 0.0;
+      tailMat.emissiveIntensity = state.headlightsOn ? 1.6 : 0.05;
+      syncUI();
+    }
+
+    btnDoor.addEventListener('click', toggleDoor);
+    btnLamp.addEventListener('click', toggleLamp);
+    btnString.addEventListener('click', toggleStringLights);
+    btnHeadlights.addEventListener('click', toggleHeadlights);
+
+    lampSlider.addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value);
+      state.lampIntensity = v / 100;
+      state.lampOn = v > 0;
+      lampVal.textContent = `${Math.round(v)}%`;
+      syncUI();
+    });
+
+    duskSlider.addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value) / 100;
+      state.duskFactor = v;
+      skyUniforms.uDusk.value = v;
+      oceanUniforms.uDusk.value = v;
+      sunLight.intensity = 1.65 * (1.0 - v * 0.68);
+      hemiLight.intensity = 0.82 * (1.0 - v * 0.48);
+      duskVal.textContent = v < 0.33 ? 'Warm Sunset' : v < 0.68 ? 'Golden Dusk' : 'Deep Twilight';
+    });
+
+    // Camera Presets
+    const cameraPresets = {
+      overview: { pos: new THREE.Vector3(6.6, 3.35, 7.6), target: new THREE.Vector3(0.15, 1.85, 1.15) },
+      table:    { pos: new THREE.Vector3(2.45, 2.38, 4.35), target: new THREE.Vector3(0.18, 1.88, 2.05) },
+      shore:    { pos: new THREE.Vector3(-6.2, 2.45, 5.2), target: new THREE.Vector3(-0.8, 1.75, 0.2) },
+      interior: { pos: new THREE.Vector3(0.42, 2.28, 3.15), target: new THREE.Vector3(-0.95, 2.02, 0.45) }
+    };
+
+    const camBtns = document.querySelectorAll('.cam-btn');
+    camBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        camBtns.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const preset = cameraPresets[btn.dataset.cam];
+        if (preset) {
+          state.cameraTransition = {
+            startPos: camera.position.clone(),
+            endPos: preset.pos.clone(),
+            startTarget: controls.target.clone(),
+            endTarget: preset.target.clone(),
+            progress: 0
+          };
+        }
+      });
+    });
+
+    // Raycasting for 3D Direct Clicks
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    let pointerDownPos = { x: 0, y: 0 };
+
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+    });
+
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      const dx = e.clientX - pointerDownPos.x;
+      const dy = e.clientY - pointerDownPos.y;
+      if (Math.hypot(dx, dy) > 6) return; // Ignore drag orbits
+
+      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+
+      const hits = raycaster.intersectObjects(interactiveMeshes, false);
+      if (hits.length > 0) {
+        const type = hits[0].object.userData.interactiveType;
+        if (type === 'door') toggleDoor();
+        else if (type === 'lamp') toggleLamp();
+        else if (type === 'stringLights') toggleStringLights();
+        else if (type === 'headlights') toggleHeadlights();
+        else if (type === 'fire') {
+          state.fireOn = !state.fireOn;
+          flameOuter.visible = state.fireOn;
+          flameInner.visible = state.fireOn;
+        }
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      composer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // --- MAIN ANIMATION LOOP ---
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.1);
+      const elapsed = clock.getElapsedTime();
+
+      skyUniforms.uTime.value = elapsed;
+      oceanUniforms.uTime.value = elapsed;
+      grassUniformTime.value = elapsed;
+
+      // Smoothly animate Camper Van Open/Closed Doors
+      const targetDoor = state.doorOpen ? 1.0 : 0.0;
+      state.doorAngle += (targetDoor - state.doorAngle) * Math.min(1.0, dt * 6.5);
+      doorPivotLeft.rotation.y = -2.18 * state.doorAngle;
+      doorPivotRight.rotation.y = 1.95 * state.doorAngle;
+      // Interior light spills out more strongly when doors are open
+      vanInteriorLight.intensity = 1.2 + state.doorAngle * 1.15;
+
+      // Table Lamp warm breathe & intensity control
+      const targetLampMult = state.lampOn ? state.lampIntensity : 0.0;
+      const flicker = 1.0 + Math.sin(elapsed * 11.0) * 0.025 + Math.cos(elapsed * 17.3) * 0.018;
+      tableLampLight.intensity = 3.8 * targetLampMult * flicker;
+      lampCoreMat.emissiveIntensity = 4.5 * targetLampMult * flicker;
+
+      // Campfire flicker animation
+      if (state.fireOn) {
+        const fPulse = 1.0 + Math.sin(elapsed * 14.0) * 0.14 + Math.cos(elapsed * 23.0) * 0.09;
+        fireLight.intensity = 1.85 * fPulse;
+        flameOuter.scale.set(1.0 + Math.sin(elapsed * 16.0) * 0.08, fPulse, 1.0 + Math.cos(elapsed * 15.0) * 0.08);
+        flameInner.scale.set(1.0, 0.9 + Math.cos(elapsed * 19.0) * 0.15, 1.0);
+      } else {
+        fireLight.intensity = 0.0;
+      }
+
+      // Drift fireflies gently
+      const posArr = fireflies.geometry.attributes.position.array;
+      for (let i = 0; i < particleCount; i++) {
+        posArr[i * 3 + 1] += Math.sin(elapsed * 1.5 + pPhase[i]) * 0.0025;
+        posArr[i * 3] += Math.cos(elapsed * 0.9 + pPhase[i]) * 0.0018;
+      }
+      fireflies.geometry.attributes.position.needsUpdate = true;
+
+      // Animate distant coastal seagulls
+      for (const g of gulls) {
+        const flap = Math.sin(elapsed * 5.2 + g.phase) * 0.42;
+        g.wingL.rotation.z = flap;
+        g.wingR.rotation.z = -flap;
+        g.group.position.x += g.speed * dt;
+        if (g.group.position.x > 28) g.group.position.x = -28;
+      }
+
+      // Smooth Camera Preset Transitions
+      if (state.cameraTransition) {
+        const tr = state.cameraTransition;
+        tr.progress = Math.min(1.0, tr.progress + dt * 1.65);
+        const ease = tr.progress < 0.5
+          ? 4 * tr.progress * tr.progress * tr.progress
+          : 1 - Math.pow(-2 * tr.progress + 2, 3) / 2;
+        camera.position.lerpVectors(tr.startPos, tr.endPos, ease);
+        controls.target.lerpVectors(tr.startTarget, tr.endTarget, ease);
+        if (tr.progress >= 1.0) state.cameraTransition = null;
+      }
+
+      controls.update();
+      composer.render();
+    }
+
+    animate();
+  </script>
+</body>
+</html>

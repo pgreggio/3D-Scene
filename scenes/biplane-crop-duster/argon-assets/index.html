@@ -1,0 +1,2598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ag-Cat N408AG — Interactive Biplane Crop Duster 3D Simulator</title>
+  <style>
+    :root {
+      --bg-panel: rgba(13, 20, 30, 0.84);
+      --border-panel: rgba(96, 165, 250, 0.28);
+      --accent-blue: #38bdf8;
+      --accent-amber: #f59e0b;
+      --accent-green: #22c55e;
+      --accent-red: #ef4444;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0b131e;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--text-main);
+    }
+
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Loading Banner */
+    #loading-overlay {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      background: rgba(10, 17, 28, 0.9);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 999px;
+      padding: 8px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(10px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    #loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-50%) translateY(-16px);
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(56, 189, 248, 0.3);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Top Left Header */
+    #hud-header {
+      position: fixed;
+      top: 18px;
+      left: 18px;
+      z-index: 10;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-panel);
+      border-left: 4px solid var(--accent-blue);
+      border-radius: 12px;
+      padding: 14px 18px;
+      max-width: 350px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    .aircraft-tag {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--accent-amber);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    #hud-header h1 {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+
+    #hud-header p {
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--text-muted);
+    }
+
+    /* Right Control Panel */
+    #control-panel {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      z-index: 10;
+      width: 320px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-panel);
+      border-radius: 14px;
+      padding: 16px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-height: calc(100vh - 36px);
+      overflow-y: auto;
+    }
+
+    .panel-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Master Spray Toggle Button */
+    #spray-toggle-btn {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 2px solid rgba(56, 189, 248, 0.5);
+      background: linear-gradient(135deg, rgba(15, 35, 58, 0.95), rgba(10, 25, 42, 0.95));
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.22s ease;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    #spray-toggle-btn:hover {
+      border-color: var(--accent-blue);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.25);
+    }
+
+    #spray-toggle-btn.active {
+      background: linear-gradient(135deg, #059669, #047857);
+      border-color: #34d399;
+      box-shadow: 0 0 24px rgba(34, 197, 94, 0.45);
+    }
+
+    .status-pill {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(239, 68, 68, 0.22);
+      border: 1px solid rgba(239, 68, 68, 0.55);
+      color: #fca5a5;
+      font-weight: 700;
+    }
+
+    #spray-toggle-btn.active .status-pill {
+      background: rgba(255, 255, 255, 0.22);
+      border-color: #ffffff;
+      color: #ffffff;
+    }
+
+    /* Telemetry Gauges */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .telemetry-card {
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+
+    .telemetry-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+    }
+
+    .telemetry-value {
+      font-size: 14px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--accent-blue);
+    }
+
+    .telemetry-value.open-state {
+      color: var(--accent-green);
+    }
+
+    .telemetry-value.closed-state {
+      color: var(--accent-amber);
+    }
+
+    /* Nozzle Aperture Bar */
+    .aperture-bar-wrap {
+      margin-top: 6px;
+      height: 6px;
+      background: rgba(30, 41, 59, 0.9);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    #nozzle-aperture-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #f59e0b, #22c55e);
+      transition: width 0.08s linear;
+    }
+
+    /* Sliders */
+    .control-row {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 8px;
+    }
+
+    .control-row-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-main);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent-blue);
+      cursor: pointer;
+    }
+
+    /* Camera & Mode Buttons */
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+
+    .cam-btn {
+      padding: 8px 10px;
+      border-radius: 7px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(30, 41, 59, 0.75);
+      color: var(--text-main);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      text-align: center;
+    }
+
+    .cam-btn:hover {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--accent-blue);
+    }
+
+    .cam-btn.highlight {
+      border-color: rgba(245, 158, 11, 0.6);
+      color: #fde68a;
+    }
+
+    /* Bottom Controls Hint */
+    #hud-footer {
+      position: fixed;
+      bottom: 16px;
+      left: 18px;
+      z-index: 10;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-panel);
+      border-radius: 10px;
+      padding: 9px 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+      backdrop-filter: blur(10px);
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(51, 65, 85, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      color: #f8fafc;
+      font-size: 11px;
+      font-weight: 700;
+      margin-right: 4px;
+    }
+
+    @media (max-width: 768px) {
+      #hud-header { max-width: 240px; padding: 10px 12px; }
+      #hud-header h1 { font-size: 15px; }
+      #hud-header p { display: none; }
+      #control-panel { width: 260px; padding: 12px; }
+      #hud-footer { display: none; }
+    }
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <span id="loading-text">Loading Poly Haven HDRI &amp; PBR Assets...</span>
+  </div>
+
+  <div id="hud-header">
+    <div class="aircraft-tag">
+      <span>GRUMMAN / STEPHENS AG-BIPLANE</span>
+      <span>REG: N408AG</span>
+    </div>
+    <h1>Biplane Crop Duster</h1>
+    <p>
+      Staggered biplane wings with X-bracing wires, chipped cobalt-blue duralumin skin, radial cowling oil streaks, low-pressure bush tyres, and articulated under-wing spray booms.
+    </p>
+  </div>
+
+  <div id="control-panel">
+    <div>
+      <div class="panel-section-title">
+        <span>Agricultural Dispersal System</span>
+        <span>22 NOZZLES</span>
+      </div>
+      <button id="spray-toggle-btn" type="button">
+        <span>Spray System</span>
+        <span id="spray-status-pill" class="status-pill">OFF</span>
+      </button>
+    </div>
+
+    <div class="telemetry-grid">
+      <div class="telemetry-card">
+        <div class="telemetry-label">Boom Nozzles</div>
+        <div id="nozzle-state-text" class="telemetry-value closed-state">CLOSED (0%)</div>
+        <div class="aperture-bar-wrap">
+          <div id="nozzle-aperture-fill"></div>
+        </div>
+      </div>
+      <div class="telemetry-card">
+        <div class="telemetry-label">Manifold Pressure</div>
+        <div id="pressure-readout" class="telemetry-value">0.0 PSI</div>
+        <div class="telemetry-label" style="margin-top:4px;">Flow: <span id="flow-readout">0.0 GPM</span></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel-section-title">
+        <span>Engine &amp; Flight State</span>
+      </div>
+      <div class="control-row">
+        <div class="control-row-header">
+          <span>Radial Engine RPM</span>
+          <span id="rpm-label">1,950 RPM</span>
+        </div>
+        <input id="rpm-slider" type="range" min="650" max="2400" value="1950" step="10" />
+      </div>
+      <div class="control-row">
+        <div class="control-row-header">
+          <span>Spray Boom Pressure</span>
+          <span id="pressure-slider-label">48 PSI</span>
+        </div>
+        <input id="pressure-slider" type="range" min="20" max="75" value="48" step="1" />
+      </div>
+      <div class="btn-grid" style="margin-top: 6px;">
+        <button id="mode-toggle-btn" class="cam-btn highlight" type="button">Mode: Low Pass</button>
+        <button id="prop-blur-btn" class="cam-btn" type="button">Prop: Running</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel-section-title">
+        <span>Free Orbit Camera Presets</span>
+      </div>
+      <div class="btn-grid">
+        <button class="cam-btn" data-cam="overview" type="button">3/4 Overview</button>
+        <button class="cam-btn highlight" data-cam="nozzles" type="button">Zoom: Boom Nozzles</button>
+        <button class="cam-btn" data-cam="cowling" type="button">Oil Streaks &amp; Engine</button>
+        <button class="cam-btn" data-cam="rigging" type="button">Stagger &amp; Wires</button>
+        <button class="cam-btn" data-cam="landinggear" type="button">Bush Tyres &amp; Tailwheel</button>
+        <button class="cam-btn" data-cam="rear" type="button">Trailing Spray Plume</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="hud-footer">
+    <div><span class="kbd">LMB</span>Orbit 360°</div>
+    <div><span class="kbd">RMB</span>Pan</div>
+    <div><span class="kbd">Scroll</span>Zoom</div>
+    <div><span class="kbd">SPACE</span>Toggle Spray &amp; Nozzles</div>
+    <div><span class="kbd">N</span>Inspect Nozzle Valve</div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+    // === SCENE & RENDERER SETUP ===
+    const container = document.getElementById('canvas-container');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingText = document.getElementById('loading-text');
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x8cb6d9);
+    scene.fog = new THREE.FogExp2(0x9ec2de, 0.0045);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.08, 450);
+    camera.position.set(8.8, 3.6, 8.4);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.055;
+    controls.maxDistance = 65;
+    controls.minDistance = 0.35;
+    controls.maxPolarAngle = Math.PI * 0.492;
+    controls.target.set(0, 1.45, 0.1);
+    controls.update();
+
+    // === LIGHTING ===
+    const hemiLight = new THREE.HemisphereLight(0xdff1ff, 0x4d5d3b, 0.75);
+    scene.add(hemiLight);
+
+    const sunLight = new THREE.DirectionalLight(0xfff4dc, 2.6);
+    sunLight.position.set(18, 26, 16);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.set(2048, 2048);
+    sunLight.shadow.camera.near = 2;
+    sunLight.shadow.camera.far = 75;
+    const d = 14;
+    sunLight.shadow.camera.left = -d;
+    sunLight.shadow.camera.right = d;
+    sunLight.shadow.camera.top = d;
+    sunLight.shadow.camera.bottom = -d;
+    sunLight.shadow.bias = -0.0004;
+    scene.add(sunLight);
+
+    const fillLight = new THREE.DirectionalLight(0x90c2ff, 0.65);
+    fillLight.position.set(-15, 8, -12);
+    scene.add(fillLight);
+
+    // === DETERMINISTIC NOISE HELPER FOR WEATHERING ===
+    function hash2(x, y) {
+      const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
+      return s - Math.floor(s);
+    }
+
+    // === PROCEDURAL + PBR COMPOSITE TEXTURE GENERATORS ===
+    // 1. Fuselage & Cowling: Blue Paint + Chipped Bare Aluminum Wear + Dark Trailing Oil Streaks
+    function createFuselageTextures() {
+      const W = 2048, H = 1024;
+      const colCanvas = document.createElement('canvas');
+      const roughCanvas = document.createElement('canvas');
+      const metalCanvas = document.createElement('canvas');
+      const bumpCanvas = document.createElement('canvas');
+      colCanvas.width = roughCanvas.width = metalCanvas.width = bumpCanvas.width = W;
+      colCanvas.height = roughCanvas.height = metalCanvas.height = bumpCanvas.height = H;
+
+      const cCtx = colCanvas.getContext('2d');
+      const rCtx = roughCanvas.getContext('2d');
+      const mCtx = metalCanvas.getContext('2d');
+      const bCtx = bumpCanvas.getContext('2d');
+
+      // Base Cobalt-Cerulean Ag Blue Paint
+      const grad = cCtx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, '#1f66a4');
+      grad.addColorStop(0.5, '#1a568e');
+      grad.addColorStop(1, '#123e68');
+      cCtx.fillStyle = grad;
+      cCtx.fillRect(0, 0, W, H);
+
+      // Base roughness (weathered satin paint) & low metalness for painted areas
+      rCtx.fillStyle = 'rgb(118,118,118)';
+      rCtx.fillRect(0, 0, W, H);
+      mCtx.fillStyle = 'rgb(35,35,35)';
+      mCtx.fillRect(0, 0, W, H);
+      bCtx.fillStyle = 'rgb(128,128,128)';
+      bCtx.fillRect(0, 0, W, H);
+
+      // Subtle sun-faded mottling across blue paint
+      for (let i = 0; i < 900; i++) {
+        const x = hash2(i, 1) * W;
+        const y = hash2(i, 2) * H;
+        const rad = 12 + hash2(i, 3) * 55;
+        cCtx.fillStyle = (i % 2 === 0) ? 'rgba(48, 128, 198, 0.05)' : 'rgba(14, 42, 70, 0.06)';
+        cCtx.beginPath();
+        cCtx.arc(x, y, rad, 0, Math.PI * 2);
+        cCtx.fill();
+      }
+
+      // Agricultural Golden-Yellow fuselage lightning/hazard stripe
+      cCtx.fillStyle = '#eab308';
+      cCtx.fillRect(0, H * 0.46, W, H * 0.055);
+      cCtx.fillStyle = '#f8fafc';
+      cCtx.fillRect(0, H * 0.445, W, H * 0.012);
+      cCtx.fillRect(0, H * 0.518, W, H * 0.012);
+
+      // Panel seams & rivet lines (X = nose-to-tail along UV, Y = circumference)
+      const panelX = [140, 320, 540, 780, 1024, 1280, 1520, 1760];
+      const panelY = [120, 280, 440, 580, 740, 900];
+
+      panelX.forEach((px) => {
+        cCtx.strokeStyle = 'rgba(8, 22, 38, 0.65)';
+        cCtx.lineWidth = 3;
+        cCtx.beginPath(); cCtx.moveTo(px, 0); cCtx.lineTo(px, H); cCtx.stroke();
+
+        bCtx.strokeStyle = 'rgb(70,70,70)';
+        bCtx.lineWidth = 3;
+        bCtx.beginPath(); bCtx.moveTo(px, 0); bCtx.lineTo(px, H); bCtx.stroke();
+
+        // Rivets along seam
+        for (let ry = 8; ry < H; ry += 18) {
+          bCtx.fillStyle = 'rgb(200,200,200)';
+          bCtx.fillRect(px - 6, ry, 3, 3);
+          bCtx.fillRect(px + 4, ry, 3, 3);
+        }
+      });
+
+      panelY.forEach((py) => {
+        cCtx.strokeStyle = 'rgba(8, 22, 38, 0.55)';
+        cCtx.lineWidth = 2.5;
+        cCtx.beginPath(); cCtx.moveTo(0, py); cCtx.lineTo(W, py); cCtx.stroke();
+
+        bCtx.strokeStyle = 'rgb(80,80,80)';
+        bCtx.lineWidth = 2.5;
+        bCtx.beginPath(); bCtx.moveTo(0, py); bCtx.lineTo(W, py); bCtx.stroke();
+      });
+
+      // CHIPPED PAINT WEAR revealing bare duralumin silver & zinc chromate primer
+      // Concentrated heavily near nose/cowling (high X or low X depending on UV) and along panel seams
+      function drawPaintChip(cx, cy, rx, ry, rot) {
+        // Zinc-chromate olive-yellow primer halo
+        cCtx.save();
+        cCtx.translate(cx, cy);
+        cCtx.rotate(rot);
+        cCtx.fillStyle = '#809446';
+        cCtx.beginPath();
+        cCtx.ellipse(0, 0, rx * 1.22, ry * 1.22, 0, 0, Math.PI * 2);
+        cCtx.fill();
+
+        // Bare metallic aluminum core
+        cCtx.fillStyle = '#cfd8e3';
+        cCtx.beginPath();
+        cCtx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+        cCtx.fill();
+        cCtx.restore();
+
+        // Shiny bare metal in roughness (low roughness) & metalness (high metalness)
+        rCtx.save();
+        rCtx.translate(cx, cy);
+        rCtx.rotate(rot);
+        rCtx.fillStyle = 'rgb(45,45,45)';
+        rCtx.beginPath();
+        rCtx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+        rCtx.fill();
+        rCtx.restore();
+
+        mCtx.save();
+        mCtx.translate(cx, cy);
+        mCtx.rotate(rot);
+        mCtx.fillStyle = 'rgb(235,235,235)';
+        mCtx.beginPath();
+        mCtx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+        mCtx.fill();
+        mCtx.restore();
+
+        // Recessed chip edge in bump map
+        bCtx.save();
+        bCtx.translate(cx, cy);
+        bCtx.rotate(rot);
+        bCtx.fillStyle = 'rgb(92,92,92)';
+        bCtx.beginPath();
+        bCtx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+        bCtx.fill();
+        bCtx.restore();
+      }
+
+      // Scatter chips along vertical panel seams
+      panelX.forEach((px, idx) => {
+        for (let i = 0; i < 65; i++) {
+          const cy = hash2(idx * 100 + i, 11) * H;
+          const ox = (hash2(idx * 100 + i, 12) - 0.5) * 14;
+          const rx = 3 + hash2(idx * 100 + i, 13) * 14;
+          const ry = 2 + hash2(idx * 100 + i, 14) * 6;
+          drawPaintChip(px + ox, cy, rx, ry, hash2(i, 15) * Math.PI);
+        }
+      });
+
+      // Heavy chipped wear on forward cowling lip & fasteners (both ends of UV to cover nose/edges)
+      for (let i = 0; i < 420; i++) {
+        const nearFront = hash2(i, 21) < 0.72;
+        const cx = nearFront
+          ? (W * 0.62 + hash2(i, 22) * W * 0.37)
+          : (hash2(i, 22) * W);
+        const cy = hash2(i, 23) * H;
+        const rx = 4 + hash2(i, 24) * 18;
+        const ry = 1.5 + hash2(i, 25) * 5.5;
+        drawPaintChip(cx, cy, rx, ry, (hash2(i, 26) - 0.5) * 0.4);
+      }
+
+      // Registration numbers "N408AG" on sides
+      cCtx.save();
+      cCtx.font = '900 68px Impact, Arial Black, sans-serif';
+      cCtx.fillStyle = 'rgba(248, 250, 252, 0.9)';
+      cCtx.fillText('N408AG', W * 0.25, H * 0.41);
+      cCtx.fillText('N408AG', W * 0.25, H * 0.64);
+      cCtx.restore();
+
+      // DARK OIL STREAKS TRAILING BACK FROM THE ENGINE COWLING
+      // Drawn as long, tapered, multi-layered glossy dark brown/black streaks streaming from nose (+X in UV) toward tail (-X in UV)
+      for (let s = 0; s < 95; s++) {
+        const startX = W * (0.68 + hash2(s, 40) * 0.30);
+        const length = W * (0.22 + hash2(s, 41) * 0.58);
+        const endX = Math.max(20, startX - length);
+        const startY = hash2(s, 42) * H;
+        const driftY = (hash2(s, 43) - 0.5) * 38;
+        const thickness = 3 + hash2(s, 44) * 18;
+
+        // Warm dark burnt-umber / engine oil outer stain
+        const oilGrad = cCtx.createLinearGradient(startX, startY, endX, startY + driftY);
+        oilGrad.addColorStop(0, 'rgba(12, 8, 5, 0.92)');
+        oilGrad.addColorStop(0.35, 'rgba(24, 15, 8, 0.78)');
+        oilGrad.addColorStop(0.75, 'rgba(32, 20, 10, 0.38)');
+        oilGrad.addColorStop(1, 'rgba(20, 12, 6, 0.0)');
+
+        cCtx.strokeStyle = oilGrad;
+        cCtx.lineWidth = thickness;
+        cCtx.lineCap = 'round';
+        cCtx.beginPath();
+        cCtx.moveTo(startX, startY);
+        cCtx.quadraticCurveTo(
+          (startX + endX) * 0.5,
+          startY + driftY * 0.35 + (hash2(s, 45) - 0.5) * 16,
+          endX,
+          startY + driftY
+        );
+        cCtx.stroke();
+
+        // Glossy wet oil specular trail in roughness map (very dark = low roughness ~ 0.1)
+        const roughGrad = rCtx.createLinearGradient(startX, startY, endX, startY + driftY);
+        roughGrad.addColorStop(0, 'rgba(18, 18, 18, 0.95)');
+        roughGrad.addColorStop(0.5, 'rgba(28, 28, 28, 0.75)');
+        roughGrad.addColorStop(1, 'rgba(118, 118, 118, 0.0)');
+        rCtx.strokeStyle = roughGrad;
+        rCtx.lineWidth = thickness * 0.85;
+        rCtx.lineCap = 'round';
+        rCtx.beginPath();
+        rCtx.moveTo(startX, startY);
+        rCtx.quadraticCurveTo(
+          (startX + endX) * 0.5,
+          startY + driftY * 0.35,
+          endX,
+          startY + driftY
+        );
+        rCtx.stroke();
+      }
+
+      const colorTex = new THREE.CanvasTexture(colCanvas);
+      colorTex.colorSpace = THREE.SRGBColorSpace;
+      const roughTex = new THREE.CanvasTexture(roughCanvas);
+      const metalTex = new THREE.CanvasTexture(metalCanvas);
+      const bumpTex = new THREE.CanvasTexture(bumpCanvas);
+      [colorTex, roughTex, metalTex, bumpTex].forEach((t) => {
+        t.wrapS = THREE.RepeatWrapping;
+        t.wrapT = THREE.RepeatWrapping;
+        t.anisotropy = 8;
+      });
+
+      return { colorTex, roughTex, metalTex, bumpTex };
+    }
+
+    // 2. Wing Textures: Blue painted metal leading edge with chipped wear + doped fabric rib bays
+    function createWingTextures() {
+      const W = 2048, H = 1024;
+      const colC = document.createElement('canvas');
+      const roughC = document.createElement('canvas');
+      const metalC = document.createElement('canvas');
+      const bumpC = document.createElement('canvas');
+      colC.width = roughC.width = metalC.width = bumpC.width = W;
+      colC.height = roughC.height = metalC.height = bumpC.height = H;
+
+      const cCtx = colC.getContext('2d');
+      const rCtx = roughC.getContext('2d');
+      const mCtx = metalC.getContext('2d');
+      const bCtx = bumpC.getContext('2d');
+
+      // Base Ag Blue across wing
+      cCtx.fillStyle = '#1d5f99';
+      cCtx.fillRect(0, 0, W, H);
+      rCtx.fillStyle = 'rgb(135,135,135)';
+      rCtx.fillRect(0, 0, W, H);
+      mCtx.fillStyle = 'rgb(25,25,25)';
+      mCtx.fillRect(0, 0, W, H);
+      bCtx.fillStyle = 'rgb(128,128,128)';
+      bCtx.fillRect(0, 0, W, H);
+
+      // Yellow high-visibility ag wingtips
+      cCtx.fillStyle = '#eab308';
+      cCtx.fillRect(0, 0, W * 0.085, H);
+      cCtx.fillRect(W * 0.915, 0, W * 0.085, H);
+      cCtx.fillStyle = '#f8fafc';
+      cCtx.fillRect(W * 0.085, 0, W * 0.012, H);
+      cCtx.fillRect(W * 0.903, 0, W * 0.012, H);
+
+      // Rib stitching tapes & doped fabric bays across span
+      const numRibs = 36;
+      for (let i = 0; i <= numRibs; i++) {
+        const rx = (i / numRibs) * W;
+        // Rib tape highlight/shadow
+        cCtx.fillStyle = 'rgba(38, 114, 180, 0.45)';
+        cCtx.fillRect(rx - 4, 0, 8, H);
+        // Raised rib ridge in bump map
+        bCtx.fillStyle = 'rgb(195,195,195)';
+        bCtx.fillRect(rx - 3, 0, 6, H);
+        // Rib stitch knots
+        for (let sy = 12; sy < H; sy += 22) {
+          bCtx.fillStyle = 'rgb(235,235,235)';
+          bCtx.fillRect(rx - 5, sy, 10, 3);
+        }
+      }
+
+      // Leading edge & spar seam chipped paint wear (revealing bare aluminum)
+      for (let i = 0; i < 520; i++) {
+        const cx = hash2(i, 61) * W;
+        const band = hash2(i, 62);
+        // Cluster chips along leading edge, front spar, and trailing edge
+        const cy = band < 0.55
+          ? (hash2(i, 63) * H * 0.22)
+          : (H * 0.72 + hash2(i, 63) * H * 0.26);
+        const rx = 4 + hash2(i, 64) * 16;
+        const ry = 2 + hash2(i, 65) * 6;
+
+        cCtx.fillStyle = '#7b8f42';
+        cCtx.beginPath(); cCtx.ellipse(cx, cy, rx * 1.2, ry * 1.2, 0, 0, Math.PI * 2); cCtx.fill();
+        cCtx.fillStyle = '#d1dae6';
+        cCtx.beginPath(); cCtx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); cCtx.fill();
+
+        rCtx.fillStyle = 'rgb(45,45,45)';
+        rCtx.beginPath(); rCtx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); rCtx.fill();
+        mCtx.fillStyle = 'rgb(230,230,230)';
+        mCtx.beginPath(); mCtx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); mCtx.fill();
+      }
+
+      // Center walk-pad & chemical/oil stains near center section
+      for (let i = 0; i < 45; i++) {
+        const sx = W * (0.42 + hash2(i, 71) * 0.16);
+        const sy = hash2(i, 72) * H * 0.55;
+        const len = 60 + hash2(i, 73) * 220;
+        const g = cCtx.createLinearGradient(sx, sy, sx, sy + len);
+        g.addColorStop(0, 'rgba(15, 11, 7, 0.75)');
+        g.addColorStop(1, 'rgba(15, 11, 7, 0)');
+        cCtx.strokeStyle = g;
+        cCtx.lineWidth = 4 + hash2(i, 74) * 10;
+        cCtx.beginPath(); cCtx.moveTo(sx, sy); cCtx.lineTo(sx, sy + len); cCtx.stroke();
+      }
+
+      const colorTex = new THREE.CanvasTexture(colC);
+      colorTex.colorSpace = THREE.SRGBColorSpace;
+      const roughTex = new THREE.CanvasTexture(roughC);
+      const metalTex = new THREE.CanvasTexture(metalC);
+      const bumpTex = new THREE.CanvasTexture(bumpC);
+      [colorTex, roughTex, metalTex, bumpTex].forEach((t) => {
+        t.wrapS = THREE.RepeatWrapping;
+        t.wrapT = THREE.RepeatWrapping;
+        t.anisotropy = 8;
+      });
+      return { colorTex, roughTex, metalTex, bumpTex };
+    }
+
+    // 3. Chunky Low-Pressure Bush Tyre Tread & Sidewall Weathering Textures
+    function createTyreTextures() {
+      const W = 1024, H = 512;
+      const colC = document.createElement('canvas');
+      const bumpC = document.createElement('canvas');
+      const roughC = document.createElement('canvas');
+      colC.width = bumpC.width = roughC.width = W;
+      colC.height = bumpC.height = roughC.height = H;
+
+      const cCtx = colC.getContext('2d');
+      const bCtx = bumpC.getContext('2d');
+      const rCtx = roughC.getContext('2d');
+
+      // Deep vulcanized rubber charcoal base
+      cCtx.fillStyle = '#1e2022';
+      cCtx.fillRect(0, 0, W, H);
+      bCtx.fillStyle = 'rgb(90,90,90)';
+      bCtx.fillRect(0, 0, W, H);
+      rCtx.fillStyle = 'rgb(215,215,215)';
+      rCtx.fillRect(0, 0, W, H);
+
+      // Heavy chevron / agricultural lug tread blocks around circumference (X)
+      const lugs = 28;
+      for (let i = 0; i < lugs; i++) {
+        const lx = (i / lugs) * W;
+        const w = (W / lugs) * 0.58;
+        bCtx.fillStyle = 'rgb(245,245,245)';
+        bCtx.fillRect(lx, H * 0.18, w, H * 0.28);
+        bCtx.fillRect(lx + w * 0.35, H * 0.54, w, H * 0.28);
+
+        // Dry field dust & mud in tread recesses
+        cCtx.fillStyle = 'rgba(112, 92, 66, 0.38)';
+        cCtx.fillRect(lx + w, H * 0.20, (W / lugs) * 0.35, H * 0.60);
+      }
+
+      // Sidewall low-pressure lettering & scuff rings
+      cCtx.strokeStyle = 'rgba(145, 125, 95, 0.25)';
+      cCtx.lineWidth = 8;
+      cCtx.beginPath();
+      cCtx.moveTo(0, H * 0.12); cCtx.lineTo(W, H * 0.12);
+      cCtx.moveTo(0, H * 0.88); cCtx.lineTo(W, H * 0.88);
+      cCtx.stroke();
+
+      const colorTex = new THREE.CanvasTexture(colC);
+      colorTex.colorSpace = THREE.SRGBColorSpace;
+      const bumpTex = new THREE.CanvasTexture(bumpC);
+      const roughTex = new THREE.CanvasTexture(roughC);
+      [colorTex, bumpTex, roughTex].forEach((t) => {
+        t.wrapS = THREE.RepeatWrapping;
+        t.wrapT = THREE.RepeatWrapping;
+      });
+      return { colorTex, bumpTex, roughTex };
+    }
+
+    // 4. Soft Radial Mist & Droplet Sprite Texture for Spray System
+    function createSprayMistTexture() {
+      const size = 128;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const g = ctx.createRadialGradient(size / 2, size / 2, 2, size / 2, size / 2, size / 2);
+      g.addColorStop(0, 'rgba(240, 252, 255, 0.95)');
+      g.addColorStop(0.35, 'rgba(210, 245, 255, 0.55)');
+      g.addColorStop(0.7, 'rgba(185, 235, 250, 0.18)');
+      g.addColorStop(1, 'rgba(185, 235, 250, 0.0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, size, size);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    const fuselageTex = createFuselageTextures();
+    const wingTex = createWingTextures();
+    const tyreTex = createTyreTextures();
+    const sprayParticleTex = createSprayMistTexture();
+
+    // === SHARED PBR MATERIALS ===
+    const texLoader = new THREE.TextureLoader();
+    texLoader.setCrossOrigin('anonymous');
+
+    // Load real Poly Haven PBR normal & roughness maps to enrich our chipped blue metal & oil-streaked materials
+    const phBlueNormal = texLoader.load('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/blue_metal_plate/blue_metal_plate_nor_gl_1k.jpg');
+    const phRustNormal = texLoader.load('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rusty_metal_02/rusty_metal_02_nor_gl_1k.jpg');
+    const phRustDiff = texLoader.load('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rusty_metal_02/rusty_metal_02_diff_1k.jpg');
+    const phRustRough = texLoader.load('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rusty_metal_02/rusty_metal_02_rough_1k.jpg');
+    phRustDiff.colorSpace = THREE.SRGBColorSpace;
+    [phBlueNormal, phRustNormal, phRustDiff, phRustRough].forEach((t) => {
+      t.wrapS = THREE.RepeatWrapping;
+      t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(3, 2);
+    });
+
+    const materials = {
+      fuselageBlue: new THREE.MeshStandardMaterial({
+        map: fuselageTex.colorTex,
+        roughnessMap: fuselageTex.roughTex,
+        metalnessMap: fuselageTex.metalTex,
+        bumpMap: fuselageTex.bumpTex,
+        bumpScale: 0.012,
+        normalMap: phBlueNormal,
+        normalScale: new THREE.Vector2(0.28, 0.28),
+        roughness: 0.72,
+        metalness: 0.65
+      }),
+      wingBlue: new THREE.MeshStandardMaterial({
+        map: wingTex.colorTex,
+        roughnessMap: wingTex.roughTex,
+        metalnessMap: wingTex.metalTex,
+        bumpMap: wingTex.bumpTex,
+        bumpScale: 0.016,
+        normalMap: phBlueNormal,
+        normalScale: new THREE.Vector2(0.2, 0.2),
+        roughness: 0.75,
+        metalness: 0.55
+      }),
+      oilStreakDecal: new THREE.MeshStandardMaterial({
+        color: 0x0e0a07,
+        roughness: 0.12,
+        metalness: 0.15,
+        transparent: true,
+        opacity: 0.88,
+        polygonOffset: true,
+        polygonOffsetFactor: -1
+      }),
+      chippedCowlingRim: new THREE.MeshStandardMaterial({
+        color: 0x9aaaba,
+        roughnessMap: phRustRough,
+        normalMap: phRustNormal,
+        normalScale: new THREE.Vector2(0.45, 0.45),
+        roughness: 0.38,
+        metalness: 0.88
+      }),
+      weatheredExhaust: new THREE.MeshStandardMaterial({
+        map: phRustDiff,
+        normalMap: phRustNormal,
+        roughnessMap: phRustRough,
+        color: 0x7c5844,
+        roughness: 0.82,
+        metalness: 0.65
+      }),
+      radialCylinder: new THREE.MeshStandardMaterial({
+        color: 0x282d33,
+        roughness: 0.52,
+        metalness: 0.82,
+        normalMap: phRustNormal,
+        normalScale: new THREE.Vector2(0.3, 0.3)
+      }),
+      chromeRod: new THREE.MeshStandardMaterial({
+        color: 0xe2e8f0,
+        roughness: 0.14,
+        metalness: 0.96
+      }),
+      strutBlue: new THREE.MeshStandardMaterial({
+        color: 0x1a568e,
+        roughness: 0.45,
+        metalness: 0.55,
+        normalMap: phBlueNormal,
+        normalScale: new THREE.Vector2(0.35, 0.35)
+      }),
+      bracingWire: new THREE.MeshStandardMaterial({
+        color: 0xcbd5e1,
+        roughness: 0.22,
+        metalness: 0.92
+      }),
+      turnbuckleBrass: new THREE.MeshStandardMaterial({
+        color: 0xd4a338,
+        roughness: 0.26,
+        metalness: 0.90
+      }),
+      bushTyre: new THREE.MeshStandardMaterial({
+        map: tyreTex.colorTex,
+        bumpMap: tyreTex.bumpTex,
+        bumpScale: 0.045,
+        roughnessMap: tyreTex.roughTex,
+        roughness: 0.88,
+        metalness: 0.06
+      }),
+      wheelHubYellow: new THREE.MeshStandardMaterial({
+        color: 0xeab308,
+        roughness: 0.42,
+        metalness: 0.65,
+        normalMap: phRustNormal,
+        normalScale: new THREE.Vector2(0.25, 0.25)
+      }),
+      stainlessBoom: new THREE.MeshStandardMaterial({
+        color: 0xc8d3de,
+        roughness: 0.25,
+        metalness: 0.90
+      }),
+      rubberHose: new THREE.MeshStandardMaterial({
+        color: 0x18191c,
+        roughness: 0.82,
+        metalness: 0.08
+      }),
+      windscreenGlass: new THREE.MeshPhysicalMaterial({
+        color: 0xd8f3ff,
+        transparent: true,
+        opacity: 0.42,
+        roughness: 0.08,
+        metalness: 0.05,
+        transmission: 0.65,
+        reflectivity: 0.9
+      }),
+      leatherSeat: new THREE.MeshStandardMaterial({
+        color: 0x4a2c18,
+        roughness: 0.72,
+        metalness: 0.05
+      })
+    };
+
+    // === RURAL AGRICULTURAL FIELD & AIRSTRIP ENVIRONMENT ===
+    const environmentGroup = new THREE.Group();
+    scene.add(environmentGroup);
+
+    const grassDiff = texLoader.load('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_grass_rock/aerial_grass_rock_diff_1k.jpg');
+    const grassNor = texLoader.load('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_grass_rock/aerial_grass_rock_nor_gl_1k.jpg');
+    const grassRough = texLoader.load('https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_grass_rock/aerial_grass_rock_rough_1k.jpg');
+    grassDiff.colorSpace = THREE.SRGBColorSpace;
+    [grassDiff, grassNor, grassRough].forEach((t) => {
+      t.wrapS = THREE.RepeatWrapping;
+      t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(36, 36);
+      t.anisotropy = 8;
+    });
+
+    const groundGeo = new THREE.PlaneGeometry(320, 320, 64, 64);
+    groundGeo.rotateX(-Math.PI / 2);
+    const groundMat = new THREE.MeshStandardMaterial({
+      map: grassDiff,
+      normalMap: grassNor,
+      roughnessMap: grassRough,
+      color: 0x8ea874,
+      roughness: 0.92,
+      metalness: 0.02
+    });
+    const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+    groundMesh.receiveShadow = true;
+    environmentGroup.add(groundMesh);
+
+    // Agricultural Crop Rows beneath the flight path (InstancedMesh for crisp 3D ridges & foliage)
+    const cropRowsGroup = new THREE.Group();
+    environmentGroup.add(cropRowsGroup);
+
+    const rowCount = 34;
+    const rowGeo = new THREE.BoxGeometry(0.48, 0.28, 160);
+    const rowMat = new THREE.MeshStandardMaterial({
+      map: grassDiff,
+      normalMap: grassNor,
+      color: 0x426b28,
+      roughness: 0.88
+    });
+    const cropRowInstanced = new THREE.InstancedMesh(rowGeo, rowMat, rowCount);
+    cropRowInstanced.receiveShadow = true;
+    cropRowInstanced.castShadow = true;
+    const dummy = new THREE.Object3D();
+    for (let i = 0; i < rowCount; i++) {
+      const xPos = (i - (rowCount - 1) / 2) * 1.35;
+      // Leave a packed dirt/grass runway strip right in the center or slightly offset
+      dummy.position.set(xPos, 0.11, 0);
+      dummy.scale.set(1, 0.75 + (i % 3) * 0.18, 1);
+      dummy.updateMatrix();
+      cropRowInstanced.setMatrixAt(i, dummy.matrix);
+    }
+    cropRowsGroup.add(cropRowInstanced);
+
+    // Load Poly Haven HDRI Sky & Environment Reflections + Poly Haven glTF Staging Props
+    const rgbeLoader = new RGBELoader();
+    rgbeLoader.setCrossOrigin('anonymous');
+    rgbeLoader.load(
+      'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/meadow_2_1k.hdr',
+      (hdrTex) => {
+        hdrTex.mapping = THREE.EquirectangularReflectionMapping;
+        scene.environment = hdrTex;
+        scene.background = hdrTex;
+        scene.environmentIntensity = 0.95;
+        loadingOverlay.classList.add('hidden');
+      },
+      undefined,
+      () => {
+        loadingOverlay.classList.add('hidden');
+      }
+    );
+
+    const gltfLoader = new GLTFLoader();
+    gltfLoader.setCrossOrigin('anonymous');
+    const stagingProps = [
+      { url: 'https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/wooden_crate_01/wooden_crate_01_1k.gltf', pos: [-7.8, 0.0, 3.2], scale: 1.3, rotY: 0.4 },
+      { url: 'https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/metal_stool_01/metal_stool_01_1k.gltf', pos: [-6.6, 0.0, 2.5], scale: 1.35, rotY: -0.3 },
+      { url: 'https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/cardboard_box_01/cardboard_box_01_1k.gltf', pos: [-7.6, 0.68, 3.2], scale: 1.2, rotY: 1.1 },
+      { url: 'https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/crowbar_01/crowbar_01_1k.gltf', pos: [-6.6, 0.62, 2.5], scale: 1.4, rotY: 0.8 }
+    ];
+    stagingProps.forEach((item) => {
+      gltfLoader.load(item.url, (gltf) => {
+        const model = gltf.scene;
+        model.position.set(...item.pos);
+        model.scale.setScalar(item.scale);
+        model.rotation.y = item.rotY;
+        model.traverse((c) => {
+          if (c.isMesh) {
+            c.castShadow = true;
+            c.receiveShadow = true;
+          }
+        });
+        environmentGroup.add(model);
+      });
+    });
+
+    // === BIPLANE CROP DUSTER HIERARCHY ===
+    const aircraftRoot = new THREE.Group();
+    // Start in Low-Pass flight attitude or parked attitude; controllable via UI
+    aircraftRoot.position.set(0, 1.35, 0);
+    scene.add(aircraftRoot);
+
+    const airframeGroup = new THREE.Group();
+    aircraftRoot.add(airframeGroup);
+
+    // Helper: Create a tensioned steel bracing wire with brass turnbuckles at both ends
+    function addBracingWire(parent, pA, pB, wireRadius = 0.0085) {
+      const vec = new THREE.Vector3().subVectors(pB, pA);
+      const len = vec.length();
+      const mid = new THREE.Vector3().addVectors(pA, pB).multiplyScalar(0.5);
+      const dir = vec.clone().normalize();
+      const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+
+      const wireGroup = new THREE.Group();
+      wireGroup.position.copy(mid);
+      wireGroup.quaternion.copy(quat);
+
+      // Tensioned steel cable/rod
+      const wireGeo = new THREE.CylinderGeometry(wireRadius, wireRadius, len, 8);
+      const wireMesh = new THREE.Mesh(wireGeo, materials.bracingWire);
+      wireMesh.castShadow = true;
+      wireGroup.add(wireMesh);
+
+      // Brass turnbuckle barrels & clevis forks near both ends
+      const tbOffset = Math.max(0.16, len * 0.5 - 0.24);
+      [-tbOffset, tbOffset].forEach((yOff) => {
+        const tb = new THREE.Mesh(
+          new THREE.CylinderGeometry(wireRadius * 2.5, wireRadius * 2.5, 0.14, 10),
+          materials.turnbuckleBrass
+        );
+        tb.position.y = yOff;
+        wireGroup.add(tb);
+
+        const lockNut = new THREE.Mesh(
+          new THREE.CylinderGeometry(wireRadius * 3.1, wireRadius * 3.1, 0.03, 6),
+          materials.chromeRod
+        );
+        lockNut.position.y = yOff + (yOff > 0 ? 0.075 : -0.075);
+        wireGroup.add(lockNut);
+      });
+
+      parent.add(wireGroup);
+      return wireGroup;
+    }
+
+    // Helper: Streamlined strut between two 3D points
+    function addStreamlinedStrut(parent, pA, pB, chord = 0.12, thickness = 0.042, mat = materials.strutBlue) {
+      const vec = new THREE.Vector3().subVectors(pB, pA);
+      const len = vec.length();
+      const mid = new THREE.Vector3().addVectors(pA, pB).multiplyScalar(0.5);
+
+      const strutGeo = new THREE.CylinderGeometry(0.5, 0.5, len, 16);
+      strutGeo.scale(thickness, 1, chord);
+      const strutMesh = new THREE.Mesh(strutGeo, mat);
+      strutMesh.position.copy(mid);
+      strutMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), vec.clone().normalize());
+      strutMesh.castShadow = true;
+      strutMesh.receiveShadow = true;
+      parent.add(strutMesh);
+
+      // Stainless end-fittings / cuffs (chipped bare metal look at attachment points)
+      [0.04, len - 0.04].forEach((dAlong) => {
+        const cuffPos = pA.clone().addScaledVector(vec.clone().normalize(), dAlong);
+        const cuff = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.55, 0.55, 0.07, 12),
+          materials.chippedCowlingRim
+        );
+        cuff.scale.set(thickness * 1.15, 1, chord * 1.08);
+        cuff.position.copy(cuffPos);
+        cuff.quaternion.copy(strutMesh.quaternion);
+        parent.add(cuff);
+      });
+      return strutMesh;
+    }
+
+    // 1. FUSELAGE (Lofted profile from tailcone z=-3.95 to engine cowling z=+2.75)
+    const fuselageStations = [
+      { z: -3.95, rx: 0.07, ry: 0.14, yOff: 0.96 },
+      { z: -3.30, rx: 0.20, ry: 0.28, yOff: 0.98 },
+      { z: -2.40, rx: 0.36, ry: 0.44, yOff: 1.03 },
+      { z: -1.45, rx: 0.50, ry: 0.58, yOff: 1.10 },
+      { z: -0.55, rx: 0.58, ry: 0.66, yOff: 1.14 }, // Cockpit station
+      { z:  0.45, rx: 0.64, ry: 0.74, yOff: 1.18 }, // Chemical hopper station (humpbacked)
+      { z:  1.45, rx: 0.65, ry: 0.72, yOff: 1.16 },
+      { z:  2.25, rx: 0.64, ry: 0.66, yOff: 1.12 }, // Firewall / behind cowling
+      { z:  2.72, rx: 0.62, ry: 0.62, yOff: 1.10 }, // Cowling ring
+      { z:  2.86, rx: 0.50, ry: 0.50, yOff: 1.10 }  // Cowling intake lip
+    ];
+
+    function buildLoftedFuselage() {
+      const radialSegs = 40;
+      const ringCount = fuselageStations.length;
+      const positions = [];
+      const uvs = [];
+      const indices = [];
+
+      const zMin = fuselageStations[0].z;
+      const zMax = fuselageStations[ringCount - 1].z;
+
+      for (let i = 0; i < ringCount; i++) {
+        const st = fuselageStations[i];
+        const u = (st.z - zMin) / (zMax - zMin); // 0 at tail, 1 at nose/cowling
+        for (let j = 0; j <= radialSegs; j++) {
+          const v = j / radialSegs;
+          const theta = v * Math.PI * 2;
+          const sinT = Math.sin(theta);
+          const cosT = Math.cos(theta);
+
+          // Slightly flatten sides and belly for authentic ag-biplane boxy-round truss cross-section
+          let x = sinT * st.rx;
+          let y = cosT * st.ry;
+          if (cosT < 0) y *= 0.88; // flatter belly for spray pump & hopper floor
+
+          positions.push(x, st.yOff + y, st.z);
+          uvs.push(u, v);
+        }
+      }
+
+      for (let i = 0; i < ringCount - 1; i++) {
+        for (let j = 0; j < radialSegs; j++) {
+          const a = i * (radialSegs + 1) + j;
+          const b = (i + 1) * (radialSegs + 1) + j;
+          const c = (i + 1) * (radialSegs + 1) + (j + 1);
+          const d = i * (radialSegs + 1) + (j + 1);
+          indices.push(a, b, d);
+          indices.push(b, c, d);
+        }
+      }
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      return geo;
+    }
+
+    const fuselageMesh = new THREE.Mesh(buildLoftedFuselage(), materials.fuselageBlue);
+    fuselageMesh.castShadow = true;
+    fuselageMesh.receiveShadow = true;
+    airframeGroup.add(fuselageMesh);
+
+    // Chipped bare-aluminum forward cowling nose ring & fastener bands
+    const cowlLipGeo = new THREE.TorusGeometry(0.55, 0.068, 16, 40);
+    const cowlLipMesh = new THREE.Mesh(cowlLipGeo, materials.chippedCowlingRim);
+    cowlLipMesh.position.set(0, 1.10, 2.82);
+    cowlLipMesh.castShadow = true;
+    airframeGroup.add(cowlLipMesh);
+
+    // Sculpted 3D Dark Glossy Oil Streaks trailing back from the engine cowling along sides & belly
+    function addSculptedOilStreaks() {
+      const oilGroup = new THREE.Group();
+      const streakConfigs = [
+        // Port side streaks from cowling louvers & exhaust
+        { side: -1, yAngle: -0.15, zStart: 2.65, zEnd: -0.95, width: 0.11 },
+        { side: -1, yAngle: -0.38, zStart: 2.55, zEnd: -1.65, width: 0.16 },
+        { side: -1, yAngle: -0.62, zStart: 2.48, zEnd: -1.20, width: 0.14 },
+        { side: -1, yAngle:  0.08, zStart: 2.60, zEnd:  0.15, width: 0.08 },
+        // Starboard side streaks from cowling louvers & exhaust
+        { side:  1, yAngle: -0.18, zStart: 2.65, zEnd: -1.10, width: 0.12 },
+        { side:  1, yAngle: -0.42, zStart: 2.55, zEnd: -1.80, width: 0.17 },
+        { side:  1, yAngle: -0.68, zStart: 2.48, zEnd: -1.35, width: 0.15 },
+        { side:  1, yAngle:  0.05, zStart: 2.60, zEnd:  0.05, width: 0.09 },
+        // Belly oil breather streaks
+        { side: -0.35, yAngle: -1.25, zStart: 2.45, zEnd: -2.10, width: 0.19 },
+        { side:  0.35, yAngle: -1.25, zStart: 2.45, zEnd: -1.95, width: 0.18 }
+      ];
+
+      streakConfigs.forEach((cfg, idx) => {
+        const segs = 24;
+        const pos = [];
+        const indices = [];
+        for (let i = 0; i <= segs; i++) {
+          const t = i / segs;
+          const z = THREE.MathUtils.lerp(cfg.zStart, cfg.zEnd, t);
+          // Interpolate fuselage radius at z
+          let rx = 0.62, ry = 0.68, yOff = 1.14;
+          for (let k = 0; k < fuselageStations.length - 1; k++) {
+            const s0 = fuselageStations[k], s1 = fuselageStations[k + 1];
+            if (z >= s0.z && z <= s1.z) {
+              const f = (z - s0.z) / (s1.z - s0.z);
+              rx = THREE.MathUtils.lerp(s0.rx, s1.rx, f);
+              ry = THREE.MathUtils.lerp(s0.ry, s1.ry, f);
+              yOff = THREE.MathUtils.lerp(s0.yOff, s1.yOff, f);
+              break;
+            }
+          }
+          // Taper width toward tail and droop slightly with gravity/airflow
+          const w = cfg.width * Math.sin(Math.pow(1 - t, 0.65) * Math.PI * 0.9) * (1 - t * 0.65);
+          const baseAng = cfg.yAngle - t * 0.18 + Math.sin(t * 9 + idx) * 0.025;
+          const dAng = (w / Math.max(0.3, ry)) * 0.5;
+
+          [baseAng - dAng, baseAng + dAng].forEach((ang) => {
+            const cosA = Math.cos(ang);
+            const sinA = Math.sin(ang);
+            const x = Math.sign(cfg.side) * cosA * (rx + 0.0045) * (Math.abs(cfg.side) < 1 ? Math.abs(cfg.side) : 1);
+            let y = sinA * (ry + 0.0045);
+            if (sinA < 0) y *= 0.88;
+            pos.push(x, yOff + y, z);
+          });
+        }
+        for (let i = 0; i < segs; i++) {
+          const a = i * 2, b = i * 2 + 1, c = (i + 1) * 2, d = (i + 1) * 2 + 1;
+          indices.push(a, c, b, b, c, d);
+        }
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        g.setIndex(indices);
+        g.computeVertexNormals();
+        const m = new THREE.Mesh(g, materials.oilStreakDecal);
+        oilGroup.add(m);
+      });
+      airframeGroup.add(oilGroup);
+    }
+    addSculptedOilStreaks();
+
+    // 2. RADIAL 9-CYLINDER ENGINE, EXHAUST STACKS & PROPELLER
+    const engineGroup = new THREE.Group();
+    engineGroup.position.set(0, 1.10, 2.68);
+    airframeGroup.add(engineGroup);
+
+    // Crankcase hub
+    const crankcase = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.22, 0.25, 0.36, 20).rotateX(Math.PI / 2),
+      materials.radialCylinder
+    );
+    engineGroup.add(crankcase);
+
+    // 9 Radial Cylinders with cooling fins, valve rocker boxes & twin chrome pushrods
+    for (let i = 0; i < 9; i++) {
+      const angle = (i / 9) * Math.PI * 2;
+      const cylGroup = new THREE.Group();
+      cylGroup.rotation.z = angle;
+
+      const barrel = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.082, 0.072, 0.34, 14),
+        materials.radialCylinder
+      );
+      barrel.position.y = 0.34;
+      cylGroup.add(barrel);
+
+      // Cooling fin rings
+      for (let f = 0; f < 5; f++) {
+        const fin = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.098, 0.098, 0.012, 14),
+          materials.radialCylinder
+        );
+        fin.position.y = 0.24 + f * 0.045;
+        cylGroup.add(fin);
+      }
+
+      // Twin chrome pushrod tubes
+      [-0.032, 0.032].forEach((px) => {
+        const pushrod = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.009, 0.009, 0.30, 8),
+          materials.chromeRod
+        );
+        pushrod.position.set(px, 0.33, 0.065);
+        cylGroup.add(pushrod);
+      });
+
+      engineGroup.add(cylGroup);
+    }
+
+    // Twin Heavy Soot-Blackened Exhaust Pipes angled downward & aft behind cowling
+    [-1, 1].forEach((side) => {
+      const exhaustPipe = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.048, 0.054, 0.62, 12),
+        materials.weatheredExhaust
+      );
+      exhaustPipe.position.set(side * 0.46, 0.62, 2.38);
+      exhaustPipe.rotation.set(0.55, 0, side * -0.28);
+      exhaustPipe.castShadow = true;
+      airframeGroup.add(exhaustPipe);
+    });
+
+    // Propeller & Spinner Assembly
+    const propellerGroup = new THREE.Group();
+    propellerGroup.position.set(0, 1.10, 2.98);
+    airframeGroup.add(propellerGroup);
+
+    const spinnerCone = new THREE.Mesh(
+      new THREE.ConeGeometry(0.14, 0.28, 24).rotateX(Math.PI / 2),
+      materials.chippedCowlingRim
+    );
+    spinnerCone.position.z = 0.10;
+    propellerGroup.add(spinnerCone);
+
+    // Two sculpted metallic propeller blades with yellow safety tips
+    const bladeGeo = new THREE.BoxGeometry(0.15, 2.45, 0.024);
+    const bladeMesh = new THREE.Mesh(bladeGeo, materials.radialCylinder);
+    bladeMesh.rotation.y = 0.22;
+    bladeMesh.castShadow = true;
+    propellerGroup.add(bladeMesh);
+
+    [-1.14, 1.14].forEach((tipY) => {
+      const tip = new THREE.Mesh(
+        new THREE.BoxGeometry(0.152, 0.16, 0.026),
+        materials.wheelHubYellow
+      );
+      tip.position.y = tipY;
+      tip.rotation.y = 0.22;
+      propellerGroup.add(tip);
+    });
+
+    // Translucent spinning prop blur disc
+    const propBlurDisc = new THREE.Mesh(
+      new THREE.CircleGeometry(1.22, 40),
+      new THREE.MeshBasicMaterial({
+        color: 0xcbd5e1,
+        transparent: true,
+        opacity: 0.16,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      })
+    );
+    propBlurDisc.position.z = 0.02;
+    propellerGroup.add(propBlurDisc);
+
+    // 3. CHEMICAL HOPPER FILLER HATCH, SIGHT GAUGE & OPEN COCKPIT
+    const hopperHatch = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.28, 0.31, 0.08, 20),
+      materials.wheelHubYellow
+    );
+    hopperHatch.position.set(0, 1.91, 0.72);
+    hopperHatch.castShadow = true;
+    airframeGroup.add(hopperHatch);
+
+    const hopperLatch = new THREE.Mesh(
+      new THREE.BoxGeometry(0.38, 0.04, 0.06),
+      materials.chromeRod
+    );
+    hopperLatch.position.set(0, 1.96, 0.72);
+    airframeGroup.add(hopperLatch);
+
+    // External translucent chemical hopper liquid sight-gauge on port fuselage side
+    const sightGaugeTube = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.022, 0.022, 0.52, 12),
+      materials.windscreenGlass
+    );
+    sightGaugeTube.position.set(-0.65, 1.32, 0.55);
+    airframeGroup.add(sightGaugeTube);
+
+    const sightGaugeLiquid = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.015, 0.015, 0.42, 10),
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+    );
+    sightGaugeLiquid.position.set(-0.65, 1.28, 0.55);
+    airframeGroup.add(sightGaugeLiquid);
+
+    // Open Cockpit Rim, Leather Coaming, Pilot Seat, Rollover Truss & Windscreen
+    const cockpitCoaming = new THREE.Mesh(
+      new THREE.TorusGeometry(0.38, 0.065, 14, 28),
+      materials.leatherSeat
+    );
+    cockpitCoaming.rotation.x = Math.PI / 2;
+    cockpitCoaming.scale.set(1.0, 1.25, 1.0);
+    cockpitCoaming.position.set(0, 1.74, -0.62);
+    airframeGroup.add(cockpitCoaming);
+
+    const cockpitRecess = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.35, 0.32, 0.35, 20),
+      new THREE.MeshStandardMaterial({ color: 0x0b1017, roughness: 0.9 })
+    );
+    cockpitRecess.position.set(0, 1.58, -0.62);
+    airframeGroup.add(cockpitRecess);
+
+    const seatBack = new THREE.Mesh(
+      new THREE.BoxGeometry(0.42, 0.48, 0.08),
+      materials.leatherSeat
+    );
+    seatBack.position.set(0, 1.66, -0.88);
+    seatBack.rotation.x = -0.15;
+    airframeGroup.add(seatBack);
+
+    // 3-panel armoured agricultural windscreen
+    const windscreenGroup = new THREE.Group();
+    windscreenGroup.position.set(0, 1.88, -0.22);
+    airframeGroup.add(windscreenGroup);
+
+    const centerGlass = new THREE.Mesh(
+      new THREE.BoxGeometry(0.36, 0.30, 0.018),
+      materials.windscreenGlass
+    );
+    centerGlass.rotation.x = -0.52;
+    windscreenGroup.add(centerGlass);
+
+    [-1, 1].forEach((s) => {
+      const sideGlass = new THREE.Mesh(
+        new THREE.BoxGeometry(0.24, 0.28, 0.018),
+        materials.windscreenGlass
+      );
+      sideGlass.position.set(s * 0.25, -0.02, -0.08);
+      sideGlass.rotation.set(-0.48, s * 0.58, s * 0.22);
+      windscreenGroup.add(sideGlass);
+    });
+
+    // Steel crash turnover pylon behind cockpit
+    addStreamlinedStrut(
+      airframeGroup,
+      new THREE.Vector3(-0.24, 1.72, -0.92),
+      new THREE.Vector3(0, 2.28, -0.82),
+      0.06, 0.04, materials.radialCylinder
+    );
+    addStreamlinedStrut(
+      airframeGroup,
+      new THREE.Vector3(0.24, 1.72, -0.92),
+      new THREE.Vector3(0, 2.28, -0.82),
+      0.06, 0.04, materials.radialCylinder
+    );
+
+    // 4. STAGGERED UPPER AND LOWER WINGS (Real NACA Cambered Airfoil Cross-Section)
+    function createAirfoilWing(span, chord, thicknessRatio = 0.14) {
+      const shape = new THREE.Shape();
+      // Airfoil in 2D: X = chord from trailing edge (-chord/2) to leading edge (+chord/2)
+      const steps = 28;
+      const halfC = chord * 0.5;
+      // Upper cambered surface (from trailing edge to leading edge)
+      shape.moveTo(-halfC, 0);
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps; // 0 at TE, 1 at LE
+        const xNorm = 1 - t; // 1 at TE, 0 at LE
+        const yt = 5 * thicknessRatio * chord * (
+          0.2969 * Math.sqrt(xNorm) -
+          0.1260 * xNorm -
+          0.3516 * Math.pow(xNorm, 2) +
+          0.2843 * Math.pow(xNorm, 3) -
+          0.1015 * Math.pow(xNorm, 4)
+        );
+        const camber = 0.045 * chord * 4 * xNorm * (1 - xNorm);
+        const px = halfC - xNorm * chord;
+        const py = camber + yt;
+        shape.lineTo(px, py);
+      }
+      // Lower surface (from leading edge back to trailing edge)
+      for (let i = 1; i <= steps; i++) {
+        const xNorm = i / steps; // 0 at LE, 1 at TE
+        const yt = 5 * thicknessRatio * chord * (
+          0.2969 * Math.sqrt(xNorm) -
+          0.1260 * xNorm -
+          0.3516 * Math.pow(xNorm, 2) +
+          0.2843 * Math.pow(xNorm, 3) -
+          0.1015 * Math.pow(xNorm, 4)
+        );
+        const camber = 0.045 * chord * 4 * xNorm * (1 - xNorm);
+        const px = halfC - xNorm * chord;
+        const py = camber - yt * 0.65;
+        shape.lineTo(px, py);
+      }
+      shape.closePath();
+
+      const extrudeGeo = new THREE.ExtrudeGeometry(shape, {
+        depth: span,
+        bevelEnabled: true,
+        bevelSegments: 5,
+        steps: 24,
+        bevelSize: 0.04,
+        bevelThickness: 0.08
+      });
+      // Center along extrusion axis and rotate so span is along X, chord along Z (+Z is leading edge)
+      extrudeGeo.translate(0, 0, -span * 0.5);
+      extrudeGeo.rotateY(Math.PI * 0.5);
+
+      // Normalize UVs so our wing texture (ribs along U, chord along V) maps cleanly
+      const posAttr = extrudeGeo.attributes.position;
+      const uvAttr = extrudeGeo.attributes.uv;
+      for (let i = 0; i < posAttr.count; i++) {
+        const vx = posAttr.getX(i);
+        const vz = posAttr.getZ(i);
+        const u = (vx + span * 0.5) / span;
+        const v = (vz + halfC) / chord;
+        uvAttr.setXY(i, u, v);
+      }
+      uvAttr.needsUpdate = true;
+      extrudeGeo.computeVertexNormals();
+      return extrudeGeo;
+    }
+
+    // UPPER WING: Positioned HIGH (y = 2.42) and FORWARD (z = +0.62) for classic positive biplane stagger
+    const upperWingSpan = 13.0;
+    const upperWingChord = 1.82;
+    const upperWingY = 2.42;
+    const upperWingZ = 0.62;
+
+    const upperWingMesh = new THREE.Mesh(
+      createAirfoilWing(upperWingSpan, upperWingChord, 0.14),
+      materials.wingBlue
+    );
+    upperWingMesh.position.set(0, upperWingY, upperWingZ);
+    upperWingMesh.rotation.x = 0.035; // slight positive angle of incidence
+    upperWingMesh.castShadow = true;
+    upperWingMesh.receiveShadow = true;
+    airframeGroup.add(upperWingMesh);
+
+    // LOWER WING: Positioned LOW (y = 0.64) and AFT (z = -0.22), giving 0.84m of forward stagger!
+    // Built as Port and Starboard panels with 2.5 deg dihedral
+    const lowerHalfSpan = 5.45;
+    const lowerWingChord = 1.72;
+    const lowerWingY = 0.64;
+    const lowerWingZ = -0.22;
+    const lowerDihedral = THREE.MathUtils.degToRad(2.4);
+
+    [-1, 1].forEach((side) => {
+      const panelGeo = createAirfoilWing(lowerHalfSpan, lowerWingChord, 0.14);
+      const panelMesh = new THREE.Mesh(panelGeo, materials.wingBlue);
+      panelMesh.position.set(
+        side * (0.52 + lowerHalfSpan * 0.5),
+        lowerWingY + Math.sin(lowerDihedral) * (lowerHalfSpan * 0.5),
+        lowerWingZ
+      );
+      panelMesh.rotation.z = side * lowerDihedral;
+      panelMesh.rotation.x = 0.035;
+      panelMesh.castShadow = true;
+      panelMesh.receiveShadow = true;
+      airframeGroup.add(panelMesh);
+
+      // Aileron control horns under both wings
+      const horn = new THREE.Mesh(
+        new THREE.BoxGeometry(0.03, 0.14, 0.12),
+        materials.wheelHubYellow
+      );
+      horn.position.set(side * 4.5, lowerWingY + 0.05, lowerWingZ - 0.65);
+      airframeGroup.add(horn);
+    });
+
+    // 5. INTERPLANE N-STRUTS, CABANE STRUTS & BRACING WIRES RUNNING BETWEEN THE STRUTS
+    const innerCabaneX = 0.58;
+    const midStrutX = 2.45;
+    const outerStrutX = 4.65;
+
+    const fSparOff = 0.46;  // Front spar Z offset from wing center
+    const rSparOff = -0.44; // Rear spar Z offset from wing center
+
+    [-1, 1].forEach((side) => {
+      const yLowInner = lowerWingY + 0.04;
+      const yLowMid = lowerWingY + Math.sin(lowerDihedral) * (midStrutX - 0.52);
+      const yLowOuter = lowerWingY + Math.sin(lowerDihedral) * (outerStrutX - 0.52);
+      const yUp = upperWingY - 0.03;
+
+      // Center Cabane N-Struts (Fuselage top deck to Upper Wing center section)
+      const cabLowF = new THREE.Vector3(side * 0.48, 1.55, upperWingZ + fSparOff - 0.18);
+      const cabLowR = new THREE.Vector3(side * 0.48, 1.52, upperWingZ + rSparOff - 0.25);
+      const cabUpF  = new THREE.Vector3(side * innerCabaneX, yUp, upperWingZ + fSparOff);
+      const cabUpR  = new THREE.Vector3(side * innerCabaneX, yUp, upperWingZ + rSparOff);
+
+      addStreamlinedStrut(airframeGroup, cabLowF, cabUpF, 0.09, 0.035);
+      addStreamlinedStrut(airframeGroup, cabLowR, cabUpR, 0.09, 0.035);
+      addStreamlinedStrut(airframeGroup, cabLowR, cabUpF, 0.075, 0.03);
+
+      // Mid-Span Interplane N-Struts (angled forward from lower wing to staggered upper wing)
+      const midLowF = new THREE.Vector3(side * midStrutX, yLowMid, lowerWingZ + fSparOff);
+      const midLowR = new THREE.Vector3(side * midStrutX, yLowMid, lowerWingZ + rSparOff);
+      const midUpF  = new THREE.Vector3(side * midStrutX, yUp, upperWingZ + fSparOff);
+      const midUpR  = new THREE.Vector3(side * midStrutX, yUp, upperWingZ + rSparOff);
+
+      addStreamlinedStrut(airframeGroup, midLowF, midUpF, 0.11, 0.038);
+      addStreamlinedStrut(airframeGroup, midLowR, midUpR, 0.11, 0.038);
+      addStreamlinedStrut(airframeGroup, midLowR, midUpF, 0.09, 0.032); // N-strut diagonal
+
+      // Outer Interplane N-Struts (classic biplane outer bay)
+      const outLowF = new THREE.Vector3(side * outerStrutX, yLowOuter, lowerWingZ + fSparOff);
+      const outLowR = new THREE.Vector3(side * outerStrutX, yLowOuter, lowerWingZ + rSparOff);
+      const outUpF  = new THREE.Vector3(side * outerStrutX, yUp, upperWingZ + fSparOff);
+      const outUpR  = new THREE.Vector3(side * outerStrutX, yUp, upperWingZ + rSparOff);
+
+      addStreamlinedStrut(airframeGroup, outLowF, outUpF, 0.12, 0.042);
+      addStreamlinedStrut(airframeGroup, outLowR, outUpR, 0.12, 0.042);
+      addStreamlinedStrut(airframeGroup, outLowR, outUpF, 0.095, 0.035); // N-strut diagonal
+
+      // BRACING WIRES RUNNING BETWEEN THE STRUTS (Inner Bay & Outer Bay X-Rigging + Incidence Wires)
+      const rootLowF = new THREE.Vector3(side * 0.56, yLowInner, lowerWingZ + fSparOff);
+      const rootLowR = new THREE.Vector3(side * 0.56, yLowInner, lowerWingZ + rSparOff);
+
+      // Inner Bay Front Spar X-wires (Flying wire + Landing wire)
+      addBracingWire(airframeGroup, rootLowF, midUpF);
+      addBracingWire(airframeGroup, cabUpF, midLowF);
+      // Inner Bay Rear Spar X-wires
+      addBracingWire(airframeGroup, rootLowR, midUpR);
+      addBracingWire(airframeGroup, cabUpR, midLowR);
+
+      // Outer Bay Front Spar X-wires (running between Mid Strut and Outer Strut)
+      addBracingWire(airframeGroup, midLowF, outUpF);
+      addBracingWire(airframeGroup, midUpF, outLowF);
+      // Outer Bay Rear Spar X-wires (running between Mid Strut and Outer Strut)
+      addBracingWire(airframeGroup, midLowR, outUpR);
+      addBracingWire(airframeGroup, midUpR, outLowR);
+
+      // Fore-and-aft incidence/drag bracing wires between the struts
+      addBracingWire(airframeGroup, midLowF, midUpR, 0.007);
+      addBracingWire(airframeGroup, outLowF, outUpR, 0.007);
+      addBracingWire(airframeGroup, cabLowF, cabUpR, 0.007);
+    });
+
+    // Crossed cabane bracing wires across the front of the cockpit
+    addBracingWire(
+      airframeGroup,
+      new THREE.Vector3(-0.48, 1.55, upperWingZ + fSparOff - 0.18),
+      new THREE.Vector3(innerCabaneX, upperWingY - 0.03, upperWingZ + fSparOff),
+      0.0075
+    );
+    addBracingWire(
+      airframeGroup,
+      new THREE.Vector3(0.48, 1.55, upperWingZ + fSparOff - 0.18),
+      new THREE.Vector3(-innerCabaneX, upperWingY - 0.03, upperWingZ + fSparOff),
+      0.0075
+    );
+
+    // 6. EMPENNAGE (TAIL SURFACES & TAIL BRACING WIRES)
+    const tailGroup = new THREE.Group();
+    tailGroup.position.set(0, 1.02, -3.55);
+    airframeGroup.add(tailGroup);
+
+    // Horizontal Stabilizer & Elevators
+    const hStabMesh = new THREE.Mesh(
+      createAirfoilWing(3.65, 0.92, 0.11),
+      materials.wingBlue
+    );
+    hStabMesh.position.set(0, 0.08, 0.05);
+    hStabMesh.castShadow = true;
+    tailGroup.add(hStabMesh);
+
+    // Vertical Fin & Rudder (with yellow agricultural safety band)
+    const vFinShape = new THREE.Shape();
+    vFinShape.moveTo(0, 0);
+    vFinShape.lineTo(0.98, 0);
+    vFinShape.quadraticCurveTo(0.85, 0.95, 0.35, 1.38);
+    vFinShape.quadraticCurveTo(0.05, 1.44, -0.28, 1.25);
+    vFinShape.lineTo(-0.32, -0.05);
+    vFinShape.closePath();
+
+    const vFinGeo = new THREE.ExtrudeGeometry(vFinShape, {
+      depth: 0.08,
+      bevelEnabled: true,
+      bevelSegments: 4,
+      bevelSize: 0.025,
+      bevelThickness: 0.03
+    });
+    vFinGeo.translate(0, 0, -0.04);
+    vFinGeo.rotateY(Math.PI * 0.5);
+    const vFinMesh = new THREE.Mesh(vFinGeo, materials.fuselageBlue);
+    vFinMesh.position.set(0, 0.02, -0.18);
+    vFinMesh.castShadow = true;
+    tailGroup.add(vFinMesh);
+
+    // Tailplane external bracing wires (Fin to Horizontal Stabilizer & Under-fuselage)
+    [-1, 1].forEach((side) => {
+      addBracingWire(
+        tailGroup,
+        new THREE.Vector3(0, 1.12, -0.15),
+        new THREE.Vector3(side * 1.38, 0.11, 0.05),
+        0.0065
+      );
+      addBracingWire(
+        tailGroup,
+        new THREE.Vector3(side * 0.14, -0.16, 0.10),
+        new THREE.Vector3(side * 1.38, 0.05, 0.05),
+        0.0065
+      );
+    });
+
+    // 7. CHUNKY LOW-PRESSURE TYRES & FIXED TAILWHEEL LANDING GEAR
+    const spinningWheels = [];
+
+    function createChunkyBushWheel(outerRadius = 0.49, tyreWidth = 0.38, hubRadius = 0.17) {
+      const wheelGroup = new THREE.Group();
+
+      // Custom fat balloon sidewall LatheGeometry profile (revolved around Y, then rotated so axle is X)
+      const lathePts = [];
+      const segs = 28;
+      for (let i = 0; i <= segs; i++) {
+        const t = i / segs; // 0 to 1 around cross-section from left bead to crown to right bead
+        const ang = (t - 0.5) * Math.PI * 1.82;
+        const r = hubRadius + (outerRadius - hubRadius) * Math.pow(Math.cos(ang * 0.52), 0.55);
+        const y = Math.sin(ang) * (tyreWidth * 0.52);
+        lathePts.push(new THREE.Vector2(r, y));
+      }
+      const tyreGeo = new THREE.LatheGeometry(lathePts, 36);
+      tyreGeo.rotateZ(Math.PI * 0.5); // Axle along X
+      const tyreMesh = new THREE.Mesh(tyreGeo, materials.bushTyre);
+      tyreMesh.castShadow = true;
+      tyreMesh.receiveShadow = true;
+      wheelGroup.add(tyreMesh);
+
+      // 3D Sculpted Agricultural Shoulder Lug Tread Blocks around the tyre circumference
+      const lugCount = 22;
+      const lugGeo = new THREE.BoxGeometry(tyreWidth * 0.44, 0.032, (outerRadius * 0.22));
+      for (let i = 0; i < lugCount; i++) {
+        const theta = (i / lugCount) * Math.PI * 2;
+        const lugHolder = new THREE.Group();
+        lugHolder.rotation.x = theta;
+
+        const lugL = new THREE.Mesh(lugGeo, materials.bushTyre);
+        lugL.position.set(-tyreWidth * 0.18, outerRadius - 0.008, 0);
+        lugL.rotation.y = 0.26;
+        lugHolder.add(lugL);
+
+        const lugR = new THREE.Mesh(lugGeo, materials.bushTyre);
+        lugR.position.set(tyreWidth * 0.18, outerRadius - 0.008, 0);
+        lugR.rotation.y = -0.26;
+        lugHolder.add(lugR);
+
+        wheelGroup.add(lugHolder);
+      }
+
+      // Deep-dish yellow agricultural wheel rim & hubcap
+      const rimMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(hubRadius * 1.06, hubRadius * 1.06, tyreWidth * 0.72, 24).rotateZ(Math.PI * 0.5),
+        materials.wheelHubYellow
+      );
+      wheelGroup.add(rimMesh);
+
+      const axleCap = new THREE.Mesh(
+        new THREE.CylinderGeometry(hubRadius * 0.42, hubRadius * 0.48, tyreWidth * 0.86, 16).rotateZ(Math.PI * 0.5),
+        materials.chippedCowlingRim
+      );
+      wheelGroup.add(axleCap);
+
+      // 8 perimeter lug bolts on both wheel faces
+      for (let b = 0; b < 8; b++) {
+        const ba = (b / 8) * Math.PI * 2;
+        const bolt = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.014, 0.014, tyreWidth * 0.78, 6).rotateZ(Math.PI * 0.5),
+          materials.chromeRod
+        );
+        bolt.position.set(0, Math.cos(ba) * hubRadius * 0.72, Math.sin(ba) * hubRadius * 0.72);
+        wheelGroup.add(bolt);
+      }
+
+      spinningWheels.push(wheelGroup);
+      return wheelGroup;
+    }
+
+    // MAIN FIXED LANDING GEAR (Heavy-duty V-struts + oleo shock struts + chunky low-pressure bush tyres)
+    const mainGearX = 1.32;
+    const mainGearY = -0.22;
+    const mainGearZ = 1.18;
+
+    [-1, 1].forEach((side) => {
+      const axlePos = new THREE.Vector3(side * mainGearX, mainGearY, mainGearZ);
+      const frontRoot = new THREE.Vector3(side * 0.54, 0.65, 1.58);
+      const rearRoot  = new THREE.Vector3(side * 0.54, 0.65, 0.68);
+      const innerStrutTop = new THREE.Vector3(side * 0.35, 0.54, 1.18);
+
+      // Main forward & rear V-legs
+      addStreamlinedStrut(airframeGroup, axlePos, frontRoot, 0.13, 0.055, materials.strutBlue);
+      addStreamlinedStrut(airframeGroup, axlePos, rearRoot, 0.11, 0.048, materials.strutBlue);
+
+      // Oleo-pneumatic shock absorber strut with exposed chrome piston
+      addStreamlinedStrut(airframeGroup, axlePos, innerStrutTop, 0.08, 0.06, materials.radialCylinder);
+      const chromePiston = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.028, 0.028, 0.38, 12),
+        materials.chromeRod
+      );
+      chromePiston.position.copy(axlePos).lerp(innerStrutTop, 0.32);
+      chromePiston.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        innerStrutTop.clone().sub(axlePos).normalize()
+      );
+      airframeGroup.add(chromePiston);
+
+      // Scissor torque links on main gear leg
+      const scissorUp = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.18, 0.05), materials.wheelHubYellow);
+      scissorUp.position.copy(axlePos).add(new THREE.Vector3(side * -0.06, 0.22, -0.09));
+      scissorUp.rotation.x = 0.45;
+      airframeGroup.add(scissorUp);
+
+      const scissorLow = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.18, 0.05), materials.wheelHubYellow);
+      scissorLow.position.copy(axlePos).add(new THREE.Vector3(side * -0.06, 0.10, -0.09));
+      scissorLow.rotation.x = -0.45;
+      airframeGroup.add(scissorLow);
+
+      // Brake caliper & hydraulic line
+      const caliper = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.16, 0.18), materials.radialCylinder);
+      caliper.position.copy(axlePos).add(new THREE.Vector3(side * -0.14, 0.08, -0.12));
+      airframeGroup.add(caliper);
+
+      // Chunky low-pressure main bush wheel
+      const mainWheel = createChunkyBushWheel(0.50, 0.40, 0.18);
+      mainWheel.position.copy(axlePos).add(new THREE.Vector3(side * 0.14, 0, 0));
+      airframeGroup.add(mainWheel);
+    });
+
+    // Cross-bracing wires between left and right main landing gear legs
+    addBracingWire(
+      airframeGroup,
+      new THREE.Vector3(-0.54, 0.65, 1.58),
+      new THREE.Vector3(mainGearX * 0.85, mainGearY + 0.18, mainGearZ),
+      0.008
+    );
+    addBracingWire(
+      airframeGroup,
+      new THREE.Vector3(0.54, 0.65, 1.58),
+      new THREE.Vector3(-mainGearX * 0.85, mainGearY + 0.18, mainGearZ),
+      0.008
+    );
+
+    // FIXED TAILWHEEL LANDING GEAR ASSEMBLY (mounted at rear of fuselage)
+    const tailwheelAssembly = new THREE.Group();
+    tailwheelAssembly.position.set(0, 0.86, -3.58);
+    airframeGroup.add(tailwheelAssembly);
+
+    // Heavy leaf-spring & tubular steel fixed tailwheel strut
+    addStreamlinedStrut(
+      tailwheelAssembly,
+      new THREE.Vector3(0, 0.04, 0.12),
+      new THREE.Vector3(0, -0.48, -0.28),
+      0.08, 0.045, materials.radialCylinder
+    );
+    // Secondary shock-strut tube
+    addStreamlinedStrut(
+      tailwheelAssembly,
+      new THREE.Vector3(0, 0.06, -0.08),
+      new THREE.Vector3(0, -0.46, -0.28),
+      0.05, 0.035, materials.chromeRod
+    );
+
+    // Castering tailwheel yoke fork (painted safety yellow)
+    const tailForkGroup = new THREE.Group();
+    tailForkGroup.position.set(0, -0.48, -0.28);
+    tailwheelAssembly.add(tailForkGroup);
+
+    const forkCrown = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.045, 0.045, 0.08, 12),
+      materials.wheelHubYellow
+    );
+    tailForkGroup.add(forkCrown);
+
+    [-1, 1].forEach((s) => {
+      const forkArm = new THREE.Mesh(
+        new THREE.BoxGeometry(0.028, 0.24, 0.06),
+        materials.wheelHubYellow
+      );
+      forkArm.position.set(s * 0.105, -0.10, -0.04);
+      forkArm.rotation.x = 0.35;
+      tailForkGroup.add(forkArm);
+    });
+
+    // Chunky low-pressure tailwheel tyre
+    const tailWheel = createChunkyBushWheel(0.21, 0.17, 0.075);
+    tailWheel.position.set(0, -0.20, -0.08);
+    tailForkGroup.add(tailWheel);
+
+    // 8. AGRICULTURAL SPRAY SYSTEM: BELLY PUMP, UNDER-WING SPRAY BOOMS & ARTICULATED NOZZLES
+    const spraySystemGroup = new THREE.Group();
+    airframeGroup.add(spraySystemGroup);
+
+    // Belly-mounted Wind-Driven Centrifugal Spray Pump (between main gear legs)
+    const bellyPumpGroup = new THREE.Group();
+    bellyPumpGroup.position.set(0, 0.24, 0.35);
+    spraySystemGroup.add(bellyPumpGroup);
+
+    const pumpHousing = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.14, 0.16, 0.26, 18).rotateX(Math.PI * 0.5),
+      materials.chippedCowlingRim
+    );
+    bellyPumpGroup.add(pumpHousing);
+
+    // Struts holding wind-driven pump under belly
+    [-0.14, 0.14].forEach((sx) => {
+      addStreamlinedStrut(
+        spraySystemGroup,
+        new THREE.Vector3(sx, 0.26, 0.35),
+        new THREE.Vector3(sx * 1.6, 0.58, 0.35),
+        0.05, 0.025, materials.radialCylinder
+      );
+    });
+
+    // Spinning ram-air fan impeller at front of belly pump
+    const pumpImpeller = new THREE.Group();
+    pumpImpeller.position.set(0, 0, 0.16);
+    bellyPumpGroup.add(pumpImpeller);
+
+    const impellerHub = new THREE.Mesh(
+      new THREE.ConeGeometry(0.05, 0.09, 12).rotateX(Math.PI * 0.5),
+      materials.turnbuckleBrass
+    );
+    pumpImpeller.add(impellerHub);
+
+    for (let b = 0; b < 5; b++) {
+      const fanBlade = new THREE.Mesh(
+        new THREE.BoxGeometry(0.045, 0.19, 0.01),
+        materials.wheelHubYellow
+      );
+      fanBlade.rotation.z = (b / 5) * Math.PI * 2;
+      fanBlade.rotation.y = 0.42;
+      pumpImpeller.add(fanBlade);
+    }
+
+    // SPRAY BOOMS MOUNTED DIRECTLY BENEATH THE LOWER WING
+    // Each boom runs along the underside of the lower wing from x = ±0.62 out to x = ±5.75
+    const nozzleControllers = []; // Stores articulated nozzle parts & world positions for spray emission
+
+    const sprayConeMat = new THREE.MeshBasicMaterial({
+      map: sprayParticleTex,
+      color: 0xd8f8ff,
+      transparent: true,
+      opacity: 0.0,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      blending: THREE.NormalBlending
+    });
+
+    const nozzleCoreMatOpen = new THREE.MeshStandardMaterial({
+      color: 0x22d3ee,
+      emissive: 0x0891b2,
+      emissiveIntensity: 0.0,
+      roughness: 0.2,
+      metalness: 0.3
+    });
+
+    const valveLeverMat = new THREE.MeshStandardMaterial({
+      color: 0xef4444,
+      roughness: 0.35,
+      metalness: 0.4
+    });
+
+    [-1, 1].forEach((side) => {
+      const boomLen = 5.15;
+      const boomGroup = new THREE.Group();
+      // Positioned directly beneath the lower wing panel, matching its 2.4-degree dihedral
+      const boomCenterDist = 0.58 + boomLen * 0.5;
+      const wingUndersideY = lowerWingY + Math.sin(lowerDihedral) * (boomCenterDist - 0.52);
+      const boomDrop = 0.21; // Suspended 21cm directly beneath the lower wing surface
+      const boomZ = lowerWingZ - 0.26;
+
+      boomGroup.position.set(
+        side * boomCenterDist,
+        wingUndersideY - boomDrop,
+        boomZ
+      );
+      boomGroup.rotation.z = side * lowerDihedral;
+      spraySystemGroup.add(boomGroup);
+
+      // Main Stainless-Steel Pressurized Spray Boom Pipe
+      const boomPipe = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.032, 0.032, boomLen, 16).rotateZ(Math.PI * 0.5),
+        materials.stainlessBoom
+      );
+      boomPipe.castShadow = true;
+      boomGroup.add(boomPipe);
+
+      // End-cap fitting on outer tip of boom
+      const boomCap = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.038, 0.038, 0.05, 14).rotateZ(Math.PI * 0.5),
+        materials.turnbuckleBrass
+      );
+      boomCap.position.x = side * (boomLen * 0.5 + 0.02);
+      boomGroup.add(boomCap);
+
+      // 5 Streamlined Drop-Hanger Brackets mounting the spray boom directly to the underside of the lower wing
+      for (let h = 0; h < 5; h++) {
+        const lx = (h / 4 - 0.5) * (boomLen - 0.45);
+        const hanger = new THREE.Mesh(
+          new THREE.BoxGeometry(0.028, boomDrop + 0.04, 0.14),
+          materials.strutBlue
+        );
+        hanger.position.set(lx, boomDrop * 0.5, 0.04);
+        hanger.castShadow = true;
+        boomGroup.add(hanger);
+
+        // Stainless mounting collar around boom
+        const clamp = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.040, 0.040, 0.045, 12).rotateZ(Math.PI * 0.5),
+          materials.chippedCowlingRim
+        );
+        clamp.position.set(lx, 0, 0);
+        boomGroup.add(clamp);
+      }
+
+      // Curved rubber chemical feed hose from belly pump manifold to inner end of under-wing boom
+      const hoseCurve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(side * 0.12, 0.22, 0.30),
+        new THREE.Vector3(side * 0.48, 0.15, -0.08),
+        new THREE.Vector3(side * 0.62, wingUndersideY - boomDrop - 0.14, boomZ)
+      );
+      const hoseGeo = new THREE.TubeGeometry(hoseCurve, 16, 0.028, 10, false);
+      const hoseMesh = new THREE.Mesh(hoseGeo, materials.rubberHose);
+      hoseMesh.castShadow = true;
+      spraySystemGroup.add(hoseMesh);
+
+      // 11 ARTICULATED BOOM NOZZLES PER WING (22 Total)
+      // Each nozzle visibly opens (lever rotates, brass poppet slides down, split-cone jaws spread apart) when spray starts
+      const nozzlesPerWing = 11;
+      for (let n = 0; n < nozzlesPerWing; n++) {
+        const frac = (n + 0.5) / nozzlesPerWing;
+        const localX = (frac - 0.5) * (boomLen - 0.28);
+
+        const nozzleRoot = new THREE.Group();
+        nozzleRoot.position.set(localX, 0, 0);
+        boomGroup.add(nozzleRoot);
+
+        // 1. Brass T-fitting collar on boom pipe
+        const tCollar = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.042, 0.042, 0.055, 12).rotateZ(Math.PI * 0.5),
+          materials.turnbuckleBrass
+        );
+        nozzleRoot.add(tCollar);
+
+        // 2. Upper spring-loaded diaphragm check-valve cap
+        const diaphragmCap = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.036, 0.030, 0.05, 12),
+          materials.radialCylinder
+        );
+        diaphragmCap.position.y = 0.048;
+        nozzleRoot.add(diaphragmCap);
+
+        // 3. Upper stationary brass nozzle body stem
+        const upperBody = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.026, 0.028, 0.075, 12),
+          materials.turnbuckleBrass
+        );
+        upperBody.position.y = -0.045;
+        nozzleRoot.add(upperBody);
+
+        // 4. Internal pressurized fluid core / atomizing chamber (revealed as lower collar slides down)
+        const innerFluidCore = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.019, 0.019, 0.085, 10),
+          nozzleCoreMatOpen
+        );
+        innerFluidCore.position.y = -0.092;
+        nozzleRoot.add(innerFluidCore);
+
+        // 5. Articulated Shutoff Valve Lever Arm (visibly rotates 82 degrees when opening!)
+        const leverPivot = new THREE.Group();
+        leverPivot.position.set(0, -0.032, -0.030);
+        nozzleRoot.add(leverPivot);
+
+        const leverArm = new THREE.Mesh(
+          new THREE.BoxGeometry(0.095, 0.018, 0.016),
+          valveLeverMat
+        );
+        leverArm.position.x = 0.038 * side;
+        leverPivot.add(leverArm);
+
+        // 6. Telescoping Lower Brass Poppet Collar & Split-Cone Orifice Jaws (slides down & spreads open!)
+        const slidingPoppet = new THREE.Group();
+        slidingPoppet.position.y = -0.082; // Closed Y = -0.082; Open Y = -0.138
+        nozzleRoot.add(slidingPoppet);
+
+        const poppetSleeve = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.032, 0.025, 0.052, 12),
+          materials.turnbuckleBrass
+        );
+        slidingPoppet.add(poppetSleeve);
+
+        const hexNut = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.036, 0.036, 0.018, 6),
+          materials.chromeRod
+        );
+        hexNut.position.y = 0.015;
+        slidingPoppet.add(hexNut);
+
+        // Twin articulated deflector jaws at nozzle tip (spread open when spraying)
+        const leftJawPivot = new THREE.Group();
+        leftJawPivot.position.set(-0.012, -0.026, 0);
+        slidingPoppet.add(leftJawPivot);
+
+        const leftJawMesh = new THREE.Mesh(
+          new THREE.ConeGeometry(0.022, 0.055, 8),
+          materials.turnbuckleBrass
+        );
+        leftJawMesh.rotation.z = Math.PI;
+        leftJawMesh.position.y = -0.024;
+        leftJawPivot.add(leftJawMesh);
+
+        const rightJawPivot = new THREE.Group();
+        rightJawPivot.position.set(0.012, -0.026, 0);
+        slidingPoppet.add(rightJawPivot);
+
+        const rightJawMesh = new THREE.Mesh(
+          new THREE.ConeGeometry(0.022, 0.055, 8),
+          materials.turnbuckleBrass
+        );
+        rightJawMesh.rotation.z = Math.PI;
+        rightJawMesh.position.y = -0.024;
+        rightJawPivot.add(rightJawMesh);
+
+        // 7. Individual Pressurized Liquid Fan-Cone Plume right under the nozzle orifice
+        const sprayConeHolder = new THREE.Group();
+        sprayConeHolder.position.set(0, -0.15, -0.02);
+        sprayConeHolder.rotation.x = 0.42; // Swept backward by slipstream
+        sprayConeHolder.scale.set(0.01, 0.01, 0.01);
+        nozzleRoot.add(sprayConeHolder);
+
+        const coneGeo = new THREE.ConeGeometry(0.34, 0.95, 14, 1, true);
+        coneGeo.translate(0, -0.475, 0);
+        const coneMesh1 = new THREE.Mesh(coneGeo, sprayConeMat);
+        coneMesh1.scale.set(1.25, 1.0, 0.48); // Flat fan-spray geometry
+        sprayConeHolder.add(coneMesh1);
+
+        const coneMesh2 = new THREE.Mesh(coneGeo, sprayConeMat);
+        coneMesh2.scale.set(0.75, 1.15, 0.85);
+        sprayConeHolder.add(coneMesh2);
+
+        nozzleControllers.push({
+          nozzleRoot,
+          leverPivot,
+          slidingPoppet,
+          leftJawPivot,
+          rightJawPivot,
+          sprayConeHolder,
+          side,
+          spanFraction: Math.abs(boomCenterDist + side * localX) / 5.75
+        });
+      }
+    });
+
+    // 9. VOLUMETRIC CHEMICAL MIST & DROPLET PARTICLE SYSTEM (2,600 Particles trailed from the 22 Nozzles)
+    const PARTICLE_COUNT = 2600;
+    const pPositions = new Float32Array(PARTICLE_COUNT * 3);
+    const pVelocities = new Float32Array(PARTICLE_COUNT * 3);
+    const pAges = new Float32Array(PARTICLE_COUNT);
+    const pMaxAges = new Float32Array(PARTICLE_COUNT);
+    const pNozzleIdx = new Uint16Array(PARTICLE_COUNT);
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      pPositions[i * 3 + 0] = 0;
+      pPositions[i * 3 + 1] = -999; // Hidden underground until emitted
+      pPositions[i * 3 + 2] = 0;
+      pAges[i] = Math.random() * 2.5;
+      pMaxAges[i] = 1.1 + Math.random() * 1.4;
+      pNozzleIdx[i] = i % nozzleControllers.length;
+    }
+
+    const sprayParticlesGeo = new THREE.BufferGeometry();
+    sprayParticlesGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+
+    const sprayParticlesMat = new THREE.PointsMaterial({
+      map: sprayParticleTex,
+      color: 0xe0f8ff,
+      size: 0.62,
+      transparent: true,
+      opacity: 0.44,
+      depthWrite: false,
+      sizeAttenuation: true
+    });
+
+    const sprayParticlePoints = new THREE.Points(sprayParticlesGeo, sprayParticlesMat);
+    sprayParticlePoints.frustumCulled = false;
+    scene.add(sprayParticlePoints);
+
+    // === INTERACTIVE STATE & UI ELEMENTS ===
+    const state = {
+      sprayEnabled: true,
+      nozzleOpenProgress: 0.0, // Animates smoothly 0 -> 1 when sprayEnabled is true
+      targetPressurePsi: 48,
+      currentPressurePsi: 0,
+      engineRpm: 1950,
+      propRunning: true,
+      flightMode: true // true = Low-Pass Ag Spraying Run, false = Parked Taildragger on Airstrip
+    };
+
+    const sprayToggleBtn = document.getElementById('spray-toggle-btn');
+    const sprayStatusPill = document.getElementById('spray-status-pill');
+    const nozzleStateText = document.getElementById('nozzle-state-text');
+    const nozzleApertureFill = document.getElementById('nozzle-aperture-fill');
+    const pressureReadout = document.getElementById('pressure-readout');
+    const flowReadout = document.getElementById('flow-readout');
+    const rpmSlider = document.getElementById('rpm-slider');
+    const rpmLabel = document.getElementById('rpm-label');
+    const pressureSlider = document.getElementById('pressure-slider');
+    const pressureSliderLabel = document.getElementById('pressure-slider-label');
+    const modeToggleBtn = document.getElementById('mode-toggle-btn');
+    const propBlurBtn = document.getElementById('prop-blur-btn');
+
+    function updateSprayButtonUI() {
+      if (state.sprayEnabled) {
+        sprayToggleBtn.classList.add('active');
+        sprayStatusPill.textContent = 'ACTIVE · ON';
+      } else {
+        sprayToggleBtn.classList.remove('active');
+        sprayStatusPill.textContent = 'OFF';
+      }
+    }
+    updateSprayButtonUI();
+
+    function toggleSpraySystem() {
+      state.sprayEnabled = !state.sprayEnabled;
+      updateSprayButtonUI();
+    }
+
+    sprayToggleBtn.addEventListener('click', toggleSpraySystem);
+
+    rpmSlider.addEventListener('input', (e) => {
+      state.engineRpm = parseFloat(e.target.value);
+      rpmLabel.textContent = `${state.engineRpm.toLocaleString()} RPM`;
+    });
+
+    pressureSlider.addEventListener('input', (e) => {
+      state.targetPressurePsi = parseFloat(e.target.value);
+      pressureSliderLabel.textContent = `${state.targetPressurePsi} PSI`;
+    });
+
+    modeToggleBtn.addEventListener('click', () => {
+      state.flightMode = !state.flightMode;
+      modeToggleBtn.textContent = state.flightMode ? 'Mode: Low Pass' : 'Mode: Ground Parked';
+    });
+
+    propBlurBtn.addEventListener('click', () => {
+      state.propRunning = !state.propRunning;
+      propBlurBtn.textContent = state.propRunning ? 'Prop: Running' : 'Prop: Stopped';
+    });
+
+    // Smooth Camera Preset Transitions (yields immediately when user orbits manually)
+    let camTransition = null;
+    controls.addEventListener('start', () => {
+      camTransition = null; // User took manual control of free orbit camera
+    });
+
+    const cameraPresets = {
+      overview: { pos: new THREE.Vector3(8.8, 3.6, 8.4), target: new THREE.Vector3(0, 1.45, 0.1) },
+      nozzles:  { pos: new THREE.Vector3(2.85, 1.48, -1.55), target: new THREE.Vector3(2.55, 1.82, -0.48) },
+      cowling:  { pos: new THREE.Vector3(2.65, 2.35, 3.15), target: new THREE.Vector3(0.0, 2.25, 1.55) },
+      rigging:  { pos: new THREE.Vector3(5.6, 2.95, 2.65), target: new THREE.Vector3(2.4, 2.75, 0.25) },
+      landinggear: { pos: new THREE.Vector3(3.4, 1.35, -1.95), target: new THREE.Vector3(0.0, 1.45, -0.65) },
+      rear:     { pos: new THREE.Vector3(-5.8, 3.3, -9.2), target: new THREE.Vector3(0, 1.5, -1.2) }
+    };
+
+    function moveToCameraPreset(key) {
+      const preset = cameraPresets[key];
+      if (!preset) return;
+      // Offset preset vertically if aircraft is in low-pass flight vs parked on ground
+      const yOffset = state.flightMode ? 0.0 : -0.62;
+      camTransition = {
+        startPos: camera.position.clone(),
+        startTarget: controls.target.clone(),
+        endPos: preset.pos.clone().add(new THREE.Vector3(0, yOffset, 0)),
+        endTarget: preset.target.clone().add(new THREE.Vector3(0, yOffset, 0)),
+        t: 0
+      };
+    }
+
+    document.querySelectorAll('[data-cam]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        moveToCameraPreset(btn.getAttribute('data-cam'));
+      });
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        toggleSpraySystem();
+      } else if (e.code === 'KeyN') {
+        moveToCameraPreset('nozzles');
+      }
+    });
+
+    // === MAIN ANIMATION LOOP ===
+    const clock = new THREE.Clock();
+    const tmpNozzleWorldPos = new THREE.Vector3();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.05);
+      const elapsed = clock.getElapsedTime();
+
+      // 1. Smoothly animateCamera preset if active
+      if (camTransition) {
+        camTransition.t = Math.min(1, camTransition.t + dt * 2.2);
+        const s = camTransition.t * camTransition.t * (3 - 2 * camTransition.t);
+        camera.position.lerpVectors(camTransition.startPos, camTransition.endPos, s);
+        controls.target.lerpVectors(camTransition.startTarget, camTransition.endTarget, s);
+        if (camTransition.t >= 1) camTransition = null;
+      }
+
+      // 2. Aircraft Attitude: Low-Pass Spraying Flight vs Ground Taildragger Attitude
+      if (state.flightMode) {
+        const targetY = 1.42 + Math.sin(elapsed * 1.9) * 0.065;
+        const targetPitch = 0.015 + Math.cos(elapsed * 1.5) * 0.012;
+        const targetRoll = Math.sin(elapsed * 1.1) * 0.025;
+        aircraftRoot.position.y = THREE.MathUtils.lerp(aircraftRoot.position.y, targetY, dt * 4);
+        airframeGroup.rotation.x = THREE.MathUtils.lerp(airframeGroup.rotation.x, targetPitch, dt * 4);
+        airframeGroup.rotation.z = THREE.MathUtils.lerp(airframeGroup.rotation.z, targetRoll, dt * 4);
+
+        // Scroll ground texture & crop rows to simulate 95 mph low-level pass over the field
+        const groundSpeed = (state.engineRpm / 1950) * 14.0;
+        grassDiff.offset.y -= dt * groundSpeed * 0.1125;
+        grassNor.offset.y = grassDiff.offset.y;
+        grassRough.offset.y = grassDiff.offset.y;
+
+        spinningWheels.forEach((w) => { w.rotation.x += dt * 1.8; });
+      } else {
+        // Classic taildragger parked attitude (nose high, fixed tailwheel & chunky main tyres on ground)
+        const parkedY = 0.68;
+        const parkedPitch = -0.185; // ~10.6 deg nose-up taildragger sit
+        aircraftRoot.position.y = THREE.MathUtils.lerp(aircraftRoot.position.y, parkedY, dt * 4);
+        airframeGroup.rotation.x = THREE.MathUtils.lerp(airframeGroup.rotation.x, parkedPitch, dt * 4);
+        airframeGroup.rotation.z = THREE.MathUtils.lerp(airframeGroup.rotation.z, 0, dt * 4);
+      }
+
+      // 3. Radial Engine Vibration, Propeller Rotation & Wind-Driven Belly Pump Impeller
+      if (state.propRunning) {
+        const omega = (state.engineRpm / 60) * Math.PI * 2 * 0.45;
+        propellerGroup.rotation.z += omega * dt;
+        propBlurDisc.visible = true;
+        propBlurDisc.material.opacity = THREE.MathUtils.clamp((state.engineRpm - 500) / 8000, 0.06, 0.22);
+
+        // Subtle radial engine harmonic vibration
+        const vib = (state.engineRpm / 2000) * 0.0022;
+        engineGroup.position.x = Math.sin(elapsed * 65) * vib;
+        engineGroup.position.y = 1.10 + Math.cos(elapsed * 72) * vib;
+
+        // Wind-driven chemical pump fan spins in slipstream
+        pumpImpeller.rotation.z -= omega * dt * 0.85;
+      } else {
+        propBlurDisc.visible = false;
+      }
+
+      // 4. BOOM NOZZLE MECHANICAL OPENING / CLOSING ANIMATION & MANIFOLD TELEMETRY
+      const openSpeed = 2.4; // Full mechanical stroke in ~0.42s
+      if (state.sprayEnabled) {
+        state.nozzleOpenProgress = Math.min(1.0, state.nozzleOpenProgress + dt * openSpeed);
+      } else {
+        state.nozzleOpenProgress = Math.max(0.0, state.nozzleOpenProgress - dt * openSpeed);
+      }
+
+      const openEase = state.nozzleOpenProgress * state.nozzleOpenProgress * (3 - 2 * state.nozzleOpenProgress);
+      const pressureRatio = state.targetPressurePsi / 48.0;
+      state.currentPressurePsi = openEase * state.targetPressurePsi;
+
+      // Update UI Telemetry Readouts
+      const pct = Math.round(openEase * 100);
+      if (pct > 5) {
+        nozzleStateText.textContent = pct === 100 ? 'OPEN (100%)' : `OPENING (${pct}%)`;
+        nozzleStateText.className = 'telemetry-value open-state';
+        valveLeverMat.color.setHex(0x22c55e); // Indicator lever turns bright green when open
+      } else {
+        nozzleStateText.textContent = 'CLOSED (0%)';
+        nozzleStateText.className = 'telemetry-value closed-state';
+        valveLeverMat.color.setHex(0xef4444); // Red when closed
+      }
+      nozzleApertureFill.style.width = `${pct}%`;
+      pressureReadout.textContent = `${state.currentPressurePsi.toFixed(1)} PSI`;
+      flowReadout.textContent = `${(openEase * 38.4 * pressureRatio).toFixed(1)} GPM`;
+
+      // Animate every single boom nozzle's valve lever, telescoping brass poppet, deflector jaws & spray cone
+      nozzleCoreMatOpen.emissiveIntensity = openEase * 1.4;
+      sprayConeMat.opacity = openEase * 0.46 * Math.min(1.25, pressureRatio);
+
+      for (let i = 0; i < nozzleControllers.length; i++) {
+        const nc = nozzleControllers[i];
+        // 1. Shutoff valve lever visibly swings 82 degrees upward to open the diaphragm valve
+        nc.leverPivot.rotation.z = nc.side * openEase * 1.43;
+
+        // 2. Brass poppet sleeve slides downward (-0.082 -> -0.140) exposing the internal atomizing core
+        nc.slidingPoppet.position.y = -0.082 - openEase * 0.058;
+
+        // 3. Split-cone orifice jaws visibly spread open (±32 deg) as pressurized spray begins
+        const jawAngle = openEase * 0.56;
+        nc.leftJawPivot.rotation.z = -jawAngle;
+        nc.rightJawPivot.rotation.z = jawAngle;
+
+        // 4. Pressurized liquid fan-cone beneath nozzle unfurls and shimmers
+        if (openEase > 0.02) {
+          nc.sprayConeHolder.visible = true;
+          const pulse = 1.0 + Math.sin(elapsed * 38 + i * 1.7) * 0.07;
+          nc.sprayConeHolder.scale.set(
+            openEase * (0.85 + 0.35 * pressureRatio) * pulse,
+            openEase * (0.90 + 0.30 * pressureRatio),
+            openEase * pulse
+          );
+        } else {
+          nc.sprayConeHolder.visible = false;
+        }
+      }
+
+      // 5. UPDATE VOLUMETRIC SPRAY MIST & DROPLET PARTICLES
+      aircraftRoot.updateMatrixWorld(true);
+      const posAttr = sprayParticlesGeo.attributes.position;
+      const slipstreamZ = state.flightMode ? -16.5 : -9.5;
+
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        pAges[i] += dt;
+        const maxAge = pMaxAges[i];
+
+        if (pAges[i] >= maxAge) {
+          if (openEase > 0.12) {
+            // Respawn particle right at its assigned open boom nozzle tip
+            pAges[i] = 0;
+            const nIdx = pNozzleIdx[i];
+            const nc = nozzleControllers[nIdx];
+            nc.slidingPoppet.getWorldPosition(tmpNozzleWorldPos);
+
+            pPositions[i * 3 + 0] = tmpNozzleWorldPos.x + (Math.random() - 0.5) * 0.08;
+            pPositions[i * 3 + 1] = tmpNozzleWorldPos.y - 0.06;
+            pPositions[i * 3 + 2] = tmpNozzleWorldPos.z + (Math.random() - 0.5) * 0.08;
+
+            // Fan-spray velocity + wingtip vortex curl on outer nozzles
+            const spreadX = (Math.random() - 0.5) * 2.2 * pressureRatio + nc.side * Math.pow(nc.spanFraction, 2) * 2.6;
+            const downY = -(2.4 + Math.random() * 2.2) * pressureRatio;
+            const backZ = slipstreamZ * (0.75 + Math.random() * 0.45);
+
+            pVelocities[i * 3 + 0] = spreadX;
+            pVelocities[i * 3 + 1] = downY;
+            pVelocities[i * 3 + 2] = backZ;
+          } else {
+            // Keep inactive particles hidden when nozzles are closed
+            pPositions[i * 3 + 1] = -999;
+          }
+        } else if (pPositions[i * 3 + 1] > -100) {
+          const lifeFrac = pAges[i] / maxAge;
+          const nIdx = pNozzleIdx[i];
+          const nc = nozzleControllers[nIdx];
+
+          // Advance position with slipstream drag, ground cushion & wingtip vortex swirl
+          pPositions[i * 3 + 0] += pVelocities[i * 3 + 0] * dt;
+          pPositions[i * 3 + 1] += pVelocities[i * 3 + 1] * dt;
+          pPositions[i * 3 + 2] += pVelocities[i * 3 + 2] * dt;
+
+          // Ground effect: mist billows outward and upward slightly when hitting crop canopy (y ~ 0.25)
+          if (pPositions[i * 3 + 1] < 0.28) {
+            pPositions[i * 3 + 1] = 0.28 + Math.sin(elapsed * 8 + i) * 0.06;
+            pVelocities[i * 3 + 1] = Math.abs(pVelocities[i * 3 + 1]) * 0.35;
+            pVelocities[i * 3 + 0] += nc.side * dt * 4.5;
+          }
+
+          // Wingtip vortex roll-up on outer half of wing
+          if (nc.spanFraction > 0.62 && lifeFrac > 0.2) {
+            const swirlAngle = elapsed * 4.0 + lifeFrac * 5.0;
+            pPositions[i * 3 + 1] += Math.sin(swirlAngle) * dt * 1.8 * nc.spanFraction;
+          }
+        }
+      }
+      posAttr.needsUpdate = true;
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate();
+
+
+
+
+
+
+
+  </script>
+</body>
+</html>

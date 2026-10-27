@@ -1,0 +1,2849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Artisanal Olive Wood Cheese Board — Interactive 3D</title>
+  <style>
+    :root {
+      --bg-dark: #14100d;
+      --gold: #d9a75a;
+      --gold-light: #f3d299;
+      --cream: #f7f1e5;
+      --muted: #b5a692;
+      --panel-bg: rgba(24, 18, 14, 0.78);
+      --panel-border: rgba(217, 167, 90, 0.28);
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 35%, #2a1f18 0%, #120d0a 75%, #090605 100%);
+      font-family: 'Georgia', 'Times New Roman', serif;
+      color: var(--cream);
+    }
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Header HUD */
+    .hud-header {
+      position: fixed;
+      top: 22px;
+      left: 26px;
+      z-index: 10;
+      pointer-events: none;
+      max-width: 440px;
+    }
+    .hud-subtitle {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    .hud-title {
+      font-size: 26px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      color: var(--cream);
+      text-shadow: 0 2px 14px rgba(0, 0, 0, 0.75);
+      margin-bottom: 6px;
+    }
+    .hud-desc {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--muted);
+      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+    }
+
+    /* Status & Controls Bar */
+    .hud-controls {
+      position: fixed;
+      top: 22px;
+      right: 26px;
+      z-index: 10;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .hud-btn {
+      pointer-events: auto;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      color: var(--cream);
+      padding: 9px 15px;
+      border-radius: 999px;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 12.5px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: all 0.22s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    }
+    .hud-btn:hover {
+      border-color: var(--gold);
+      background: rgba(45, 33, 24, 0.88);
+      transform: translateY(-1px);
+    }
+    .hud-btn.active {
+      background: linear-gradient(135deg, rgba(217, 167, 90, 0.32), rgba(165, 112, 42, 0.26));
+      border-color: var(--gold-light);
+      color: var(--gold-light);
+      box-shadow: 0 0 18px rgba(217, 167, 90, 0.3);
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.25s ease, box-shadow 0.25s ease;
+    }
+    .hud-btn.active .status-dot {
+      background: #76e086;
+      box-shadow: 0 0 8px #76e086;
+    }
+
+    /* Bottom Tasting & Action Banner */
+    .hud-bottom {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+      width: min(92vw, 720px);
+    }
+    .tasting-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 14px;
+      padding: 12px 20px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+      transition: border-color 0.25s ease;
+    }
+    .tasting-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .tasting-tag {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--gold);
+      font-weight: 600;
+    }
+    .tasting-name {
+      font-size: 17px;
+      color: var(--cream);
+      font-weight: 400;
+    }
+    .tasting-notes {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+    .tasting-hint {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 12px;
+      color: var(--gold-light);
+      background: rgba(217, 167, 90, 0.13);
+      border: 1px solid rgba(217, 167, 90, 0.3);
+      padding: 7px 13px;
+      border-radius: 8px;
+      white-space: nowrap;
+      font-weight: 500;
+    }
+
+    /* Floating 3D Cursor Label */
+    #cursor-pill {
+      position: fixed;
+      pointer-events: none;
+      z-index: 20;
+      background: rgba(20, 14, 10, 0.86);
+      border: 1px solid rgba(217, 167, 90, 0.55);
+      color: var(--gold-light);
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 11.5px;
+      font-weight: 500;
+      padding: 5px 10px;
+      border-radius: 999px;
+      transform: translate(-50%, -140%);
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+    }
+    #cursor-pill.visible {
+      opacity: 1;
+    }
+
+    @media (max-width: 720px) {
+      .hud-header {
+        top: 14px;
+        left: 16px;
+        max-width: 60%;
+      }
+      .hud-title { font-size: 20px; }
+      .hud-desc { display: none; }
+      .hud-controls { top: 14px; right: 16px; }
+      .tasting-card {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px 14px;
+        gap: 8px;
+      }
+      .tasting-hint { align-self: stretch; text-align: center; }
+    }
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <div class="hud-header">
+    <div class="hud-subtitle">Artisanal Fromagerie</div>
+    <h1 class="hud-title">Oiled Olive Wood Tasting Board</h1>
+    <p class="hud-desc">
+      Click the cheese knife on the board to lift it into your hand, move across any cheese to align the blade, and click to slice or crumble.
+    </p>
+  </div>
+
+  <div class="hud-controls">
+    <button id="btn-knife" class="hud-btn" title="Pick up or set down the artisanal cheese knife">
+      <span class="status-dot"></span>
+      <span id="btn-knife-label">Pick Up Knife</span>
+    </button>
+    <button id="btn-camera" class="hud-btn" title="Cycle camera angles">
+      <span>Camera View</span>
+    </button>
+    <button id="btn-reset" class="hud-btn" title="Restore full uncut cheeses to the board">
+      <span>Replenish Board</span>
+    </button>
+  </div>
+
+  <div class="hud-bottom">
+    <div class="tasting-card">
+      <div class="tasting-info">
+        <div class="tasting-tag" id="info-tag">Interactive Board</div>
+        <div class="tasting-name" id="info-name">Artisanal Four-Cheese Selection</div>
+        <div class="tasting-notes" id="info-notes">
+          Aged Crumbly Reserve &bull; Bloomy Brie Round &bull; Veined Roquefort Blue &bull; Ash-Rind Chèvre Log
+        </div>
+      </div>
+      <div class="tasting-hint" id="info-hint">Click the knife on the board to begin slicing</div>
+    </div>
+  </div>
+
+  <div id="cursor-pill">Slice Here</div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+    // =========================================================================
+    // 1. DETERMINISTIC PRNG & PROCEDURAL NOISE UTILITIES
+    // =========================================================================
+    class SeededRandom {
+      constructor(seed = 1337) {
+        this.s = seed % 2147483647;
+        if (this.s <= 0) this.s += 2147483646;
+      }
+      next() {
+        this.s = (this.s * 16807) % 2147483647;
+        return (this.s - 1) / 2147483646;
+      }
+      range(min, max) {
+        return min + (max - min) * this.next();
+      }
+    }
+
+    const rng = new SeededRandom(42069);
+
+    // Permutation table for 2D/3D gradient noise
+    const PERM = new Uint8Array(512);
+    const GRAD3 = [
+      [1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],
+      [1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],
+      [0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]
+    ];
+    (function initNoise() {
+      const p = new Uint8Array(256);
+      for (let i = 0; i < 256; i++) p[i] = i;
+      const nRng = new SeededRandom(98765);
+      for (let i = 255; i > 0; i--) {
+        const j = Math.floor(nRng.next() * (i + 1));
+        const tmp = p[i]; p[i] = p[j]; p[j] = tmp;
+      }
+      for (let i = 0; i < 512; i++) PERM[i] = p[i & 255];
+    })();
+
+    function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    function lerp(a, b, t) { return a + t * (b - a); }
+    function dot2(g, x, y) { return g[0] * x + g[1] * y; }
+    function dot3(g, x, y, z) { return g[0] * x + g[1] * y + g[2] * z; }
+
+    function noise2D(x, y) {
+      const X = Math.floor(x) & 255;
+      const Y = Math.floor(y) & 255;
+      x -= Math.floor(x);
+      y -= Math.floor(y);
+      const u = fade(x), v = fade(y);
+      const A = PERM[X] + Y, B = PERM[X + 1] + Y;
+      const g00 = GRAD3[PERM[A] % 12];
+      const g10 = GRAD3[PERM[B] % 12];
+      const g01 = GRAD3[PERM[A + 1] % 12];
+      const g11 = GRAD3[PERM[B + 1] % 12];
+      return lerp(
+        lerp(dot2(g00, x, y), dot2(g10, x - 1, y), u),
+        lerp(dot2(g01, x, y - 1), dot2(g11, x - 1, y - 1), u),
+        v
+      );
+    }
+
+    function noise3D(x, y, z) {
+      const X = Math.floor(x) & 255;
+      const Y = Math.floor(y) & 255;
+      const Z = Math.floor(z) & 255;
+      x -= Math.floor(x);
+      y -= Math.floor(y);
+      z -= Math.floor(z);
+      const u = fade(x), v = fade(y), w = fade(z);
+      const A = PERM[X] + Y, AA = PERM[A] + Z, AB = PERM[A + 1] + Z;
+      const B = PERM[X + 1] + Y, BA = PERM[B] + Z, BB = PERM[B + 1] + Z;
+      return lerp(
+        lerp(
+          lerp(dot3(GRAD3[PERM[AA] % 12], x, y, z), dot3(GRAD3[PERM[BA] % 12], x - 1, y, z), u),
+          lerp(dot3(GRAD3[PERM[AB] % 12], x, y - 1, z), dot3(GRAD3[PERM[BB] % 12], x - 1, y - 1, z), u),
+          v
+        ),
+        lerp(
+          lerp(dot3(GRAD3[PERM[AA + 1] % 12], x, y, z - 1), dot3(GRAD3[PERM[BA + 1] % 12], x - 1, y, z - 1), u),
+          lerp(dot3(GRAD3[PERM[AB + 1] % 12], x, y - 1, z - 1), dot3(GRAD3[PERM[BB + 1] % 12], x - 1, y - 1, z - 1), u),
+          v
+        ),
+        w
+      );
+    }
+
+    function fbm2D(x, y, octaves = 4, persistence = 0.5, lacunarity = 2.0) {
+      let total = 0, amp = 1, freq = 1, maxVal = 0;
+      for (let i = 0; i < octaves; i++) {
+        total += noise2D(x * freq, y * freq) * amp;
+        maxVal += amp;
+        amp *= persistence;
+        freq *= lacunarity;
+      }
+      return total / maxVal;
+    }
+
+    function fbm3D(x, y, z, octaves = 4, persistence = 0.5, lacunarity = 2.0) {
+      let total = 0, amp = 1, freq = 1, maxVal = 0;
+      for (let i = 0; i < octaves; i++) {
+        total += noise3D(x * freq, y * freq, z * freq) * amp;
+        maxVal += amp;
+        amp *= persistence;
+        freq *= lacunarity;
+      }
+      return total / maxVal;
+    }
+
+    // =========================================================================
+    // 2. WEB AUDIO SYNTHESIZER (TACTILE FOLEY SOUNDS)
+    // =========================================================================
+    let audioCtx = null;
+    function ensureAudio() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) audioCtx = new AudioContextClass();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playFoley(type) {
+      try {
+        ensureAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+
+        if (type === 'lift') {
+          // Subtle metallic ring + wood lift
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1480, now);
+          osc.frequency.exponentialRampToValueAtTime(2120, now + 0.14);
+          gain.gain.setValueAtTime(0.06, now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+          osc.connect(gain).connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.23);
+        } else if (type === 'setDown') {
+          // Warm olive wood thud
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(140, now);
+          osc.frequency.exponentialRampToValueAtTime(52, now + 0.12);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+          osc.connect(gain).connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        } else if (type === 'sliceHard') {
+          // Crisp crystalline fracture + board tap
+          const bufferSize = audioCtx.sampleRate * 0.18;
+          const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            const env = Math.pow(1 - i / bufferSize, 1.8);
+            data[i] = (Math.random() * 2 - 1) * env * (i % 40 < 12 ? 1.0 : 0.35);
+          }
+          const noise = audioCtx.createBufferSource();
+          noise.buffer = buffer;
+          const filter = audioCtx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.frequency.setValueAtTime(1600, now);
+          filter.Q.setValueAtTime(1.4, now);
+          const gain = audioCtx.createGain();
+          gain.gain.setValueAtTime(0.24, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+          noise.connect(filter).connect(gain).connect(audioCtx.destination);
+          noise.start(now);
+        } else if (type === 'sliceSoft' || type === 'sliceBlue' || type === 'sliceGoat') {
+          // Smooth blade glide + gentle wood contact at the end
+          const bufferSize = audioCtx.sampleRate * 0.22;
+          const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            const t = i / bufferSize;
+            const env = Math.sin(t * Math.PI);
+            data[i] = (Math.random() * 2 - 1) * env * 0.4;
+          }
+          const noise = audioCtx.createBufferSource();
+          noise.buffer = buffer;
+          const filter = audioCtx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(type === 'sliceBlue' ? 1100 : 750, now);
+          const gain = audioCtx.createGain();
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+          noise.connect(filter).connect(gain).connect(audioCtx.destination);
+          noise.start(now);
+
+          // Soft wood tap at completion
+          const osc = audioCtx.createOscillator();
+          const tapGain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(175, now + 0.14);
+          osc.frequency.exponentialRampToValueAtTime(68, now + 0.24);
+          tapGain.gain.setValueAtTime(0.0001, now);
+          tapGain.gain.setValueAtTime(0.12, now + 0.14);
+          tapGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+          osc.connect(tapGain).connect(audioCtx.destination);
+          osc.start(now + 0.14);
+          osc.stop(now + 0.26);
+        }
+      } catch (e) {
+        // Ignore audio errors if blocked by browser policy
+      }
+    }
+
+    // =========================================================================
+    // 3. SCENE, CAMERA, RENDERER & LIGHTING SETUP
+    // =========================================================================
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x120d0a, 0.028);
+
+    const camera = new THREE.PerspectiveCamera(
+      38,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+    camera.position.set(0.4, 8.6, 10.6);
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: 'high-performance'
+    });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    container.appendChild(renderer.domElement);
+
+    // Environment map for realistic specular on oiled olive wood, glossy grapes & steel blade
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+    const roomEnv = new RoomEnvironment();
+    scene.environment = pmremGenerator.fromScene(roomEnv, 0.04).texture;
+    scene.environmentIntensity = 0.65;
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.target.set(0, 0.55, 0.15);
+    controls.minDistance = 4.2;
+    controls.maxDistance = 18.5;
+    controls.maxPolarAngle = Math.PI * 0.465;
+    controls.minPolarAngle = 0.18;
+
+    // Warm Golden Key Light (simulating warm bistro / overhead pendant lamp)
+    const keyLight = new THREE.DirectionalLight(0xfff1dc, 2.55);
+    keyLight.position.set(5.8, 10.5, 6.2);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.near = 2.0;
+    keyLight.shadow.camera.far = 24.0;
+    const d = 7.5;
+    keyLight.shadow.camera.left = -d;
+    keyLight.shadow.camera.right = d;
+    keyLight.shadow.camera.top = d;
+    keyLight.shadow.camera.bottom = -d;
+    keyLight.shadow.bias = -0.0004;
+    keyLight.shadow.normalBias = 0.018;
+    scene.add(keyLight);
+
+    // Cool-neutral skylight fill for soft shadow contrast
+    const fillLight = new THREE.DirectionalLight(0xcce0ff, 0.65);
+    fillLight.position.set(-7.0, 6.5, -4.5);
+    scene.add(fillLight);
+
+    // Warm rim/back light to make glossy grapes & oiled wood edge pop
+    const rimLight = new THREE.SpotLight(0xffb86c, 2.2, 25, Math.PI * 0.35, 0.6, 1.2);
+    rimLight.position.set(-3.5, 6.8, -7.8);
+    rimLight.target.position.set(0, 0.5, 0);
+    scene.add(rimLight);
+    scene.add(rimLight.target);
+
+    // Subtle warm candlelight point light near back-left
+    const candleLight = new THREE.PointLight(0xff9b42, 0.9, 12, 1.6);
+    candleLight.position.set(-4.8, 2.4, -3.2);
+    scene.add(candleLight);
+
+    // Ambient hemisphere base
+    const hemiLight = new THREE.HemisphereLight(0xffe9cf, 0x241811, 0.55);
+    scene.add(hemiLight);
+
+    // =========================================================================
+    // 4. PROCEDURAL CANVAS TEXTURES & PBR MATERIAL LIBRARY
+    // =========================================================================
+    const maxAniso = renderer.capabilities.getMaxAnisotropy();
+
+    function makeCanvasTex(width, height, drawFn, isSRGB = true, repeatX = 1, repeatY = 1) {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      drawFn(ctx, width, height);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = isSRGB ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+      tex.anisotropy = maxAniso;
+      if (repeatX !== 1 || repeatY !== 1) {
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(repeatX, repeatY);
+      } else {
+        tex.wrapS = THREE.ClampToEdgeWrapping;
+        tex.wrapT = THREE.ClampToEdgeWrapping;
+      }
+      return tex;
+    }
+
+    // --- 4.1 Oiled Olive Wood Slab Texture (Swirling high-contrast grain) ---
+    function createOliveWoodTextures() {
+      const w = 1024, h = 1024;
+      const colorCanvas = document.createElement('canvas');
+      colorCanvas.width = w; colorCanvas.height = h;
+      const cCtx = colorCanvas.getContext('2d');
+      const cImg = cCtx.createImageData(w, h);
+
+      const bumpCanvas = document.createElement('canvas');
+      bumpCanvas.width = w; bumpCanvas.height = h;
+      const bCtx = bumpCanvas.getContext('2d');
+      const bImg = bCtx.createImageData(w, h);
+
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const u = x / w;
+          const v = y / h;
+
+          // Domain warping for signature wild olive wood burl & cathedral swirls
+          const warp1 = fbm2D(u * 3.2 + 1.4, v * 2.4 + 5.1, 4, 0.55);
+          const warp2 = fbm2D(u * 6.5 + warp1 * 2.2, v * 4.5 - warp1 * 1.8, 4, 0.5);
+          const burl = Math.exp(-((u - 0.36) ** 2 + (v - 0.54) ** 2) * 18.0) * 1.6
+                     + Math.exp(-((u - 0.72) ** 2 + (v - 0.38) ** 2) * 24.0) * 1.2;
+
+          const grainCoord = (v * 14.0) + warp1 * 4.8 + warp2 * 2.3 + burl * Math.sin(u * 18.0);
+          const ring = Math.sin(grainCoord * Math.PI * 2.0);
+          const sharpVein = Math.pow(0.5 + 0.5 * Math.cos(grainCoord * Math.PI * 2.0 + warp2 * 3.0), 6.0);
+          const finePore = noise2D(u * 160.0, v * 35.0) * 0.5 + 0.5;
+
+          // Warm golden honey olive wood to deep espresso-umber veins
+          let r = 204, g = 142, b = 72;
+          const tone = 0.5 + 0.5 * ring;
+          r = lerp(155, 224, tone);
+          g = lerp(98, 162, tone);
+          b = lerp(42, 84, tone);
+
+          // Dark dramatic olive heartwood streaks
+          const darkStreak = Math.min(1, sharpVein * 0.85 + Math.max(0, warp2) * 0.35);
+          r = lerp(r, 56, darkStreak);
+          g = lerp(g, 31, darkStreak);
+          b = lerp(b, 14, darkStreak);
+
+          // Sapwood lighter golden edge near top/bottom borders
+          const edgeDist = Math.min(v, 1 - v);
+          if (edgeDist < 0.16) {
+            const sap = (0.16 - edgeDist) / 0.16;
+            r = lerp(r, 232, sap * 0.55);
+            g = lerp(g, 188, sap * 0.55);
+            b = lerp(b, 118, sap * 0.55);
+          }
+
+          // Subtle knife score marks in center
+          const poreMod = (finePore - 0.5) * 14;
+          const idx = (y * w + x) * 4;
+          cImg.data[idx] = Math.max(0, Math.min(255, r + poreMod));
+          cImg.data[idx + 1] = Math.max(0, Math.min(255, g + poreMod));
+          cImg.data[idx + 2] = Math.max(0, Math.min(255, b + poreMod));
+          cImg.data[idx + 3] = 255;
+
+          const bumpVal = Math.max(0, Math.min(255, 128 + (tone - 0.5) * 60 - sharpVein * 40 + (finePore - 0.5) * 35));
+          bImg.data[idx] = bumpVal;
+          bImg.data[idx + 1] = bumpVal;
+          bImg.data[idx + 2] = bumpVal;
+          bImg.data[idx + 3] = 255;
+        }
+      }
+      cCtx.putImageData(cImg, 0, 0);
+      bCtx.putImageData(bImg, 0, 0);
+
+      const colorTex = new THREE.CanvasTexture(colorCanvas);
+      colorTex.colorSpace = THREE.SRGBColorSpace;
+      colorTex.anisotropy = maxAniso;
+      colorTex.wrapS = colorTex.wrapT = THREE.RepeatWrapping;
+
+      const bumpTex = new THREE.CanvasTexture(bumpCanvas);
+      bumpTex.colorSpace = THREE.NoColorSpace;
+      bumpTex.anisotropy = maxAniso;
+      bumpTex.wrapS = bumpTex.wrapT = THREE.RepeatWrapping;
+
+      return { colorTex, bumpTex };
+    }
+
+    // --- 4.2 Cheese & Garnish Procedural Textures ---
+    const oliveTextures = createOliveWoodTextures();
+
+    // Bark texture for live edge of olive wood slab
+    const barkTex = makeCanvasTex(512, 256, (ctx, w, h) => {
+      const img = ctx.createImageData(w, h);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const n = fbm2D(x / 18, y / 42, 5, 0.6);
+          const ridge = Math.abs(noise2D(x / 8, y / 28));
+          const v = 0.5 + n * 0.45 - ridge * 0.35;
+          const idx = (y * w + x) * 4;
+          img.data[idx] = Math.max(20, Math.min(255, 78 * v));
+          img.data[idx + 1] = Math.max(15, Math.min(255, 58 * v));
+          img.data[idx + 2] = Math.max(10, Math.min(255, 38 * v));
+          img.data[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+    }, true, 3, 1);
+
+    // 1A: Hard Crumbly Cheese Rind (Matte aged golden-ochre rind with pin-dots)
+    const hardRindTex = makeCanvasTex(512, 512, (ctx, w, h) => {
+      const img = ctx.createImageData(w, h);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const n = fbm2D(x / 36, y / 36, 4, 0.55);
+          const dot = (Math.sin(x * 0.45) * Math.sin(y * 0.45)) > 0.72 ? -18 : 0;
+          const dust = noise2D(x / 6, y / 6) * 14;
+          const idx = (y * w + x) * 4;
+          img.data[idx] = Math.min(255, Math.max(0, 178 + n * 38 + dot + dust));
+          img.data[idx + 1] = Math.min(255, Math.max(0, 134 + n * 32 + dot + dust));
+          img.data[idx + 2] = Math.min(255, Math.max(0, 68 + n * 24 + dot + dust));
+          img.data[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+    });
+
+    // 1B: Hard Crumbly Cheese Interior (Straw-gold paste + white tyrosine crystals + micro-cracks)
+    const hardPasteTex = makeCanvasTex(512, 512, (ctx, w, h) => {
+      const img = ctx.createImageData(w, h);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const n = fbm2D(x / 28, y / 28, 5, 0.6);
+          const flake = Math.abs(noise2D(x / 9, y / 9));
+          const crystalNoise = noise2D(x * 0.35, y * 0.35);
+          const isCrystal = crystalNoise > 0.66;
+          const idx = (y * w + x) * 4;
+          let r = 236 + n * 22 - (flake < 0.08 ? 26 : 0);
+          let g = 204 + n * 20 - (flake < 0.08 ? 24 : 0);
+          let b = 124 + n * 16 - (flake < 0.08 ? 18 : 0);
+          if (isCrystal) {
+            r = 253; g = 249; b = 236;
+          }
+          img.data[idx] = Math.min(255, Math.max(0, r));
+          img.data[idx + 1] = Math.min(255, Math.max(0, g));
+          img.data[idx + 2] = Math.min(255, Math.max(0, b));
+          img.data[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+    });
+
+    const hardBumpTex = makeCanvasTex(512, 512, (ctx, w, h) => {
+      const img = ctx.createImageData(w, h);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const n = fbm2D(x / 14, y / 14, 5, 0.65);
+          const cr = Math.abs(noise2D(x / 7, y / 7));
+          const v = Math.min(255, Math.max(0, 128 + n * 95 - (cr < 0.12 ? 55 : 0)));
+          const idx = (y * w + x) * 4;
+          img.data[idx] = img.data[idx + 1] = img.data[idx + 2] = v;
+          img.data[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+    }, false);
+
+    // 2A: Bloomy Soft Round Rind (Velvety matte white mold coat with subtle straw-mat lines)
+    const bloomyRindTex = makeCanvasTex(512, 512, (ctx, w, h) => {
+      const img = ctx.createImageData(w, h);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const bloom = fbm2D(x / 40, y / 40, 4, 0.55);
+          const matRidge = Math.sin(x * 0.38 + noise2D(x / 30, y / 30) * 1.5) * 4.5;
+          const velvet = noise2D(x / 4, y / 4) * 5;
+          const blush = Math.max(0, bloom) * 14;
+          const idx = (y * w + x) * 4;
+          img.data[idx] = Math.min(255, Math.max(210, 245 - blush * 0.3 + matRidge + velvet));
+          img.data[idx + 1] = Math.min(255, Math.max(200, 241 - blush * 0.7 + matRidge + velvet));
+          img.data[idx + 2] = Math.min(255, Math.max(185, 232 - blush * 1.3 + matRidge + velvet));
+          img.data[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+    });
+
+    // 3A: Blue Cheese Cut Veining Texture (Creamy paste + deep blue-green Penicillium veins)
+    const blueVeinsTex = makeCanvasTex(512, 512, (ctx, w, h) => {
+      const img = ctx.createImageData(w, h);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const u = x / w, v = y / h;
+          const wx = u * 5.5 + fbm2D(u * 4.0, v * 4.0, 3) * 1.25;
+          const wy = v * 5.5 + fbm2D(u * 4.0 + 9.2, v * 4.0 + 3.7, 3) * 1.25;
+
+          // Ridged multifractal for branching veins & pockets
+          const ridge1 = Math.abs(noise2D(wx, wy));
+          const ridge2 = Math.abs(noise2D(wx * 2.3 + 4.1, wy * 2.3 - 1.9));
+          const pocket = fbm2D(u * 12.0, v * 12.0, 3);
+
+          // Creamy sheep's milk paste base
+          let r = 244 + pocket * 10;
+          let g = 236 + pocket * 10;
+          let b = 210 + pocket * 8;
+
+          // Primary blue-green mold veins & secondary marbling
+          const veinMask = (ridge1 < 0.085) ? (1.0 - ridge1 / 0.085) : 0;
+          const fineVein = (ridge2 < 0.065 && pocket > -0.15) ? (1.0 - ridge2 / 0.065) * 0.85 : 0;
+          const cavity = (ridge1 < 0.032 && pocket > 0.08) ? 1.0 : 0;
+          const vStrength = Math.min(1.0, Math.max(veinMask, fineVein));
+
+          if (vStrength > 0.05) {
+            // Deep Roquefort teal-indigo-slate veining
+            r = lerp(r, cavity ? 22 : 38, vStrength);
+            g = lerp(g, cavity ? 52 : 82, vStrength);
+            b = lerp(b, cavity ? 58 : 88, vStrength);
+          }
+
+          const idx = (y * w + x) * 4;
+          img.data[idx] = Math.min(255, Math.max(0, r));
+          img.data[idx + 1] = Math.min(255, Math.max(0, g));
+          img.data[idx + 2] = Math.min(255, Math.max(0, b));
+          img.data[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+    });
+
+    const blueBumpTex = makeCanvasTex(512, 512, (ctx, w, h) => {
+      const img = ctx.createImageData(w, h);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const u = x / w, v = y / h;
+          const wx = u * 5.5 + fbm2D(u * 4.0, v * 4.0, 3) * 1.25;
+          const wy = v * 5.5 + fbm2D(u * 4.0 + 9.2, v * 4.0 + 3.7, 3) * 1.25;
+          const ridge1 = Math.abs(noise2D(wx, wy));
+          const ridge2 = Math.abs(noise2D(wx * 2.3 + 4.1, wy * 2.3 - 1.9));
+          const crumb = fbm2D(u * 24, v * 24, 3) * 28;
+          let heightVal = 155 + crumb;
+          if (ridge1 < 0.085) heightVal -= (1 - ridge1 / 0.085) * 95;
+          if (ridge2 < 0.065) heightVal -= (1 - ridge2 / 0.065) * 55;
+          const idx = (y * w + x) * 4;
+          const c = Math.min(255, Math.max(0, heightVal));
+          img.data[idx] = img.data[idx + 1] = img.data[idx + 2] = c;
+          img.data[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+    }, false);
+
+    // 3B: Blue Cheese Outer Matte Cave Rind
+    const blueRindTex = makeCanvasTex(512, 512, (ctx, w, h) => {
+      const img = ctx.createImageData(w, h);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const n = fbm2D(x / 22, y / 22, 4, 0.6);
+          const pebble = noise2D(x / 5, y / 5) * 18;
+          const idx = (y * w + x) * 4;
+          img.data[idx] = Math.min(255, Math.max(0, 176 + n * 35 + pebble));
+          img.data[idx + 1] = Math.min(255, Math.max(0, 162 + n * 32 + pebble));
+          img.data[idx + 2] = Math.min(255, Math.max(0, 136 + n * 28 + pebble));
+          img.data[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+    });
+
+    // 4A: Goat Log Matte Rind (Ash & fine herbs dusted chèvre coat)
+    const goatRindTex = makeCanvasTex(512, 512, (ctx, w, h) => {
+      const img = ctx.createImageData(w, h);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const wrinkle = fbm2D(x / 26, y / 14, 4, 0.6);
+          const ashPatch = fbm2D(x / 45 + 3.1, y / 45 + 1.7, 3, 0.5);
+          const herbSpec = noise2D(x * 0.42, y * 0.42);
+          // Silvery-charcoal vegetable ash with white bloom showing through
+          let base = 115 + wrinkle * 48 + ashPatch * 45;
+          let r = base, g = base + 2, b = base + 5;
+          if (herbSpec > 0.68) {
+            // Tiny dried thyme / rosemary / peppercorn flecks
+            r = 76; g = 92; b = 52;
+          } else if (herbSpec < -0.68) {
+            r = 235; g = 233; b = 226;
+          }
+          const idx = (y * w + x) * 4;
+          img.data[idx] = Math.min(255, Math.max(35, r));
+          img.data[idx + 1] = Math.min(255, Math.max(35, g));
+          img.data[idx + 2] = Math.min(255, Math.max(35, b));
+          img.data[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+    });
+
+    // Walnut & Table Linen Textures
+    const walnutTex = makeCanvasTex(256, 256, (ctx, w, h) => {
+      const img = ctx.createImageData(w, h);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const n = fbm2D(x / 14, y / 14, 4, 0.65);
+          const groove = Math.abs(noise2D(x / 7, y / 7));
+          const dark = groove < 0.14 ? -32 : 0;
+          const idx = (y * w + x) * 4;
+          img.data[idx] = Math.min(255, Math.max(25, 138 + n * 42 + dark));
+          img.data[idx + 1] = Math.min(255, Math.max(18, 94 + n * 32 + dark));
+          img.data[idx + 2] = Math.min(255, Math.max(10, 52 + n * 24 + dark));
+          img.data[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+    });
+
+    const linenTex = makeCanvasTex(256, 256, (ctx, w, h) => {
+      const img = ctx.createImageData(w, h);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const warp = Math.sin(x * 1.2) * 8;
+          const weft = Math.sin(y * 1.2) * 8;
+          const n = noise2D(x / 18, y / 18) * 10;
+          const v = 54 + warp + weft + n;
+          const idx = (y * w + x) * 4;
+          img.data[idx] = Math.min(255, Math.max(0, v + 6));
+          img.data[idx + 1] = Math.min(255, Math.max(0, v));
+          img.data[idx + 2] = Math.min(255, Math.max(0, v - 6));
+          img.data[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+    }, true, 12, 12);
+
+    const MAT = {
+      // Oiled Olive Wood Slab (rich satin sheen)
+      oliveWoodTop: new THREE.MeshPhysicalMaterial({
+        map: oliveTextures.colorTex,
+        bumpMap: oliveTextures.bumpTex,
+        bumpScale: 0.016,
+        roughness: 0.24,
+        metalness: 0.0,
+        clearcoat: 0.52,
+        clearcoatRoughness: 0.2,
+        reflectivity: 0.7
+      }),
+      oliveBark: new THREE.MeshStandardMaterial({
+        map: barkTex,
+        bumpMap: barkTex,
+        bumpScale: 0.048,
+        roughness: 0.93,
+        metalness: 0.0
+      }),
+
+      // 1. Hard Crumbly Wedge (Matte Rind + Crumbly Crystalline Interior)
+      hardRind: new THREE.MeshStandardMaterial({
+        map: hardRindTex,
+        bumpMap: hardRindTex,
+        bumpScale: 0.026,
+        roughness: 0.92,
+        metalness: 0.0
+      }),
+      hardPaste: new THREE.MeshStandardMaterial({
+        map: hardPasteTex,
+        bumpMap: hardBumpTex,
+        bumpScale: 0.042,
+        roughness: 0.78,
+        metalness: 0.0
+      }),
+      hardCrystal: new THREE.MeshStandardMaterial({
+        color: 0xfffcf2,
+        roughness: 0.45,
+        metalness: 0.0
+      }),
+
+      // 2. Bloomy Soft Round (Matte Velvety White Rind + Creamy Glossy Interior)
+      bloomyRind: new THREE.MeshPhysicalMaterial({
+        map: bloomyRindTex,
+        bumpMap: bloomyRindTex,
+        bumpScale: 0.018,
+        roughness: 0.96,
+        metalness: 0.0,
+        sheen: 0.42,
+        sheenRoughness: 0.92,
+        sheenColor: new THREE.Color(0xffffff)
+      }),
+      bloomyPaste: new THREE.MeshPhysicalMaterial({
+        color: 0xf7e3a1,
+        bumpMap: bloomyRindTex,
+        bumpScale: 0.005,
+        roughness: 0.19,
+        metalness: 0.0,
+        clearcoat: 0.48,
+        clearcoatRoughness: 0.16
+      }),
+
+      // 3. Blue Cheese with Cut Veining (Matte Cave Rind + Veined Interior)
+      blueRind: new THREE.MeshStandardMaterial({
+        map: blueRindTex,
+        bumpMap: blueRindTex,
+        bumpScale: 0.036,
+        roughness: 0.93,
+        metalness: 0.0
+      }),
+      bluePaste: new THREE.MeshStandardMaterial({
+        map: blueVeinsTex,
+        bumpMap: blueBumpTex,
+        bumpScale: 0.038,
+        roughness: 0.56,
+        metalness: 0.0
+      }),
+
+      // 4. Goat Log (Matte Ash & Herb Rind + Snowy Chèvre Interior)
+      goatRind: new THREE.MeshStandardMaterial({
+        map: goatRindTex,
+        bumpMap: goatRindTex,
+        bumpScale: 0.032,
+        roughness: 0.95,
+        metalness: 0.0
+      }),
+      goatPaste: new THREE.MeshStandardMaterial({
+        color: 0xfaf8f2,
+        bumpMap: hardBumpTex,
+        bumpScale: 0.016,
+        roughness: 0.74,
+        metalness: 0.0
+      }),
+
+      // Walnuts (Woody convoluted shell + pale golden-ivory meat)
+      walnutShell: new THREE.MeshStandardMaterial({
+        map: walnutTex,
+        bumpMap: walnutTex,
+        bumpScale: 0.045,
+        roughness: 0.76,
+        metalness: 0.0
+      }),
+      walnutPellicle: new THREE.MeshStandardMaterial({
+        map: walnutTex,
+        bumpMap: walnutTex,
+        bumpScale: 0.03,
+        color: 0xd9a664,
+        roughness: 0.62,
+        metalness: 0.0
+      }),
+      walnutMeat: new THREE.MeshStandardMaterial({
+        color: 0xf6ebd2,
+        roughness: 0.55,
+        metalness: 0.0
+      }),
+
+      // Glossy Grapes (Ruby-Violet & Translucent Muscat Green)
+      grapeRuby: new THREE.MeshPhysicalMaterial({
+        color: 0x4e0c26,
+        emissive: 0x1a030b,
+        emissiveIntensity: 0.35,
+        roughness: 0.08,
+        metalness: 0.0,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.06,
+        reflectivity: 0.95,
+        sheen: 0.22,
+        sheenRoughness: 0.4,
+        sheenColor: new THREE.Color(0x9e7bb5)
+      }),
+      grapeGreen: new THREE.MeshPhysicalMaterial({
+        color: 0x8fb339,
+        emissive: 0x243307,
+        emissiveIntensity: 0.32,
+        roughness: 0.09,
+        metalness: 0.0,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.07,
+        reflectivity: 0.92,
+        sheen: 0.18,
+        sheenRoughness: 0.4,
+        sheenColor: new THREE.Color(0xdcf2a7)
+      }),
+      grapeStem: new THREE.MeshStandardMaterial({
+        color: 0x5c4728,
+        roughness: 0.85,
+        metalness: 0.0
+      }),
+
+      // Knife Materials
+      steelBlade: new THREE.MeshPhysicalMaterial({
+        color: 0xebeff2,
+        roughness: 0.14,
+        metalness: 0.94,
+        clearcoat: 0.35,
+        clearcoatRoughness: 0.1
+      }),
+      brassBolster: new THREE.MeshStandardMaterial({
+        color: 0xd9ad5b,
+        roughness: 0.24,
+        metalness: 0.88
+      }),
+
+      // Tabletop & Accents
+      tableSurface: new THREE.MeshStandardMaterial({
+        color: 0x1b1410,
+        bumpMap: oliveTextures.bumpTex,
+        bumpScale: 0.008,
+        roughness: 0.68,
+        metalness: 0.05
+      }),
+      linenRunner: new THREE.MeshStandardMaterial({
+        map: linenTex,
+        bumpMap: linenTex,
+        bumpScale: 0.02,
+        roughness: 0.92
+      })
+    };
+
+    // =========================================================================
+    // 5. OILED OLIVE WOOD LIVE-EDGE SLAB & TABLE ENVIRONMENT
+    // =========================================================================
+    const boardGroup = new THREE.Group();
+    scene.add(boardGroup);
+
+    const BOARD_Y = 0.44; // Top surface height of the olive wood slab
+
+    function buildTableAndOliveSlab() {
+      // 1. Dark Bistro Tabletop
+      const tableGeo = new THREE.CylinderGeometry(16, 16, 0.5, 64);
+      const tableMesh = new THREE.Mesh(tableGeo, MAT.tableSurface);
+      tableMesh.position.y = -0.26;
+      tableMesh.receiveShadow = true;
+      scene.add(tableMesh);
+
+      // 2. Woven Linen Table Runner beneath the slab
+      const runnerGeo = new THREE.BoxGeometry(14.5, 0.03, 5.4, 48, 1, 24);
+      const rPos = runnerGeo.attributes.position;
+      for (let i = 0; i < rPos.count; i++) {
+        const x = rPos.getX(i), z = rPos.getZ(i);
+        const ripple = Math.sin(x * 1.4 + z * 0.8) * 0.008;
+        rPos.setY(i, rPos.getY(i) + ripple);
+      }
+      runnerGeo.computeVertexNormals();
+      const runnerMesh = new THREE.Mesh(runnerGeo, MAT.linenRunner);
+      runnerMesh.position.set(0, 0.005, 0.1);
+      runnerMesh.rotation.y = -0.06;
+      runnerMesh.receiveShadow = true;
+      scene.add(runnerMesh);
+
+      // 3. Handcrafted Live-Edge Oiled Olive Wood Slab
+      // Build organic silhouette with natural live-edge curves & chamfered bevel
+      const numPts = 140;
+      const outlinePts = [];
+      for (let i = 0; i < numPts; i++) {
+        const t = (i / numPts) * Math.PI * 2;
+        const cosT = Math.cos(t);
+        const sinT = Math.sin(t);
+
+        // Elongated organic olive slab: ~9.4 units wide (X), ~5.5 units deep (Z)
+        let rx = 4.65;
+        let rz = 2.72;
+
+        // Natural live-edge waist & organic burl curves along front/back edges
+        const liveWave = Math.sin(t * 2.0 - 0.4) * 0.22
+                       + Math.cos(t * 3.0 + 0.7) * 0.16
+                       + Math.sin(t * 5.0) * 0.07
+                       + noise2D(cosT * 2.2 + 3.1, sinT * 2.2 + 1.7) * 0.18;
+
+        let x = cosT * (rx + liveWave);
+        let z = sinT * (rz + liveWave * 0.85);
+
+        // Artisanal lug / handle extension on right side (cosT > 0.75)
+        if (cosT > 0.72 && Math.abs(sinT) < 0.45) {
+          const hFactor = Math.pow((cosT - 0.72) / 0.28, 1.2) * Math.cos((sinT / 0.45) * Math.PI * 0.5);
+          x += hFactor * 0.85;
+          z *= (1.0 - hFactor * 0.25);
+        }
+
+        outlinePts.push(new THREE.Vector2(x, z));
+      }
+
+      const slabShape = new THREE.Shape(outlinePts);
+
+      // Lanyard hole in the artisanal handle end
+      const holePath = new THREE.Path();
+      const holeCenter = new THREE.Vector2(4.78, -0.05);
+      holePath.absarc(holeCenter.x, holeCenter.y, 0.22, 0, Math.PI * 2, true);
+      slabShape.holes.push(holePath);
+
+      const extrudeSettings = {
+        steps: 2,
+        depth: 0.34,
+        bevelEnabled: true,
+        bevelThickness: 0.05,
+        bevelSize: 0.06,
+        bevelOffset: -0.02,
+        bevelSegments: 5
+      };
+
+      const slabGeo = new THREE.ExtrudeGeometry(slabShape, extrudeSettings);
+      // Rotate so shape X,Y lies in world X,Z and extrusion is along +Y
+      slabGeo.rotateX(Math.PI / 2);
+      slabGeo.translate(0, BOARD_Y - 0.05, 0);
+
+      // Fix planar UV coordinates so the swirling olive wood texture spans smoothly across the slab
+      const posAttr = slabGeo.attributes.position;
+      const normAttr = slabGeo.attributes.normal;
+      const uvAttr = slabGeo.attributes.uv;
+      for (let i = 0; i < posAttr.count; i++) {
+        const vx = posAttr.getX(i);
+        const vy = posAttr.getY(i);
+        const vz = posAttr.getZ(i);
+        const ny = normAttr.getY(i);
+
+        // Subtle organic wood planing micro-undulation on sides
+        if (Math.abs(ny) < 0.5) {
+          const gnarl = noise3D(vx * 1.8, vy * 6.0, vz * 1.8) * 0.035;
+          posAttr.setX(i, vx + normAttr.getX(i) * gnarl);
+          posAttr.setZ(i, vz + normAttr.getZ(i) * gnarl);
+        }
+
+        // Map UVs across the 11 x 6.5 board bounds
+        const u = (vx + 5.5) / 11.0;
+        const v = (vz + 3.25) / 6.5;
+        uvAttr.setXY(i, u, v);
+      }
+      slabGeo.computeVertexNormals();
+
+      // ExtrudeGeometry uses group 0 for top/bottom faces, group 1 for side/bevel walls
+      // Let's keep oiled wood on top/bottom & bevels, and add live-edge bark strips on front/back flanks
+      const slabMesh = new THREE.Mesh(slabGeo, [MAT.oliveWoodTop, MAT.oliveWoodTop]);
+      slabMesh.castShadow = true;
+      slabMesh.receiveShadow = true;
+      slabMesh.name = 'oliveWoodSlab';
+      boardGroup.add(slabMesh);
+
+      // Add gnarled live-edge bark strips along the front and back natural edges of the slab
+      const buildBarkStrip = (startIdx, endIdx) => {
+        const curvePts = [];
+        for (let idx = startIdx; idx <= endIdx; idx++) {
+          const pt = outlinePts[idx % numPts];
+          curvePts.push(new THREE.Vector3(pt.x * 1.004, BOARD_Y - 0.22, pt.y * 1.004));
+        }
+        const curve = new THREE.CatmullRomCurve3(curvePts);
+        const tubeGeo = new THREE.TubeGeometry(curve, 48, 0.14, 10, false);
+        // Flatten tube vertically and roughen vertices so it hugs the slab side like natural bark
+        const tPos = tubeGeo.attributes.position;
+        for (let i = 0; i < tPos.count; i++) {
+          const tx = tPos.getX(i), ty = tPos.getY(i), tz = tPos.getZ(i);
+          const n = fbm3D(tx * 2.5, ty * 5.0, tz * 2.5, 3) * 0.035;
+          const clampedY = Math.min(BOARD_Y - 0.03, Math.max(0.03, ty));
+          tPos.setXYZ(i, tx + n, clampedY, tz + n);
+        }
+        tubeGeo.computeVertexNormals();
+        const barkMesh = new THREE.Mesh(tubeGeo, MAT.oliveBark);
+        barkMesh.castShadow = true;
+        barkMesh.receiveShadow = true;
+        boardGroup.add(barkMesh);
+      };
+
+      // Front live bark edge & Back live bark edge
+      buildBarkStrip(14, 56);
+      buildBarkStrip(84, 126);
+
+      // Subtle milled juice/oil groove arc near the right handle
+      const grooveCurvePts = [];
+      for (let a = -0.7; a <= 0.7; a += 0.1) {
+        grooveCurvePts.push(new THREE.Vector3(3.65 + Math.cos(a) * 0.35, BOARD_Y + 0.002, Math.sin(a) * 1.55));
+      }
+      const grooveCurve = new THREE.CatmullRomCurve3(grooveCurvePts);
+      const grooveGeo = new THREE.TubeGeometry(grooveCurve, 24, 0.025, 8, false);
+      grooveGeo.scale(1, 0.25, 1);
+      const grooveMesh = new THREE.Mesh(grooveGeo, MAT.oliveBark);
+      grooveMesh.receiveShadow = true;
+      boardGroup.add(grooveMesh);
+
+      return slabMesh;
+    }
+
+    const oliveSlabMesh = buildTableAndOliveSlab();
+
+    // =========================================================================
+    // 6. THE FOUR SIGNATURE CHEESES (WITH MATTE RINDS & INTERACTIVE SLICING)
+    // =========================================================================
+    const cheesesGroup = new THREE.Group();
+    boardGroup.add(cheesesGroup);
+
+    // Registry of interactive cheese objects for raycasting & real-world slicing
+    const interactiveCheeses = [];
+    const dynamicSlices = []; // All cut pieces & crumbs spawned or placed on board
+
+    function clearDynamicSlices() {
+      while (dynamicSlices.length > 0) {
+        const item = dynamicSlices.pop();
+        if (item.mesh && item.mesh.parent) {
+          item.mesh.parent.remove(item.mesh);
+        }
+      }
+    }
+
+    // Helper: Creates an irregular crumbly chunk of hard cheese
+    function createCrumbGeometry(radius = 0.14, seedOffset = 0) {
+      const geo = new THREE.DodecahedronGeometry(radius, 2);
+      const pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const vx = pos.getX(i), vy = pos.getY(i), vz = pos.getZ(i);
+        const n = fbm3D(vx * 8 + seedOffset, vy * 8 + seedOffset, vz * 8, 3);
+        const scale = 0.72 + n * 0.55;
+        pos.setXYZ(i, vx * scale, vy * scale * 0.82, vz * scale);
+      }
+      geo.computeVertexNormals();
+      return geo;
+    }
+
+    // Helper: Builds a cylindrical sector / wheel wedge with distinct Rind & Paste materials
+    // Material index 0 = Rind (outer arc, and optionally top/bottom), index 1 = Cut Paste
+    function createWheelSectorGeometry(radius, height, startAngle, arcAngle, rindTopBottom = true, bulgePaste = 0, craggyTip = 0) {
+      const radialSegs = 28;
+      const heightSegs = 10;
+      const positions = [];
+      const uvs = [];
+      const rindIndices = [];
+      const pasteIndices = [];
+
+      function addTri(a, b, c, isRind) {
+        if (isRind) rindIndices.push(a, b, c);
+        else pasteIndices.push(a, b, c);
+      }
+
+      // 1. Top & Bottom sector caps
+      const buildCap = (isTop) => {
+        const y = isTop ? height : 0;
+        const centerIdx = positions.length / 3;
+        positions.push(0, y, 0);
+        uvs.push(0.5, 0.5);
+
+        const ringStart = positions.length / 3;
+        for (let s = 0; s <= radialSegs; s++) {
+          const t = s / radialSegs;
+          const ang = startAngle + t * arcAngle;
+          // Slight soft pillow bevel near outer rim for bloomy rounds
+          const bev = rindTopBottom ? 0.04 : 0.0;
+          const x = Math.cos(ang) * radius;
+          const z = Math.sin(ang) * radius;
+          positions.push(x, isTop ? y - bev * 0.3 : y, z);
+          uvs.push(0.5 + Math.cos(ang) * 0.48, 0.5 + Math.sin(ang) * 0.48);
+        }
+
+        for (let s = 0; s < radialSegs; s++) {
+          if (isTop) {
+            addTri(centerIdx, ringStart + s + 1, ringStart + s, rindTopBottom);
+          } else {
+            addTri(centerIdx, ringStart + s, ringStart + s + 1, true);
+          }
+        }
+      };
+
+      buildCap(true);
+      buildCap(false);
+
+      // 2. Curved Outer Rind Wall (Always Matte Rind = index 0)
+      const wallStart = positions.length / 3;
+      for (let h = 0; h <= heightSegs; h++) {
+        const ty = h / heightSegs;
+        const y = ty * height;
+        const pillow = rindTopBottom ? Math.sin(ty * Math.PI) * 0.035 : 0;
+        for (let s = 0; s <= radialSegs; s++) {
+          const ts = s / radialSegs;
+          const ang = startAngle + ts * arcAngle;
+          const r = radius + pillow;
+          positions.push(Math.cos(ang) * r, y, Math.sin(ang) * r);
+          uvs.push(ts * 1.5, ty);
+        }
+      }
+      const stride = radialSegs + 1;
+      for (let h = 0; h < heightSegs; h++) {
+        for (let s = 0; s < radialSegs; s++) {
+          const a = wallStart + h * stride + s;
+          const b = a + 1;
+          const c = a + stride;
+          const d = c + 1;
+          addTri(a, b, d, true);
+          addTri(a, d, c, true);
+        }
+      }
+
+      // 3. Two Radial Cut Faces (Always Cut Paste = index 1)
+      const buildCutFace = (angle, flipNormal) => {
+        const faceStart = positions.length / 3;
+        const cosA = Math.cos(angle), sinA = Math.sin(angle);
+        const nx = -sinA * (flipNormal ? -1 : 1);
+        const nz = cosA * (flipNormal ? -1 : 1);
+
+        for (let h = 0; h <= heightSegs; h++) {
+          const ty = h / heightSegs;
+          const y = ty * height;
+          for (let rStep = 0; rStep <= radialSegs; rStep++) {
+            const tr = rStep / radialSegs;
+            const r = tr * radius;
+            // Optional creamy bulge (for Brie) or craggy crystalline fracture (for Hard Cheese)
+            const bulge = Math.sin(ty * Math.PI) * Math.sin(tr * Math.PI) * bulgePaste;
+            let crag = 0;
+            if (craggyTip > 0 && tr < 0.88 && ty > 0.06 && ty < 0.94) {
+              crag = fbm2D(tr * 6.5 + angle, ty * 6.5, 3) * craggyTip;
+            }
+            const disp = bulge + crag;
+            positions.push(cosA * r + nx * disp, y, sinA * r + nz * disp);
+            uvs.push(tr, ty);
+          }
+        }
+
+        for (let h = 0; h < heightSegs; h++) {
+          for (let rStep = 0; rStep < radialSegs; rStep++) {
+            const a = faceStart + h * stride + rStep;
+            const b = a + 1;
+            const c = a + stride;
+            const d = c + 1;
+            if (flipNormal) {
+              addTri(a, b, d, false);
+              addTri(a, d, c, false);
+            } else {
+              addTri(a, d, b, false);
+              addTri(a, c, d, false);
+            }
+          }
+        }
+      };
+
+      buildCutFace(startAngle, false);
+      buildCutFace(startAngle + arcAngle, true);
+
+      const geo = new THREE.BufferGeometry();
+      const allIndices = [...rindIndices, ...pasteIndices];
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      geo.setIndex(allIndices);
+      geo.addGroup(0, rindIndices.length, 0); // Group 0: Matte Rind
+      geo.addGroup(rindIndices.length, pasteIndices.length, 1); // Group 1: Interior Paste
+      geo.computeVertexNormals();
+      return geo;
+    }
+
+    // -------------------------------------------------------------------------
+    // CHEESE 1: HARD, CRUMBLY WEDGE (24-Month Aged Reserve)
+    // -------------------------------------------------------------------------
+    function buildHardCrumblyCheese() {
+      const group = new THREE.Group();
+      group.position.set(-2.15, BOARD_Y, -0.78);
+      group.rotation.y = 0.32;
+      cheesesGroup.add(group);
+
+      // Build main wedge with matte rind on back/bottom and crumbly crystalline paste on sides & fractured nose
+      const wedgeRadius = 2.05;
+      const wedgeHeight = 0.72;
+      const wedgeArc = 0.56;
+      const wedgeGeo = createWheelSectorGeometry(
+        wedgeRadius,
+        wedgeHeight,
+        -wedgeArc * 0.5,
+        wedgeArc,
+        false, // Top is exposed cut paste; back heel & bottom have matte rind
+        0.0,
+        0.045  // Craggy crystalline relief on cut faces
+      );
+
+      // Displace the tip (radius < 0.55) to create an authentic hand-cleaved crumbly fracture nose
+      const pos = wedgeGeo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+        const r = Math.hypot(x, z);
+        if (r < 0.62) {
+          const n = fbm3D(x * 7.5, y * 7.5, z * 7.5, 4);
+          pos.setX(i, Math.max(0.36 + n * 0.09, x));
+          pos.setY(i, y * (0.85 + n * 0.15));
+        }
+      }
+      wedgeGeo.computeVertexNormals();
+
+      // Center geometry around its centroid for natural scaling/slicing
+      wedgeGeo.translate(-1.05, 0, 0);
+
+      const mainMesh = new THREE.Mesh(wedgeGeo, [MAT.hardRind, MAT.hardPaste]);
+      mainMesh.castShadow = true;
+      mainMesh.receiveShadow = true;
+      group.add(mainMesh);
+
+      // Add thin matte rind band along the back top rim for authentic wheel-shoulder look
+      const heelRimGeo = new THREE.CylinderGeometry(
+        wedgeRadius - 0.99, wedgeRadius - 0.99, 0.04, 24, 1, false,
+        Math.PI * 0.5 - wedgeArc * 0.5, wedgeArc
+      );
+      heelRimGeo.rotateY(-Math.PI * 0.5);
+      const heelRim = new THREE.Mesh(heelRimGeo, MAT.hardRind);
+      heelRim.position.set(0, wedgeHeight - 0.018, 0);
+      mainMesh.add(heelRim);
+
+      // Scatter initial cleaved chunks & crystalline crumbs around the front nose of the wedge
+      const spawnHardCrumbs = (baseOffset = 0, extraStep = 0) => {
+        const chunkPositions = [
+          { x: -0.78 - extraStep, z: 0.14, r: 0.18, s: 1.1 },
+          { x: -0.96 - extraStep, z: -0.16, r: 0.15, s: 2.4 },
+          { x: -0.66 - extraStep, z: -0.25, r: 0.12, s: 3.7 },
+          { x: -1.12 - extraStep, z: 0.06, r: 0.09, s: 5.1 },
+          { x: -0.85 - extraStep, z: 0.34, r: 0.08, s: 6.3 },
+          { x: -1.04 - extraStep, z: -0.34, r: 0.06, s: 7.8 },
+          { x: -0.72 - extraStep, z: -0.02, r: 0.05, s: 9.2 }
+        ];
+        chunkPositions.forEach((cp, idx) => {
+          const cGeo = createCrumbGeometry(cp.r, cp.s + baseOffset);
+          const isTinyCrystal = cp.r < 0.065;
+          const cMesh = new THREE.Mesh(cGeo, isTinyCrystal ? MAT.hardCrystal : MAT.hardPaste);
+          cMesh.position.set(cp.x, cp.r * 0.58, cp.z);
+          cMesh.rotation.set(cp.s, cp.s * 1.7, cp.s * 0.6);
+          cMesh.castShadow = true;
+          cMesh.receiveShadow = true;
+          group.add(cMesh);
+          dynamicSlices.push({ mesh: cMesh });
+        });
+      };
+
+      spawnHardCrumbs(0, 0);
+
+      const cheeseState = {
+        id: 'hard',
+        name: '24-Month Aged Parmigiano Reserve',
+        tag: 'Hard & Crumbly Wedge • Matte Natural Rind',
+        notes: 'Savory umami depth with crunchy tyrosine crystals and a hand-oiled matte wheel rind.',
+        group,
+        mainMesh,
+        slicesTaken: 0,
+        maxSlices: 6,
+        bladeLocalPos: new THREE.Vector3(-0.35, 0.76, 0),
+        bladeRotY: Math.PI * 0.5,
+        reset() {
+          this.slicesTaken = 0;
+          mainMesh.scale.set(1, 1, 1);
+          mainMesh.position.set(0, 0, 0);
+          spawnHardCrumbs(0, 0);
+        },
+        slice() {
+          if (this.slicesTaken >= this.maxSlices) return false;
+          this.slicesTaken++;
+          playFoley('sliceHard');
+
+          // Main wedge cleaves back slightly
+          const shrink = 1 - this.slicesTaken * 0.095;
+          mainMesh.scale.set(shrink, 1, shrink);
+          mainMesh.position.x = (1 - shrink) * 0.75;
+
+          // Spawn a freshly cleaved irregular chunk & scattering of crystalline crumbs that tumble out
+          const numNew = 5;
+          for (let i = 0; i < numNew; i++) {
+            const radius = i === 0 ? 0.19 : (i === 1 ? 0.13 : 0.055 + Math.random() * 0.045);
+            const geo = createCrumbGeometry(radius, this.slicesTaken * 13 + i * 3.1);
+            const mat = radius < 0.07 ? MAT.hardCrystal : MAT.hardPaste;
+            const mesh = new THREE.Mesh(geo, mat);
+            const startX = -0.45 - this.slicesTaken * 0.06;
+            const startZ = (Math.random() - 0.5) * 0.35;
+            mesh.position.set(startX, 0.35, startZ);
+            group.add(mesh);
+            dynamicSlices.push({
+              mesh,
+              anim: {
+                t: 0,
+                startPos: mesh.position.clone(),
+                endPos: new THREE.Vector3(
+                  startX - 0.38 - Math.random() * 0.48,
+                  radius * 0.58,
+                  startZ + (Math.random() - 0.5) * 0.55
+                ),
+                rotVel: new THREE.Vector3(
+                  (Math.random() - 0.5) * 6,
+                  (Math.random() - 0.5) * 6,
+                  (Math.random() - 0.5) * 6
+                )
+              }
+            });
+          }
+          return true;
+        }
+      };
+
+      mainMesh.userData.cheese = cheeseState;
+      interactiveCheeses.push(cheeseState);
+    }
+
+    // -------------------------------------------------------------------------
+    // CHEESE 2: BLOOMY SOFT ROUND (Triple-Crème Brie de Meaux)
+    // -------------------------------------------------------------------------
+    function buildBloomySoftRound() {
+      const group = new THREE.Group();
+      group.position.set(-1.68, BOARD_Y, 1.12);
+      cheesesGroup.add(group);
+
+      const radius = 0.94;
+      const height = 0.50;
+      const initialArc = Math.PI * 1.68; // 302-degree wheel with a 58-degree wedge cut out
+      const startAng = 0.35;
+
+      const buildWheelMesh = (arc) => {
+        const geo = createWheelSectorGeometry(
+          radius,
+          height,
+          startAng + (initialArc - arc),
+          arc,
+          true,  // Matte velvety white bloomy rind on top, bottom & outer wall
+          0.042, // Luscious creamy outward bulge on cut paste faces!
+          0.0
+        );
+        const mesh = new THREE.Mesh(geo, [MAT.bloomyRind, MAT.bloomyPaste]);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        return mesh;
+      };
+
+      let mainMesh = buildWheelMesh(initialArc);
+      group.add(mainMesh);
+
+      // Initial cut wedge resting just outside the opening on the olive wood slab
+      const spawnInitialBrieWedge = () => {
+        const wGeo = createWheelSectorGeometry(radius * 0.96, height * 0.96, -0.22, 0.44, true, 0.032, 0);
+        const wMesh = new THREE.Mesh(wGeo, [MAT.bloomyRind, MAT.bloomyPaste]);
+        wMesh.position.set(0.32, 0, 0.22);
+        wMesh.rotation.y = 0.14;
+        wMesh.castShadow = true;
+        wMesh.receiveShadow = true;
+        group.add(wMesh);
+        dynamicSlices.push({ mesh: wMesh });
+      };
+      spawnInitialBrieWedge();
+
+      const cheeseState = {
+        id: 'bloomy',
+        name: 'Triple-Crème Bloomy Brie Round',
+        tag: 'Bloomy Soft Round • Matte Velvety Rind',
+        notes: 'Pillow-soft Penicillium candidum matte white rind encasing a lush, buttery molten center.',
+        group,
+        mainMesh,
+        slicesTaken: 0,
+        maxSlices: 5,
+        bladeLocalPos: new THREE.Vector3(0.1, 0.56, 0.1),
+        bladeRotY: -0.35,
+        reset() {
+          this.slicesTaken = 0;
+          if (this.mainMesh.parent) group.remove(this.mainMesh);
+          this.mainMesh.geometry.dispose();
+          this.mainMesh = buildWheelMesh(initialArc);
+          this.mainMesh.userData.cheese = this;
+          group.add(this.mainMesh);
+          mainMesh = this.mainMesh;
+          spawnInitialBrieWedge();
+        },
+        slice() {
+          if (this.slicesTaken >= this.maxSlices) return false;
+          this.slicesTaken++;
+          playFoley('sliceSoft');
+
+          const stepArc = 0.34;
+          const remainingArc = initialArc - this.slicesTaken * stepArc;
+          const sliceStartAngle = startAng + (this.slicesTaken - 1) * stepArc;
+
+          // Rebuild wheel with smaller arc
+          if (this.mainMesh.parent) group.remove(this.mainMesh);
+          this.mainMesh.geometry.dispose();
+          this.mainMesh = buildWheelMesh(remainingArc);
+          this.mainMesh.userData.cheese = this;
+          group.add(this.mainMesh);
+
+          // Spawn the freshly cut creamy wedge sliding out along its bisector
+          const sliceGeo = createWheelSectorGeometry(radius * 0.95, height * 0.96, sliceStartAngle, stepArc * 0.92, true, 0.035, 0);
+          const sliceMesh = new THREE.Mesh(sliceGeo, [MAT.bloomyRind, MAT.bloomyPaste]);
+          sliceMesh.castShadow = true;
+          sliceMesh.receiveShadow = true;
+          group.add(sliceMesh);
+
+          const midAng = sliceStartAngle + stepArc * 0.46;
+          const slideDist = 0.38 + this.slicesTaken * 0.11;
+          dynamicSlices.push({
+            mesh: sliceMesh,
+            anim: {
+              t: 0,
+              startPos: new THREE.Vector3(0, 0.02, 0),
+              endPos: new THREE.Vector3(Math.cos(midAng) * slideDist, 0, Math.sin(midAng) * slideDist),
+              rotVel: new THREE.Vector3(0, 0.35, 0)
+            }
+          });
+          return true;
+        }
+      };
+
+      mainMesh.userData.cheese = cheeseState;
+      interactiveCheeses.push(cheeseState);
+    }
+
+    // -------------------------------------------------------------------------
+    // CHEESE 3: BLUE CHEESE WITH CUT VEINING (Cave-Aged Roquefort)
+    // -------------------------------------------------------------------------
+    function buildBlueCheese() {
+      const group = new THREE.Group();
+      group.position.set(0.65, BOARD_Y, -0.82);
+      group.rotation.y = -0.38;
+      cheesesGroup.add(group);
+
+      const radius = 1.78;
+      const height = 0.84;
+      const arc = 0.54;
+
+      // Create tall wedge: Matte cave rind on curved back heel & bottom; cut blue veining on top & both radial sides!
+      const wedgeGeo = createWheelSectorGeometry(
+        radius,
+        height,
+        -arc * 0.5,
+        arc,
+        false, // Top is exposed cut blue veining (`MAT.bluePaste`), outer curved back & bottom are matte rind (`MAT.blueRind`)
+        0.0,
+        0.025  // Subtle cave-pocket cragginess on cut faces
+      );
+      wedgeGeo.translate(-0.92, 0, 0);
+
+      const mainMesh = new THREE.Mesh(wedgeGeo, [MAT.blueRind, MAT.bluePaste]);
+      mainMesh.castShadow = true;
+      mainMesh.receiveShadow = true;
+      group.add(mainMesh);
+
+      // Helper to build a cut triangular slice/slab of veined blue cheese
+      const createBlueSliceMesh = (thickness = 0.11, scaleW = 0.96) => {
+        const sGeo = createWheelSectorGeometry(
+          radius * scaleW,
+          thickness,
+          -arc * 0.48,
+          arc * 0.96,
+          false,
+          0.0,
+          0.018
+        );
+        sGeo.translate(-0.92 * scaleW, 0, 0);
+        const sMesh = new THREE.Mesh(sGeo, [MAT.blueRind, MAT.bluePaste]);
+        sMesh.castShadow = true;
+        sMesh.receiveShadow = true;
+        return sMesh;
+      };
+
+      const spawnInitialBlueSlices = () => {
+        // A freshly cut slab lying flat beside the tall blue wedge showing its cut veining
+        const slab = createBlueSliceMesh(0.11, 0.94);
+        slab.position.set(-0.18, 0.005, 0.68);
+        slab.rotation.set(0, 0.28, 0);
+        group.add(slab);
+        dynamicSlices.push({ mesh: slab });
+
+        // Plus a few blue-veined crumbles on the board
+        const crumbs = [
+          { x: -0.62, z: 0.56, r: 0.085, s: 1.4 },
+          { x: -0.45, z: 0.85, r: 0.065, s: 2.9 },
+          { x: -0.78, z: 0.72, r: 0.055, s: 4.2 }
+        ];
+        crumbs.forEach(c => {
+          const cGeo = createCrumbGeometry(c.r, c.s);
+          const cMesh = new THREE.Mesh(cGeo, MAT.bluePaste);
+          cMesh.position.set(c.x, c.r * 0.6, c.z);
+          cMesh.rotation.set(c.s, c.s * 2, c.s);
+          cMesh.castShadow = true;
+          cMesh.receiveShadow = true;
+          group.add(cMesh);
+          dynamicSlices.push({ mesh: cMesh });
+        });
+      };
+      spawnInitialBlueSlices();
+
+      const cheeseState = {
+        id: 'blue',
+        name: 'Cave-Aged Roquefort Blue',
+        tag: 'Blue Cheese with Cut Veining • Matte Cave Rind',
+        notes: 'Rich sheep’s milk paste marbled with deep emerald-blue Penicillium roqueforti veins and cavities.',
+        group,
+        mainMesh,
+        slicesTaken: 0,
+        maxSlices: 5,
+        bladeLocalPos: new THREE.Vector3(-0.15, 0.88, 0.12),
+        bladeRotY: 0.25,
+        reset() {
+          this.slicesTaken = 0;
+          mainMesh.scale.set(1, 1, 1);
+          mainMesh.position.set(0, 0, 0);
+          spawnInitialBlueSlices();
+        },
+        slice() {
+          if (this.slicesTaken >= this.maxSlices) return false;
+          this.slicesTaken++;
+          playFoley('sliceBlue');
+
+          // Narrow the wedge slightly as a vertical side slice is cut off
+          const newScaleZ = 1 - this.slicesTaken * 0.11;
+          mainMesh.scale.set(1 - this.slicesTaken * 0.04, 1, newScaleZ);
+
+          // Spawn a freshly sliced veined slab tipping down onto the board
+          const slab = createBlueSliceMesh(0.10, 0.92 - this.slicesTaken * 0.03);
+          const startZ = 0.32;
+          slab.position.set(-0.1, 0.35, startZ);
+          slab.rotation.x = Math.PI * 0.35;
+          group.add(slab);
+
+          dynamicSlices.push({
+            mesh: slab,
+            anim: {
+              t: 0,
+              startPos: slab.position.clone(),
+              endPos: new THREE.Vector3(
+                -0.12 + (this.slicesTaken % 2) * 0.14,
+                0.01 + this.slicesTaken * 0.025,
+                0.62 + this.slicesTaken * 0.14
+              ),
+              targetRot: new THREE.Euler(0, 0.18 + this.slicesTaken * 0.12, 0)
+            }
+          });
+
+          // Also drop 2 small veined crumbles
+          for (let k = 0; k < 2; k++) {
+            const r = 0.055 + Math.random() * 0.035;
+            const cGeo = createCrumbGeometry(r, this.slicesTaken * 7 + k);
+            const cMesh = new THREE.Mesh(cGeo, MAT.bluePaste);
+            cMesh.position.set(-0.4 - Math.random() * 0.3, 0.4, 0.35);
+            group.add(cMesh);
+            dynamicSlices.push({
+              mesh: cMesh,
+              anim: {
+                t: 0,
+                startPos: cMesh.position.clone(),
+                endPos: new THREE.Vector3(
+                  -0.45 - Math.random() * 0.45,
+                  r * 0.6,
+                  0.55 + Math.random() * 0.45
+                ),
+                rotVel: new THREE.Vector3(3, 4, 2)
+              }
+            });
+          }
+
+          return true;
+        }
+      };
+
+      mainMesh.userData.cheese = cheeseState;
+      interactiveCheeses.push(cheeseState);
+    }
+
+    // -------------------------------------------------------------------------
+    // CHEESE 4: GOAT LOG (Sainte-Maure Ash & Herb Chèvre Log)
+    // -------------------------------------------------------------------------
+    function buildGoatLog() {
+      const group = new THREE.Group();
+      group.position.set(0.55, BOARD_Y, 1.05);
+      group.rotation.y = 0.24;
+      cheesesGroup.add(group);
+
+      const logRadius = 0.39;
+      const logLength = 1.65;
+
+      // Helper to build a horizontal chèvre log or medallion with organic wrinkled ash rind
+      function createGoatCylinder(radius, length, backCapIsRind = true) {
+        const geo = new THREE.CylinderGeometry(radius, radius * 1.02, length, 36, 16, false);
+        // Rotate so cylinder axis runs along X (from -length/2 to +length/2)
+        geo.rotateZ(Math.PI * 0.5);
+
+        const pos = geo.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+          const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+          const r = Math.hypot(y, z);
+          if (r > radius * 0.85) {
+            const w = fbm3D(x * 3.5, y * 5.0, z * 5.0, 3) * 0.024;
+            pos.setY(i, y + (y / r) * w);
+            pos.setZ(i, z + (z / r) * w);
+          }
+          // Flatten bottom slightly where the soft goat log rests on the olive wood board
+          if (y < -radius * 0.82) {
+            pos.setY(i, -radius * 0.86);
+          }
+        }
+        geo.computeVertexNormals();
+        geo.translate(0, radius * 0.86, 0);
+
+        // CylinderGeometry groups:
+        // 0: barrel side (Matte Ash/Herb Rind)
+        // 1: +X cap (Snowy-white cut paste face)
+        // 2: -X cap (Matte Ash/Herb Rind for back of log, or Snowy-white paste for cut medallion)
+        const mats = [
+          MAT.goatRind,
+          MAT.goatPaste,
+          backCapIsRind ? MAT.goatRind : MAT.goatPaste
+        ];
+        const mesh = new THREE.Mesh(geo, mats);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        return mesh;
+      }
+
+      const mainMesh = createGoatCylinder(logRadius, logLength, true);
+      group.add(mainMesh);
+
+      // Spawn 2 initial shingled chèvre medallions resting in front of the cut +X end
+      const spawnInitialMedallions = () => {
+        for (let i = 0; i < 2; i++) {
+          const med = createGoatCylinder(logRadius * 0.96, 0.14, false);
+          // Lay medallion tilted shingle-style on the board
+          med.position.set(logLength * 0.5 + 0.22 + i * 0.24, -0.16, 0.04 * i);
+          med.rotation.z = -1.18 - i * 0.12;
+          group.add(med);
+          dynamicSlices.push({ mesh: med });
+        }
+      };
+      spawnInitialMedallions();
+
+      const cheeseState = {
+        id: 'goat',
+        name: 'Sainte-Maure Cendré Goat Log',
+        tag: 'Artisanal Chèvre Log • Matte Ash & Herb Rind',
+        notes: 'Bright, citrusy snowy-white goat cheese rolled in a matte vegetable-ash and Provence herb coat.',
+        group,
+        mainMesh,
+        slicesTaken: 0,
+        maxSlices: 6,
+        bladeLocalPos: new THREE.Vector3(0.68, 0.78, 0),
+        bladeRotY: Math.PI * 0.5,
+        reset() {
+          this.slicesTaken = 0;
+          mainMesh.scale.set(1, 1, 1);
+          mainMesh.position.set(0, 0, 0);
+          this.bladeLocalPos.x = 0.68;
+          spawnInitialMedallions();
+        },
+        slice() {
+          if (this.slicesTaken >= this.maxSlices) return false;
+          this.slicesTaken++;
+          playFoley('sliceGoat');
+
+          const newScaleX = 1 - this.slicesTaken * 0.115;
+          mainMesh.scale.set(newScaleX, 1, 1);
+          mainMesh.position.x = -(1 - newScaleX) * (logLength * 0.5);
+
+          const cutX = logLength * 0.5 - this.slicesTaken * (logLength * 0.115);
+          this.bladeLocalPos.x = cutX - 0.08;
+
+          // Spawn a fresh round chèvre medallion tipping off the cut end
+          const med = createGoatCylinder(logRadius * 0.95, 0.135, false);
+          med.position.set(cutX + 0.08, 0.05, 0);
+          group.add(med);
+
+          const targetX = logLength * 0.5 + 0.12 + this.slicesTaken * 0.13;
+          const targetZ = (this.slicesTaken % 2 === 0 ? 1 : -1) * 0.08;
+
+          dynamicSlices.push({
+            mesh: med,
+            anim: {
+              t: 0,
+              startPos: med.position.clone(),
+              endPos: new THREE.Vector3(targetX, -0.15, targetZ),
+              targetRot: new THREE.Euler(0, (Math.random() - 0.5) * 0.25, -1.22)
+            }
+          });
+          return true;
+        }
+      };
+
+      mainMesh.userData.cheese = cheeseState;
+      interactiveCheeses.push(cheeseState);
+    }
+
+    buildHardCrumblyCheese();
+    buildBloomySoftRound();
+    buildBlueCheese();
+    buildGoatLog();
+
+    // =========================================================================
+    // 7. SCATTERED WALNUTS & GLOSSY GRAPE CLUSTERS
+    // =========================================================================
+    const garnishGroup = new THREE.Group();
+    boardGroup.add(garnishGroup);
+
+    // --- 7.1 Procedural Whole Walnuts & Shelled Brain-like Walnut Halves ---
+    function createWholeWalnutMesh(seed = 1) {
+      const geo = new THREE.SphereGeometry(0.18, 24, 20);
+      const pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+        // Prolate along X, slightly pinched tip at +X
+        x *= 1.24;
+        y *= 0.88;
+        z *= 0.96;
+
+        // Equatorial shell seam ridge along z = 0
+        const seamDist = Math.abs(z);
+        const seamRidge = seamDist < 0.028 ? (1.0 - seamDist / 0.028) * 0.022 : 0;
+
+        // Brain-like shell convolutions
+        const conv = fbm3D(x * 16 + seed, y * 16, z * 16, 3) * 0.026;
+        const r = Math.hypot(x, y, z) || 1;
+        x += (x / r) * (conv + seamRidge);
+        y += (y / r) * (conv + seamRidge);
+        z += (z / r) * conv;
+
+        pos.setXYZ(i, x, y, z);
+      }
+      geo.computeVertexNormals();
+      const mesh = new THREE.Mesh(geo, MAT.walnutShell);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    }
+
+    function createWalnutHalfMesh(seed = 1) {
+      const halfGroup = new THREE.Group();
+
+      // Build two convoluted cerebral lobes joined by a central bridge
+      const lobeGeo = new THREE.SphereGeometry(0.115, 22, 16);
+      const pos = lobeGeo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+        x *= 1.38;
+        // Flatten bottom face so it looks like a split walnut kernel half
+        if (y < 0) y *= 0.25;
+        else y *= 0.88;
+        z *= 0.68;
+
+        // Deep brain-like sulci/gyri wrinkles on upper dome
+        const fold = Math.sin(x * 36 + Math.cos(z * 28) * 1.6) * 0.014
+                   + fbm3D(x * 18 + seed, y * 18, z * 18, 3) * 0.015;
+        if (y > 0) y += fold;
+        pos.setXYZ(i, x, y, z);
+      }
+      lobeGeo.computeVertexNormals();
+
+      const leftLobe = new THREE.Mesh(lobeGeo, MAT.walnutPellicle);
+      leftLobe.position.z = -0.056;
+      leftLobe.rotation.y = 0.08;
+      leftLobe.castShadow = true;
+      leftLobe.receiveShadow = true;
+      halfGroup.add(leftLobe);
+
+      const rightLobe = new THREE.Mesh(lobeGeo, MAT.walnutPellicle);
+      rightLobe.position.z = 0.056;
+      rightLobe.rotation.y = -0.08;
+      rightLobe.castShadow = true;
+      rightLobe.receiveShadow = true;
+      halfGroup.add(rightLobe);
+
+      // Creamy interior heart connection visible between lobes
+      const heartGeo = new THREE.BoxGeometry(0.16, 0.05, 0.09);
+      const heart = new THREE.Mesh(heartGeo, MAT.walnutMeat);
+      heart.position.y = 0.015;
+      halfGroup.add(heart);
+
+      return halfGroup;
+    }
+
+    function buildScatteredWalnuts() {
+      // Scatter whole walnuts and shelled walnut halves naturally across the olive wood slab
+      const walnutSpots = [
+        // Near hard crumbly wedge & brie (left & center-left)
+        { x: -3.55, z: 0.22, rotY: 0.4, type: 'whole', scale: 1.05 },
+        { x: -3.22, z: 0.56, rotY: 1.8, type: 'half', scale: 1.0 },
+        { x: -2.95, z: 0.14, rotY: -0.7, type: 'half', scale: 0.92 },
+        { x: -0.58, z: 0.25, rotY: 2.1, type: 'whole', scale: 0.98 },
+        { x: -0.32, z: -0.04, rotY: 0.5, type: 'half', scale: 1.04 },
+        // Near blue cheese & goat log (center & right)
+        { x: -0.75, z: -1.55, rotY: 1.1, type: 'whole', scale: 1.02 },
+        { x: -0.38, z: -1.72, rotY: -1.4, type: 'half', scale: 0.96 },
+        { x: 1.68, z: 0.28, rotY: 0.9, type: 'whole', scale: 1.05 },
+        { x: 1.95, z: 0.62, rotY: 2.5, type: 'half', scale: 1.0 },
+        { x: 1.42, z: 1.72, rotY: -0.4, type: 'half', scale: 0.95 },
+        { x: -0.35, z: 1.82, rotY: 1.6, type: 'whole', scale: 0.94 },
+        { x: 2.28, z: -0.22, rotY: -2.1, type: 'half', scale: 0.90 }
+      ];
+
+      walnutSpots.forEach((spot, i) => {
+        const wObj = spot.type === 'whole'
+          ? createWholeWalnutMesh(i * 3.7 + 1)
+          : createWalnutHalfMesh(i * 5.3 + 2);
+        const yOffset = spot.type === 'whole' ? 0.145 * spot.scale : 0.032 * spot.scale;
+        wObj.position.set(spot.x, BOARD_Y + yOffset, spot.z);
+        wObj.rotation.set(
+          (rng.next() - 0.5) * 0.15,
+          spot.rotY,
+          (rng.next() - 0.5) * 0.15
+        );
+        wObj.scale.setScalar(spot.scale);
+        garnishGroup.add(wObj);
+      });
+    }
+
+    // --- 7.2 Glossy Grape Clusters (Ruby Concord & Emerald Muscat) ---
+    // Shared glossy berry geometry (slightly prolate ellipsoid with tiny blossom-end dimple)
+    const grapeBerryGeo = (() => {
+      const geo = new THREE.SphereGeometry(0.145, 24, 20);
+      const pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+        y *= 1.16; // Natural oval grape proportion
+        // Tiny dimple at bottom pole
+        if (y < -0.14) y += 0.012;
+        pos.setXYZ(i, x, y, z);
+      }
+      geo.computeVertexNormals();
+      return geo;
+    })();
+
+    function createGrapeCluster(spinePoints, material, berryCount = 34, radiusSpread = 0.36) {
+      const clusterGroup = new THREE.Group();
+
+      // 1. Woody central rachis stem + small side pedicels
+      const spineCurve = new THREE.CatmullRomCurve3(spinePoints);
+      const stemGeo = new THREE.TubeGeometry(spineCurve, 28, 0.028, 8, false);
+      const pos = stemGeo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const n = noise3D(pos.getX(i) * 14, pos.getY(i) * 14, pos.getZ(i) * 14) * 0.008;
+        pos.setY(i, pos.getY(i) + n);
+      }
+      stemGeo.computeVertexNormals();
+      const stemMesh = new THREE.Mesh(stemGeo, MAT.grapeStem);
+      stemMesh.castShadow = true;
+      clusterGroup.add(stemMesh);
+
+      // 2. Pack glossy berries along the curved stem spine
+      const placedCenters = [];
+      for (let i = 0; i < berryCount; i++) {
+        // Parameter t along stem from 0.12 (thick top bunch) to 0.96 (tapered tip)
+        const t = 0.12 + Math.pow(i / berryCount, 0.88) * 0.84;
+        const spinePt = spineCurve.getPointAt(Math.min(0.98, t));
+        const tangent = spineCurve.getTangentAt(Math.min(0.98, t));
+
+        // Cluster tapers toward the tip of the bunch
+        const bunchEnvelope = Math.sin(t * Math.PI * 0.88) * radiusSpread * (1.08 - t * 0.45);
+        const goldenAngle = i * 2.39996;
+        const radialDist = (0.35 + 0.65 * ((i % 3) / 2)) * bunchEnvelope;
+
+        let bx = spinePt.x + Math.cos(goldenAngle) * radialDist;
+        let bz = spinePt.z + Math.sin(goldenAngle) * radialDist;
+        let by = spinePt.y + (Math.sin(goldenAngle * 1.7) * 0.5) * bunchEnvelope * 0.72;
+
+        // Clamp so bottom berries rest naturally on the olive wood slab (`y >= BOARD_Y + 0.135`)
+        by = Math.max(BOARD_Y + 0.135, by);
+
+        // Simple relaxation pass to prevent excessive overlap
+        const candidate = new THREE.Vector3(bx, by, bz);
+        for (let iter = 0; iter < 2; iter++) {
+          for (let j = 0; j < placedCenters.length; j++) {
+            const diff = candidate.clone().sub(placedCenters[j]);
+            const dist = diff.length();
+            const minDist = 0.215;
+            if (dist > 0.001 && dist < minDist) {
+              candidate.addScaledVector(diff.normalize(), (minDist - dist) * 0.6);
+              candidate.y = Math.max(BOARD_Y + 0.135, candidate.y);
+            }
+          }
+        }
+        placedCenters.push(candidate);
+
+        const berry = new THREE.Mesh(grapeBerryGeo, material);
+        berry.position.copy(candidate);
+
+        // Point berry slightly outward from stem spine
+        const outDir = candidate.clone().sub(spinePt).normalize();
+        berry.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), outDir);
+        const s = 0.88 + (i % 5) * 0.055;
+        berry.scale.set(s, s * (0.96 + (i % 3) * 0.04), s);
+        berry.castShadow = true;
+        berry.receiveShadow = true;
+        clusterGroup.add(berry);
+
+        // Short pedicel twig connecting top berries to the main stem
+        if (i % 3 === 0) {
+          const pedGeo = new THREE.CylinderGeometry(0.011, 0.014, spinePt.distanceTo(candidate), 5);
+          const ped = new THREE.Mesh(pedGeo, MAT.grapeStem);
+          ped.position.copy(spinePt).lerp(candidate, 0.5);
+          ped.quaternion.setFromUnitVectors(
+            new THREE.Vector3(0, 1, 0),
+            candidate.clone().sub(spinePt).normalize()
+          );
+          clusterGroup.add(ped);
+        }
+      }
+
+      return clusterGroup;
+    }
+
+    function buildGlossyGrapeClusters() {
+      // 1. Lush Ruby-Violet Grape Cluster draped at Back-Right of the Olive Wood Slab
+      const rubySpine = [
+        new THREE.Vector3(2.85, BOARD_Y + 0.72, -1.42),
+        new THREE.Vector3(2.42, BOARD_Y + 0.54, -1.08),
+        new THREE.Vector3(2.05, BOARD_Y + 0.36, -0.62),
+        new THREE.Vector3(1.88, BOARD_Y + 0.20, -0.15)
+      ];
+      const rubyCluster = createGrapeCluster(rubySpine, MAT.grapeRuby, 38, 0.42);
+      garnishGroup.add(rubyCluster);
+
+      // 2. Emerald-Gold Muscat Grape Cluster nestled at Center-Left between Hard Wedge & Brie
+      const greenSpine = [
+        new THREE.Vector3(-1.05, BOARD_Y + 0.56, -0.18),
+        new THREE.Vector3(-1.32, BOARD_Y + 0.38, 0.05),
+        new THREE.Vector3(-1.62, BOARD_Y + 0.22, 0.18)
+      ];
+      const greenCluster = createGrapeCluster(greenSpine, MAT.grapeGreen, 24, 0.33);
+      garnishGroup.add(greenCluster);
+
+      // 3. A few loose glossy grapes scattered near the clusters
+      const looseGrapes = [
+        { x: 1.55, z: 0.05, mat: MAT.grapeRuby, s: 0.96 },
+        { x: 2.38, z: -0.02, mat: MAT.grapeRuby, s: 0.90 },
+        { x: -0.78, z: 0.44, mat: MAT.grapeGreen, s: 0.94 }
+      ];
+      looseGrapes.forEach((g, idx) => {
+        const berry = new THREE.Mesh(grapeBerryGeo, g.mat);
+        berry.position.set(g.x, BOARD_Y + 0.135 * g.s, g.z);
+        berry.rotation.set(0.8 + idx, idx * 1.2, 0.4);
+        berry.scale.setScalar(g.s);
+        berry.castShadow = true;
+        berry.receiveShadow = true;
+        garnishGroup.add(berry);
+      });
+
+      // 4. Two aromatic rosemary sprigs tucked onto the board for botanical contrast
+      const herbMat = new THREE.MeshStandardMaterial({ color: 0x3f5e34, roughness: 0.72 });
+      const buildRosemarySprig = (bx, bz, rotY) => {
+        const sprig = new THREE.Group();
+        sprig.position.set(bx, BOARD_Y + 0.04, bz);
+        sprig.rotation.y = rotY;
+        const twigGeo = new THREE.CylinderGeometry(0.012, 0.018, 0.95, 6);
+        twigGeo.rotateZ(Math.PI * 0.5);
+        const twig = new THREE.Mesh(twigGeo, MAT.grapeStem);
+        sprig.add(twig);
+
+        const needleGeo = new THREE.ConeGeometry(0.022, 0.22, 5);
+        for (let i = -4; i <= 4; i++) {
+          for (let side = -1; side <= 1; side += 2) {
+            const needle = new THREE.Mesh(needleGeo, herbMat);
+            needle.position.set(i * 0.09, 0.02, side * 0.05);
+            needle.rotation.z = -Math.PI * 0.32;
+            needle.rotation.x = side * 0.65;
+            needle.castShadow = true;
+            sprig.add(needle);
+          }
+        }
+        garnishGroup.add(sprig);
+      };
+
+      buildRosemarySprig(-0.75, -0.62, 0.48);
+      buildRosemarySprig(1.75, 1.28, -0.65);
+    }
+
+    buildScatteredWalnuts();
+    buildGlossyGrapeClusters();
+
+    // =========================================================================
+    // 8. ARTISANAL OLIVE-WOOD CHEESE KNIFE & REAL-WORLD CUTTING MECHANIC
+    // =========================================================================
+    const knifeGroup = new THREE.Group();
+    scene.add(knifeGroup);
+
+    const knifeMeshes = [];
+    let knifeDockIndicator = null;
+    let cutGuideLine = null;
+
+    function buildArtisanalCheeseKnife() {
+      // Coordinate convention inside knifeGroup:
+      // Origin (0,0,0) is at the middle of the sharp lower cutting edge of the blade.
+      // Blade extends along -X (toward tip at x = -0.82) and +X (toward bolster at x = +0.72).
+      // Handle extends from x = +0.72 to x = +2.05.
+      // Blade height is along +Y (from y = 0 sharp edge to y = +0.29 spine).
+
+      // 1. Forged Stainless Steel Cheese Blade with Ajouré Cutout Windows & Forked Tip
+      const bladeShape = new THREE.Shape();
+      bladeShape.moveTo(0.72, 0.02);       // Heel near bolster
+      bladeShape.lineTo(-0.55, 0.0);       // Straight sharp cutting edge
+      bladeShape.quadraticCurveTo(-0.78, 0.01, -0.88, 0.12); // Upcurved slicing belly
+      bladeShape.lineTo(-0.79, 0.16);      // Forked serving prong notch
+      bladeShape.lineTo(-0.86, 0.24);      // Upper serving prong tip
+      bladeShape.quadraticCurveTo(-0.55, 0.30, 0.72, 0.28);  // Spine back to bolster
+      bladeShape.closePath();
+
+      // Add 3 oval cutout windows in the blade (prevents soft brie/chèvre from sticking)
+      const holeSpecs = [
+        { x: -0.42, y: 0.14, rx: 0.11, ry: 0.055 },
+        { x: -0.08, y: 0.14, rx: 0.12, ry: 0.058 },
+        { x: 0.28,  y: 0.14, rx: 0.11, ry: 0.055 }
+      ];
+      holeSpecs.forEach(h => {
+        const hole = new THREE.Path();
+        hole.absellipse(h.x, h.y, h.rx, h.ry, 0, Math.PI * 2, true, 0);
+        bladeShape.holes.push(hole);
+      });
+
+      const bladeGeo = new THREE.ExtrudeGeometry(bladeShape, {
+        steps: 1,
+        depth: 0.022,
+        bevelEnabled: true,
+        bevelThickness: 0.008,
+        bevelSize: 0.008,
+        bevelSegments: 2
+      });
+      bladeGeo.translate(0, 0, -0.011);
+
+      // Taper the bottom cutting edge (y < 0.06) to a razor V-edge
+      const bPos = bladeGeo.attributes.position;
+      for (let i = 0; i < bPos.count; i++) {
+        const vy = bPos.getY(i);
+        if (vy < 0.065) {
+          const factor = Math.max(0.08, vy / 0.065);
+          bPos.setZ(i, bPos.getZ(i) * factor);
+        }
+      }
+      bladeGeo.computeVertexNormals();
+
+      const bladeMesh = new THREE.Mesh(bladeGeo, MAT.steelBlade);
+      bladeMesh.castShadow = true;
+      bladeMesh.receiveShadow = true;
+      knifeGroup.add(bladeMesh);
+      knifeMeshes.push(bladeMesh);
+
+      // 2. Forged Brass Bolster & Finger Guard Collar
+      const bolsterGeo = new THREE.CylinderGeometry(0.11, 0.125, 0.18, 20);
+      bolsterGeo.rotateZ(Math.PI * 0.5);
+      bolsterGeo.scale(1, 1.15, 0.62);
+      const bolsterMesh = new THREE.Mesh(bolsterGeo, MAT.brassBolster);
+      bolsterMesh.position.set(0.76, 0.17, 0);
+      bolsterMesh.castShadow = true;
+      knifeGroup.add(bolsterMesh);
+      knifeMeshes.push(bolsterMesh);
+
+      // 3. Contoured Oiled Olive Wood Handle
+      const handleGeo = new THREE.CylinderGeometry(0.11, 0.12, 1.26, 24, 20);
+      handleGeo.rotateZ(Math.PI * 0.5);
+      const hPos = handleGeo.attributes.position;
+      for (let i = 0; i < hPos.count; i++) {
+        const hx = hPos.getX(i); // from -0.63 to +0.63
+        const hy = hPos.getY(i);
+        const hz = hPos.getZ(i);
+        const t = (hx + 0.63) / 1.26; // 0 at bolster, 1 at pommel
+        // Ergonomic palm swell in middle, graceful curved bird's-beak pommel at end
+        const swell = Math.sin(t * Math.PI) * 0.25 + (t > 0.8 ? (t - 0.8) * 0.6 : 0);
+        const dropCurve = Math.sin(t * Math.PI * 1.1) * 0.045 - (t * t) * 0.055;
+        hPos.setY(i, hy * (1.08 + swell * 0.5) + dropCurve);
+        hPos.setZ(i, hz * (0.68 + swell * 0.45));
+      }
+      handleGeo.computeVertexNormals();
+      const handleMesh = new THREE.Mesh(handleGeo, MAT.oliveWoodTop);
+      handleMesh.position.set(1.44, 0.18, 0);
+      handleMesh.castShadow = true;
+      handleMesh.receiveShadow = true;
+      knifeGroup.add(handleMesh);
+      knifeMeshes.push(handleMesh);
+
+      // 4. Three Brass Cutler Rivets along the Olive Wood Handle
+      const rivetGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.19, 12);
+      rivetGeo.rotateX(Math.PI * 0.5);
+      [1.06, 1.42, 1.78].forEach((rx, idx) => {
+        const ry = 0.18 - idx * 0.012;
+        const rivet = new THREE.Mesh(rivetGeo, MAT.brassBolster);
+        rivet.position.set(rx, ry, 0);
+        knifeGroup.add(rivet);
+      });
+
+      // Invisible larger hit-box around knife so clicking it on the board is effortless
+      const hitBoxGeo = new THREE.BoxGeometry(3.1, 0.45, 0.55);
+      const hitBoxMat = new THREE.MeshBasicMaterial({ visible: false });
+      const hitBox = new THREE.Mesh(hitBoxGeo, hitBoxMat);
+      hitBox.position.set(0.55, 0.16, 0);
+      knifeGroup.add(hitBox);
+      knifeMeshes.push(hitBox);
+
+      // Subtle golden dock outline on the olive wood slab where the knife rests
+      const dockGeo = new THREE.RingGeometry(0.24, 0.29, 32);
+      dockGeo.rotateX(-Math.PI * 0.5);
+      const dockMat = new THREE.MeshBasicMaterial({
+        color: 0xf3d299,
+        transparent: true,
+        opacity: 0.0,
+        side: THREE.DoubleSide
+      });
+      knifeDockIndicator = new THREE.Mesh(dockGeo, dockMat);
+      knifeDockIndicator.position.set(2.82, BOARD_Y + 0.012, 0.95);
+      boardGroup.add(knifeDockIndicator);
+
+      // Subtle golden cut-line preview indicator shown on top of a cheese when hovering with knife
+      const lineGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-0.65, 0, 0),
+        new THREE.Vector3(0.65, 0, 0)
+      ]);
+      const lineMat = new THREE.LineBasicMaterial({
+        color: 0xffe4a8,
+        transparent: true,
+        opacity: 0.0
+      });
+      cutGuideLine = new THREE.Line(lineGeo, lineMat);
+      scene.add(cutGuideLine);
+    }
+
+    buildArtisanalCheeseKnife();
+
+    // Resting pose of the knife on the front-right of the oiled olive wood slab
+    const KNIFE_REST_POS = new THREE.Vector3(2.58, BOARD_Y + 0.04, 0.96);
+    const KNIFE_REST_ROT = new THREE.Euler(Math.PI * 0.47, -0.52, 0.04, 'YXZ');
+
+    // Current & Target Knife State
+    let knifeHeld = false;
+    const knifeTargetPos = KNIFE_REST_POS.clone();
+    const knifeTargetQuat = new THREE.Quaternion().setFromEuler(KNIFE_REST_ROT);
+    knifeGroup.position.copy(KNIFE_REST_POS);
+    knifeGroup.quaternion.copy(knifeTargetQuat);
+
+    // Active slicing stroke animation state
+    let knifeCutAnim = null; // { cheese, t: 0..1, slicedTriggered: false, baseWorldPos, baseYaw }
+
+    // UI Elements
+    const btnKnife = document.getElementById('btn-knife');
+    const btnKnifeLabel = document.getElementById('btn-knife-label');
+    const btnCamera = document.getElementById('btn-camera');
+    const btnReset = document.getElementById('btn-reset');
+    const infoTag = document.getElementById('info-tag');
+    const infoName = document.getElementById('info-name');
+    const infoNotes = document.getElementById('info-notes');
+    const infoHint = document.getElementById('info-hint');
+    const cursorPill = document.getElementById('cursor-pill');
+
+    function setKnifeHeld(held) {
+      if (knifeHeld === held) return;
+      knifeHeld = held;
+      if (knifeHeld) {
+        playFoley('lift');
+        btnKnife.classList.add('active');
+        btnKnifeLabel.textContent = 'Put Knife Down';
+        infoTag.textContent = 'Knife in Hand';
+        infoName.textContent = 'Artisanal Olive-Wood Cheese Knife Ready';
+        infoNotes.textContent = 'Hover over any of the four cheeses to align the blade and click to slice or crumble.';
+        infoHint.textContent = 'Click a cheese to slice • Right-click or click dock to set knife down';
+        // Lift immediately above its resting spot
+        knifeTargetPos.set(KNIFE_REST_POS.x - 0.4, BOARD_Y + 1.25, KNIFE_REST_POS.z - 0.2);
+        knifeTargetQuat.setFromEuler(new THREE.Euler(0, -0.35, -0.1, 'YXZ'));
+      } else {
+        playFoley('setDown');
+        btnKnife.classList.remove('active');
+        btnKnifeLabel.textContent = 'Pick Up Knife';
+        knifeTargetPos.copy(KNIFE_REST_POS);
+        knifeTargetQuat.setFromEuler(KNIFE_REST_ROT);
+        cursorPill.classList.remove('visible');
+        cutGuideLine.material.opacity = 0;
+        infoTag.textContent = 'Interactive Board';
+        infoName.textContent = 'Artisanal Four-Cheese Selection';
+        infoNotes.textContent = 'Aged Crumbly Reserve • Bloomy Brie Round • Veined Roquefort Blue • Ash-Rind Chèvre Log';
+        infoHint.textContent = 'Click the knife on the board to begin slicing';
+      }
+    }
+
+    // =========================================================================
+    // 9. RAYCASTING, USER INTERACTION & ANIMATION LOOP
+    // =========================================================================
+    const raycaster = new THREE.Raycaster();
+    const pointerNDC = new THREE.Vector2();
+    const boardPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(BOARD_Y + 0.55));
+    const planeIntersect = new THREE.Vector3();
+
+    let hoveredCheese = null;
+    let pointerDownPos = new THREE.Vector2();
+
+    function getCheeseMeshes() {
+      return interactiveCheeses.map(c => c.mainMesh);
+    }
+
+    function findClosestCheeseToPoint(worldPt) {
+      let best = null;
+      let bestDist = 1.28; // Snap radius around each cheese when holding knife
+      for (const ch of interactiveCheeses) {
+        const d = Math.hypot(worldPt.x - ch.group.position.x, worldPt.z - ch.group.position.z);
+        if (d < bestDist) {
+          bestDist = d;
+          best = ch;
+        }
+      }
+      return best;
+    }
+
+    function updateTastingHUD(cheese, isHoldingKnife) {
+      if (cheese) {
+        infoTag.textContent = cheese.tag;
+        infoName.textContent = cheese.name;
+        infoNotes.textContent = cheese.notes;
+        if (isHoldingKnife) {
+          infoHint.textContent = cheese.slicesTaken < cheese.maxSlices
+            ? 'Click to slice with the artisanal knife'
+            : 'Fully sliced — Click "Replenish Board" to restore';
+        } else {
+          infoHint.textContent = 'Click the knife (or press Pick Up Knife) to slice this cheese';
+        }
+      }
+    }
+
+    window.addEventListener('pointermove', (e) => {
+      pointerNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointerNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+      cursorPill.style.left = `${e.clientX}px`;
+      cursorPill.style.top = `${e.clientY}px`;
+
+      raycaster.setFromCamera(pointerNDC, camera);
+
+      if (!knifeHeld) {
+        // Check if hovering over the resting knife
+        const knifeHits = raycaster.intersectObjects(knifeMeshes, false);
+        if (knifeHits.length > 0) {
+          document.body.style.cursor = 'pointer';
+          cursorPill.textContent = 'Click to Lift Knife';
+          cursorPill.classList.add('visible');
+          infoTag.textContent = 'Artisanal Cutlery';
+          infoName.textContent = 'Oiled Olive-Wood & Forged Steel Cheese Knife';
+          infoNotes.textContent = 'Features ajouré blade cutouts and a forked serving tip. Click to lift into your hand.';
+          infoHint.textContent = 'Click knife to pick up and start slicing';
+          return;
+        }
+
+        // Check if hovering over one of the 4 cheeses
+        const cheeseHits = raycaster.intersectObjects(getCheeseMeshes(), false);
+        if (cheeseHits.length > 0) {
+          const ch = cheeseHits[0].object.userData.cheese;
+          hoveredCheese = ch;
+          document.body.style.cursor = 'pointer';
+          cursorPill.textContent = `${ch.name} (Click knife to slice)`;
+          cursorPill.classList.add('visible');
+          updateTastingHUD(ch, false);
+          return;
+        }
+
+        hoveredCheese = null;
+        document.body.style.cursor = 'grab';
+        cursorPill.classList.remove('visible');
+        return;
+      }
+
+      // --- WHEN KNIFE IS HELD IN HAND ---
+      if (knifeCutAnim) return; // Currently mid-slice stroke
+
+      // Raycast against cheeses first, then horizontal plane above the board
+      const cheeseHits = raycaster.intersectObjects(getCheeseMeshes(), false);
+      raycaster.ray.intersectPlane(boardPlane, planeIntersect);
+
+      // Clamp plane intersection to reasonable board bounds
+      planeIntersect.x = Math.max(-4.8, Math.min(4.8, planeIntersect.x));
+      planeIntersect.z = Math.max(-3.1, Math.min(3.1, planeIntersect.z));
+
+      let targetCheese = null;
+      if (cheeseHits.length > 0) {
+        targetCheese = cheeseHits[0].object.userData.cheese;
+      } else {
+        targetCheese = findClosestCheeseToPoint(planeIntersect);
+      }
+
+      hoveredCheese = targetCheese;
+
+      // Check if hovering near the knife dock to set the knife back down
+      const distToDock = Math.hypot(
+        planeIntersect.x - knifeDockIndicator.position.x,
+        planeIntersect.z - knifeDockIndicator.position.z
+      );
+
+      if (distToDock < 0.72 && !targetCheese) {
+        document.body.style.cursor = 'pointer';
+        cursorPill.textContent = 'Click to Set Knife Down on Board';
+        cursorPill.classList.add('visible');
+        cutGuideLine.material.opacity = 0.0;
+        knifeTargetPos.set(KNIFE_REST_POS.x, BOARD_Y + 0.55, KNIFE_REST_POS.z);
+        knifeTargetQuat.setFromEuler(new THREE.Euler(0.25, KNIFE_REST_ROT.y, -0.05, 'YXZ'));
+        return;
+      }
+
+      if (targetCheese) {
+        document.body.style.cursor = 'pointer';
+        updateTastingHUD(targetCheese, true);
+
+        const canSlice = targetCheese.slicesTaken < targetCheese.maxSlices;
+        cursorPill.textContent = canSlice
+          ? `Click to Slice ${targetCheese.name}`
+          : `${targetCheese.name} (Replenish to slice more)`;
+        cursorPill.classList.add('visible');
+
+        // Align knife blade directly over the cheese's active cut line in world space
+        const worldBladePos = targetCheese.bladeLocalPos.clone();
+        targetCheese.group.localToWorld(worldBladePos);
+
+        const totalYaw = targetCheese.group.rotation.y + targetCheese.bladeRotY;
+        knifeTargetPos.set(worldBladePos.x, worldBladePos.y + 0.16, worldBladePos.z);
+        knifeTargetQuat.setFromEuler(new THREE.Euler(0, totalYaw, -0.08, 'YXZ'));
+
+        // Position subtle golden cut-guide line on top of the cheese
+        cutGuideLine.position.set(worldBladePos.x, worldBladePos.y - 0.02, worldBladePos.z);
+        cutGuideLine.rotation.set(0, totalYaw, 0);
+        cutGuideLine.material.opacity = canSlice ? 0.75 : 0.0;
+      } else {
+        document.body.style.cursor = 'crosshair';
+        cursorPill.textContent = 'Move over any cheese to slice';
+        cursorPill.classList.add('visible');
+        cutGuideLine.material.opacity = 0.0;
+
+        // Glide smoothly above the olive wood board following the pointer
+        knifeTargetPos.set(planeIntersect.x, BOARD_Y + 1.05, planeIntersect.z);
+        const gentleYaw = -0.35 - planeIntersect.x * 0.06;
+        knifeTargetQuat.setFromEuler(new THREE.Euler(0.04, gentleYaw, -0.10, 'YXZ'));
+      }
+    });
+
+    function triggerSliceOnCheese(cheese) {
+      if (!cheese || knifeCutAnim) return;
+      if (cheese.slicesTaken >= cheese.maxSlices) {
+        infoHint.textContent = 'Cheese fully sliced! Click "Replenish Board" at top-right.';
+        return;
+      }
+
+      const worldBladePos = cheese.bladeLocalPos.clone();
+      cheese.group.localToWorld(worldBladePos);
+      const totalYaw = cheese.group.rotation.y + cheese.bladeRotY;
+
+      knifeCutAnim = {
+        cheese,
+        t: 0,
+        slicedTriggered: false,
+        baseWorldPos: worldBladePos,
+        baseYaw: totalYaw
+      };
+    }
+
+    window.addEventListener('pointerdown', (e) => {
+      pointerDownPos.set(e.clientX, e.clientY);
+    });
+
+    window.addEventListener('pointerup', (e) => {
+      // Ignore if the user dragged to orbit the camera
+      if (Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y) > 7) return;
+      if (e.target.closest('.hud-btn')) return;
+
+      // Right-click while holding knife sets it back down on the olive wood slab
+      if (e.button === 2 && knifeHeld) {
+        setKnifeHeld(false);
+        return;
+      }
+      if (e.button !== 0) return;
+
+      pointerNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointerNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointerNDC, camera);
+
+      if (!knifeHeld) {
+        // Did user click the knife?
+        const knifeHits = raycaster.intersectObjects(knifeMeshes, false);
+        if (knifeHits.length > 0) {
+          setKnifeHeld(true);
+          return;
+        }
+        // Did user click a cheese while knife is resting? Lift the knife automatically so they can slice!
+        const cheeseHits = raycaster.intersectObjects(getCheeseMeshes(), false);
+        if (cheeseHits.length > 0) {
+          const ch = cheeseHits[0].object.userData.cheese;
+          setKnifeHeld(true);
+          hoveredCheese = ch;
+          updateTastingHUD(ch, true);
+          return;
+        }
+      } else {
+        if (knifeCutAnim) return;
+
+        // Check if clicking on a cheese (or snapped to a cheese)
+        if (hoveredCheese) {
+          triggerSliceOnCheese(hoveredCheese);
+          return;
+        }
+
+        // Check if clicking near the knife resting spot to set the knife down
+        raycaster.ray.intersectPlane(boardPlane, planeIntersect);
+        const distToDock = Math.hypot(
+          planeIntersect.x - knifeDockIndicator.position.x,
+          planeIntersect.z - knifeDockIndicator.position.z
+        );
+        if (distToDock < 0.85) {
+          setKnifeHeld(false);
+        }
+      }
+    });
+
+    window.addEventListener('contextmenu', (e) => {
+      if (knifeHeld) {
+        e.preventDefault();
+        setKnifeHeld(false);
+      }
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && knifeHeld) {
+        setKnifeHeld(false);
+      }
+    });
+
+    // --- UI Controls ---
+    btnKnife.addEventListener('click', () => {
+      setKnifeHeld(!knifeHeld);
+    });
+
+    btnReset.addEventListener('click', () => {
+      clearDynamicSlices();
+      interactiveCheeses.forEach(c => c.reset());
+      playFoley('setDown');
+      infoHint.textContent = 'Board replenished with fresh artisanal cheeses!';
+    });
+
+    const cameraPresets = [
+      { pos: new THREE.Vector3(0.4, 8.6, 10.6), target: new THREE.Vector3(0, 0.55, 0.15), label: 'Classic Bistro View' },
+      { pos: new THREE.Vector3(-3.4, 5.2, 6.8), target: new THREE.Vector3(-0.8, 0.65, 0.15), label: 'Fromager Close-Up' },
+      { pos: new THREE.Vector3(4.5, 4.8, 6.4),  target: new THREE.Vector3(0.3, 0.65, 0.05), label: 'Knife & Roquefort Angle' },
+      { pos: new THREE.Vector3(0.0, 11.8, 2.2), target: new THREE.Vector3(0, 0.45, 0.0),   label: 'Overhead Tasting View' }
+    ];
+    let currentCamPreset = 0;
+    let camTransition = null;
+
+    btnCamera.addEventListener('click', () => {
+      currentCamPreset = (currentCamPreset + 1) % cameraPresets.length;
+      const preset = cameraPresets[currentCamPreset];
+      camTransition = {
+        t: 0,
+        startPos: camera.position.clone(),
+        endPos: preset.pos.clone(),
+        startTarget: controls.target.clone(),
+        endTarget: preset.target.clone()
+      };
+      infoHint.textContent = `Camera: ${preset.label}`;
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // =========================================================================
+    // 10. MAIN RENDER & PHYSICS / SLICING ANIMATION LOOP
+    // =========================================================================
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.05);
+      const elapsed = clock.getElapsedTime();
+
+      // 1. Subtle warm candlelight shimmer
+      candleLight.intensity = 0.88 + Math.sin(elapsed * 7.3) * 0.06 + Math.cos(elapsed * 13.1) * 0.04;
+
+      // 2. Pulse knife dock ring when knife is held
+      if (knifeDockIndicator) {
+        const targetOpacity = knifeHeld ? (0.35 + 0.2 * Math.sin(elapsed * 4.0)) : 0.0;
+        knifeDockIndicator.material.opacity = lerp(knifeDockIndicator.material.opacity, targetOpacity, dt * 8);
+      }
+
+      // 3. Camera preset smooth transition
+      if (camTransition) {
+        camTransition.t += dt * 1.8;
+        const s = Math.min(1, camTransition.t);
+        const ease = s * s * (3 - 2 * s);
+        camera.position.lerpVectors(camTransition.startPos, camTransition.endPos, ease);
+        controls.target.lerpVectors(camTransition.startTarget, camTransition.endTarget, ease);
+        if (s >= 1) camTransition = null;
+      }
+      controls.update();
+
+      // 4. Knife Real-World Slicing Animation or Smooth Hover Tracking
+      if (knifeCutAnim) {
+        knifeCutAnim.t += dt * 2.55;
+        const t = knifeCutAnim.t;
+        const bPos = knifeCutAnim.baseWorldPos;
+        const yaw = knifeCutAnim.baseYaw;
+
+        const forwardDir = new THREE.Vector3(-Math.cos(yaw), 0, Math.sin(yaw));
+
+        if (t < 0.45) {
+          // Downward press + forward slicing draw through the cheese down to the olive wood slab
+          const p = t / 0.45;
+          const easeIn = p * p;
+          const curY = lerp(bPos.y + 0.22, BOARD_Y + 0.035, easeIn);
+          const forwardDraw = Math.sin(p * Math.PI * 0.5) * 0.22;
+          knifeGroup.position.set(
+            bPos.x + forwardDir.x * forwardDraw,
+            curY,
+            bPos.z + forwardDir.z * forwardDraw
+          );
+          // Slight downward tip rock during slice
+          const pitchZ = lerp(-0.18, 0.04, easeIn);
+          knifeGroup.quaternion.setFromEuler(new THREE.Euler(0, yaw, pitchZ, 'YXZ'));
+        } else {
+          // Trigger physical cheese slice right as the blade reaches the olive wood board!
+          if (!knifeCutAnim.slicedTriggered) {
+            knifeCutAnim.slicedTriggered = true;
+            knifeCutAnim.cheese.slice();
+            updateTastingHUD(knifeCutAnim.cheese, true);
+          }
+          // Smoothly lift blade back up above the freshly cut cheese
+          const p = Math.min(1, (t - 0.45) / 0.55);
+          const easeOut = 1 - Math.pow(1 - p, 2);
+          const curY = lerp(BOARD_Y + 0.035, bPos.y + 0.18, easeOut);
+          const forwardDraw = lerp(0.22, 0.0, easeOut);
+          knifeGroup.position.set(
+            bPos.x + forwardDir.x * forwardDraw,
+            curY,
+            bPos.z + forwardDir.z * forwardDraw
+          );
+          const pitchZ = lerp(0.04, -0.08, easeOut);
+          knifeGroup.quaternion.setFromEuler(new THREE.Euler(0, yaw, pitchZ, 'YXZ'));
+
+          if (t >= 1.0) {
+            // Update target position to the cheese's updated cut line
+            const nextWorldPos = knifeCutAnim.cheese.bladeLocalPos.clone();
+            knifeCutAnim.cheese.group.localToWorld(nextWorldPos);
+            knifeTargetPos.set(nextWorldPos.x, nextWorldPos.y + 0.16, nextWorldPos.z);
+            cutGuideLine.position.set(nextWorldPos.x, nextWorldPos.y - 0.02, nextWorldPos.z);
+            knifeCutAnim = null;
+          }
+        }
+      } else {
+        // Smooth damped spring interpolation toward knifeTargetPos & knifeTargetQuat
+        const followSpeed = knifeHeld ? 14.0 : 8.5;
+        knifeGroup.position.lerp(knifeTargetPos, Math.min(1, dt * followSpeed));
+        knifeGroup.quaternion.slerp(knifeTargetQuat, Math.min(1, dt * followSpeed));
+      }
+
+      // 5. Animate freshly cut cheese wedges, medallions, slabs & crumbs settling onto the board
+      for (const item of dynamicSlices) {
+        if (item.anim) {
+          item.anim.t += dt * 2.8;
+          const p = Math.min(1, item.anim.t);
+          const ease = 1 - Math.pow(1 - p, 3);
+          item.mesh.position.lerpVectors(item.anim.startPos, item.anim.endPos, ease);
+          // Parabolic hop for crumbs
+          if (item.anim.rotVel) {
+            item.mesh.position.y += Math.sin(p * Math.PI) * 0.14;
+            item.mesh.rotation.x += item.anim.rotVel.x * dt * (1 - p);
+            item.mesh.rotation.y += item.anim.rotVel.y * dt * (1 - p);
+            item.mesh.rotation.z += item.anim.rotVel.z * dt * (1 - p);
+          }
+          if (item.anim.targetRot) {
+            item.mesh.rotation.x = lerp(item.mesh.rotation.x, item.anim.targetRot.x, ease);
+            item.mesh.rotation.y = lerp(item.mesh.rotation.y, item.anim.targetRot.y, ease);
+            item.mesh.rotation.z = lerp(item.mesh.rotation.z, item.anim.targetRot.z, ease);
+          }
+          if (p >= 1) {
+            delete item.anim;
+          }
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

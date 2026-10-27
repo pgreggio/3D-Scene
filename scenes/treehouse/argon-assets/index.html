@@ -1,0 +1,2649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ancient Canopy — Interactive 3D Treehouse Simulation</title>
+  <style>
+    :root {
+      --bg-glass: rgba(18, 24, 20, 0.78);
+      --bg-glass-hover: rgba(28, 38, 31, 0.88);
+      --border-glass: rgba(168, 212, 145, 0.25);
+      --accent-gold: #f0b85c;
+      --accent-green: #8cd47e;
+      --accent-amber: #e8834a;
+      --text-main: #f3f6f0;
+      --text-muted: #adc0b0;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0d130f;
+      font-family: var(--font-sans);
+      color: var(--text-main);
+    }
+
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Loading Overlay */
+    #loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: radial-gradient(circle at center, #1b281e 0%, #090e0a 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.7s ease, visibility 0.7s ease;
+    }
+
+    #loading-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .loader-emblem {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      border: 3px solid rgba(140, 212, 126, 0.2);
+      border-top-color: var(--accent-gold);
+      border-right-color: var(--accent-green);
+      animation: spin 1.2s cubic-bezier(0.5, 0.1, 0.5, 0.9) infinite;
+      margin-bottom: 22px;
+      box-shadow: 0 0 30px rgba(240, 184, 92, 0.2);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loader-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    .loader-subtitle {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .progress-track {
+      width: 280px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    #progress-bar {
+      width: 8%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-green), var(--accent-gold));
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    #loading-status {
+      font-size: 0.78rem;
+      color: var(--accent-gold);
+      font-family: monospace;
+    }
+
+    /* Top Header Banner */
+    #top-bar {
+      position: fixed;
+      top: 18px;
+      left: 20px;
+      right: 20px;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+    }
+
+    .brand-card {
+      pointer-events: auto;
+      background: var(--bg-glass);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border-glass);
+      border-radius: 14px;
+      padding: 14px 18px;
+      max-width: 390px;
+      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    .brand-title {
+      font-size: 1.12rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: #fff;
+      margin-bottom: 5px;
+    }
+
+    .brand-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent-gold);
+      box-shadow: 0 0 10px var(--accent-gold);
+    }
+
+    .brand-desc {
+      font-size: 0.8rem;
+      line-height: 1.45;
+      color: var(--text-muted);
+    }
+
+    .brand-desc strong {
+      color: var(--accent-gold);
+      font-weight: 600;
+    }
+
+    /* Quick Action Pills */
+    .top-actions {
+      pointer-events: auto;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .action-btn {
+      background: var(--bg-glass);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-glass);
+      color: var(--text-main);
+      padding: 9px 14px;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .action-btn:hover {
+      background: var(--bg-glass-hover);
+      border-color: var(--accent-gold);
+      transform: translateY(-1px);
+    }
+
+    .action-btn.active {
+      background: rgba(240, 184, 92, 0.22);
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    /* Right Control Panel */
+    #control-panel {
+      position: fixed;
+      top: 76px;
+      right: 20px;
+      z-index: 10;
+      width: 310px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-height: calc(100vh - 96px);
+      overflow-y: auto;
+    }
+
+    .panel-section-title {
+      font-size: 0.73rem;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--accent-green);
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .platform-control {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 11px;
+      padding: 10px 12px;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .platform-control.dragging,
+    .platform-control:hover {
+      border-color: var(--accent-gold);
+      background: rgba(240, 184, 92, 0.08);
+    }
+
+    .plat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .plat-name {
+      font-size: 0.84rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .plat-badge {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .plat-height-val {
+      font-size: 0.82rem;
+      font-family: monospace;
+      color: var(--accent-gold);
+      font-weight: 700;
+    }
+
+    .plat-slider {
+      width: 100%;
+      accent-color: var(--accent-gold);
+      cursor: pointer;
+      height: 5px;
+    }
+
+    .plat-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.71rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+
+    .preset-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-main);
+      padding: 7px 9px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      text-align: center;
+    }
+
+    .preset-btn:hover {
+      background: rgba(140, 212, 126, 0.18);
+      border-color: var(--accent-green);
+    }
+
+    .stats-box {
+      background: rgba(0, 0, 0, 0.28);
+      border-radius: 10px;
+      padding: 9px 11px;
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .stat-row span:last-child {
+      color: var(--text-main);
+      font-family: monospace;
+    }
+
+    /* Floating 3D Platform Labels */
+    #labels-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .floating-label {
+      position: absolute;
+      transform: translate(-50%, -100%);
+      background: rgba(15, 21, 17, 0.85);
+      border: 1px solid rgba(240, 184, 92, 0.5);
+      border-radius: 8px;
+      padding: 4px 9px;
+      font-size: 0.73rem;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      pointer-events: auto;
+      cursor: ns-resize;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+      transition: border-color 0.15s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .floating-label:hover,
+    .floating-label.active {
+      border-color: #fff;
+      background: rgba(240, 184, 92, 0.92);
+      color: #111;
+      transform: translate(-50%, -100%) scale(1.06);
+    }
+
+    .floating-label .drag-icon {
+      font-size: 0.85rem;
+      line-height: 1;
+    }
+
+    /* Bottom Hint Bar */
+    #bottom-hint {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      background: var(--bg-glass);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-glass);
+      border-radius: 999px;
+      padding: 8px 18px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      pointer-events: none;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+      white-space: nowrap;
+    }
+
+    #bottom-hint strong {
+      color: var(--accent-gold);
+    }
+
+    @media (max-width: 768px) {
+      #control-panel {
+        width: 260px;
+        top: auto;
+        bottom: 54px;
+        right: 12px;
+        max-height: 48vh;
+      }
+      .brand-card {
+        max-width: 240px;
+        padding: 10px 12px;
+      }
+      .brand-desc {
+        display: none;
+      }
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-overlay">
+    <div class="loader-emblem"></div>
+    <div class="loader-title">ANCIENT CANOPY</div>
+    <div class="loader-subtitle">Loading CC0 PBR Textures, HDRI Sky &amp; glTF Props...</div>
+    <div class="progress-track">
+      <div id="progress-bar"></div>
+    </div>
+    <div id="loading-status">Initializing 3D Engine...</div>
+  </div>
+
+  <!-- 3D Viewport Container -->
+  <div id="canvas-container"></div>
+
+  <!-- Floating 3D Labels -->
+  <div id="labels-container"></div>
+
+  <!-- Top Bar -->
+  <div id="top-bar">
+    <div class="brand-card">
+      <div class="brand-title">
+        <span class="brand-dot"></span>
+        Ancient Trunk Treehouse
+      </div>
+      <div class="brand-desc">
+        <strong>Drag any platform up or down</strong> directly in 3D (or via sliders). Watch the catenary <strong>rope bridges</strong> &amp; <strong>ladders</strong> dynamically flex and telescope!
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="action-btn" id="btn-time" title="Toggle Sunrise / Twilight Lighting">
+        <span id="time-label">Golden Sunrise</span>
+      </button>
+      <button class="action-btn" id="btn-autorotate" title="Toggle Slow Camera Orbit">
+        Auto-Orbit
+      </button>
+      <button class="action-btn" id="btn-camera-reset" title="Reset Camera View">
+        Reset View
+      </button>
+    </div>
+  </div>
+
+  <!-- Right Control Panel -->
+  <div id="control-panel">
+    <div>
+      <div class="panel-section-title">
+        <span>Platform Elevations</span>
+        <span>Drag ↕</span>
+      </div>
+
+      <!-- Platform 1 -->
+      <div class="platform-control" id="card-plat-0" style="margin-bottom: 8px;">
+        <div class="plat-header">
+          <span class="plat-name">
+            <span class="plat-badge" style="background: #5cd68d;"></span>
+            1. Lower Hoist Deck
+          </span>
+          <span class="plat-height-val" id="val-plat-0">6.0 m</span>
+        </div>
+        <input type="range" class="plat-slider" id="slider-plat-0" min="3.0" max="19.5" step="0.1" value="6.0" />
+        <div class="plat-meta">
+          <span>SE Trunk Collar</span>
+          <span id="meta-plat-0">Ground Ladder + Bridge 1</span>
+        </div>
+      </div>
+
+      <!-- Platform 2 -->
+      <div class="platform-control" id="card-plat-1" style="margin-bottom: 8px;">
+        <div class="plat-header">
+          <span class="plat-name">
+            <span class="plat-badge" style="background: #f0b85c;"></span>
+            2. Main Cabin Deck
+          </span>
+          <span class="plat-height-val" id="val-plat-1">11.2 m</span>
+        </div>
+        <input type="range" class="plat-slider" id="slider-plat-1" min="3.5" max="20.5" step="0.1" value="11.2" />
+        <div class="plat-meta">
+          <span>NW Trunk Collar</span>
+          <span id="meta-plat-1">Bridges 1 &amp; 2 Hub</span>
+        </div>
+      </div>
+
+      <!-- Platform 3 -->
+      <div class="platform-control" id="card-plat-2">
+        <div class="plat-header">
+          <span class="plat-name">
+            <span class="plat-badge" style="background: #e87a5d;"></span>
+            3. Stargazer Nest
+          </span>
+          <span class="plat-height-val" id="val-plat-2">16.5 m</span>
+        </div>
+        <input type="range" class="plat-slider" id="slider-plat-2" min="4.0" max="22.0" step="0.1" value="16.5" />
+        <div class="plat-meta">
+          <span>NE Trunk Collar</span>
+          <span id="meta-plat-2">Bridge 2 + Rope Ladder</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel-section-title">Elevation Presets</div>
+      <div class="preset-grid">
+        <button class="preset-btn" data-preset="cascade">Staircase Cascade</button>
+        <button class="preset-btn" data-preset="level">Level Canopy Ring</button>
+        <button class="preset-btn" data-preset="high">Skyward Lookout</button>
+        <button class="preset-btn" data-preset="inverted">Inverted Spiral</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel-section-title">Focus Camera</div>
+      <div class="preset-grid">
+        <button class="preset-btn" data-cam="overview">Full Treehouse</button>
+        <button class="preset-btn" data-cam="plat0">1. Hoist Deck</button>
+        <button class="preset-btn" data-cam="plat1">2. Main Cabin</button>
+        <button class="preset-btn" data-cam="plat2">3. Crow's Nest</button>
+      </div>
+    </div>
+
+    <div class="stats-box">
+      <div class="stat-row">
+        <span>Bridge 1->2 Span / Slope:</span>
+        <span id="stat-bridge-1">--</span>
+      </div>
+      <div class="stat-row">
+        <span>Bridge 2->3 Span / Slope:</span>
+        <span id="stat-bridge-2">--</span>
+      </div>
+      <div class="stat-row">
+        <span>Ladder 1->3 Length:</span>
+        <span id="stat-ladder-13">--</span>
+      </div>
+      <div class="stat-row">
+        <span>Ground Ladder Rungs:</span>
+        <span id="stat-ladder-g">--</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Hint -->
+  <div id="bottom-hint">
+    <strong>Left-Drag Platform / Label:</strong> Move Up/Down &nbsp;|&nbsp; <strong>Left-Drag Sky/Tree:</strong> Orbit &nbsp;|&nbsp; <strong>Scroll / Right-Drag:</strong> Zoom &amp; Pan
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+
+    // --- DOM Elements ---
+    const container = document.getElementById('canvas-container');
+    const labelsContainer = document.getElementById('labels-container');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const progressBar = document.getElementById('progress-bar');
+    const loadingStatus = document.getElementById('loading-status');
+
+    // --- Scene, Camera, Renderer ---
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x1b261e, 0.011);
+
+    const camera = new THREE.PerspectiveCamera(46, window.innerWidth / window.innerHeight, 0.1, 250);
+    camera.position.set(18, 14, 22);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 10.5, 0);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.055;
+    controls.maxPolarAngle = Math.PI * 0.49;
+    controls.minDistance = 6;
+    controls.maxDistance = 55;
+    controls.update();
+
+    // --- Loading Manager ---
+    const manager = new THREE.LoadingManager();
+    manager.onProgress = (url, itemsLoaded, itemsTotal) => {
+      const pct = Math.min(100, Math.round((itemsLoaded / Math.max(1, itemsTotal)) * 100));
+      progressBar.style.width = `${Math.max(10, pct)}%`;
+      const shortName = url.split('/').pop();
+      loadingStatus.textContent = `Loading ${shortName} (${itemsLoaded}/${itemsTotal})...`;
+    };
+    manager.onLoad = () => {
+      progressBar.style.width = '100%';
+      loadingStatus.textContent = 'Ready!';
+      setTimeout(() => loadingOverlay.classList.add('hidden'), 300);
+    };
+    manager.onError = (url) => {
+      console.warn('Non-critical asset fallback for:', url);
+    };
+
+    // Fallback timeout in case network is slow
+    setTimeout(() => loadingOverlay.classList.add('hidden'), 9000);
+
+    const texLoader = new THREE.TextureLoader(manager);
+    const gltfLoader = new GLTFLoader(manager);
+    const rgbeLoader = new RGBELoader(manager);
+
+    // Helper to load PBR texture set with repeat
+    function loadPBRSet(baseUrl, name, repeatX, repeatY) {
+      const diff = texLoader.load(`${baseUrl}/${name}_diff_1k.jpg`);
+      const nor = texLoader.load(`${baseUrl}/${name}_nor_gl_1k.jpg`);
+      const rough = texLoader.load(`${baseUrl}/${name}_rough_1k.jpg`);
+      diff.colorSpace = THREE.SRGBColorSpace;
+      [diff, nor, rough].forEach(t => {
+        t.wrapS = THREE.RepeatWrapping;
+        t.wrapT = THREE.RepeatWrapping;
+        t.repeat.set(repeatX, repeatY);
+      });
+      return { diff, nor, rough };
+    }
+
+    // --- Load Verified Poly Haven PBR Textures ---
+    const barkTex = loadPBRSet(
+      'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/bark_willow',
+      'bark_willow', 3, 8
+    );
+    const woodTex = loadPBRSet(
+      'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_planks_dirt',
+      'wood_planks_dirt', 2, 2
+    );
+    const roofTex = loadPBRSet(
+      'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/thatch_roof_angled',
+      'thatch_roof_angled', 3, 2
+    );
+    const groundTex = loadPBRSet(
+      'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/forest_ground_04',
+      'forest_ground_04', 18, 18
+    );
+
+    // Procedural Braided Rope Texture for crisp close-ups
+    function createRopeTexture() {
+      const c = document.createElement('canvas');
+      c.width = 128;
+      c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#b68f56';
+      ctx.fillRect(0, 0, 128, 128);
+      for (let i = -128; i < 256; i += 16) {
+        ctx.strokeStyle = '#755427';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(128, i + 64);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#d6b47c';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, i + 6);
+        ctx.lineTo(128, i + 70);
+        ctx.stroke();
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(1, 20);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+    const ropeTexture = createRopeTexture();
+
+    // --- Shared Materials ---
+    const materials = {
+      bark: new THREE.MeshStandardMaterial({
+        map: barkTex.diff,
+        normalMap: barkTex.nor,
+        normalScale: new THREE.Vector2(1.4, 1.4),
+        roughnessMap: barkTex.rough,
+        roughness: 0.92,
+        color: 0xd8cbb8
+      }),
+      woodDeck: new THREE.MeshStandardMaterial({
+        map: woodTex.diff,
+        normalMap: woodTex.nor,
+        normalScale: new THREE.Vector2(1.0, 1.0),
+        roughnessMap: woodTex.rough,
+        roughness: 0.85,
+        color: 0xe0c8a8
+      }),
+      woodBeam: new THREE.MeshStandardMaterial({
+        map: woodTex.diff,
+        normalMap: woodTex.nor,
+        roughnessMap: woodTex.rough,
+        roughness: 0.88,
+        color: 0x9c7248
+      }),
+      woodDark: new THREE.MeshStandardMaterial({
+        map: woodTex.diff,
+        normalMap: woodTex.nor,
+        roughness: 0.9,
+        color: 0x6b4c2b
+      }),
+      thatch: new THREE.MeshStandardMaterial({
+        map: roofTex.diff,
+        normalMap: roofTex.nor,
+        roughnessMap: roofTex.rough,
+        roughness: 0.95,
+        color: 0xd9bf8c,
+        side: THREE.DoubleSide
+      }),
+      rope: new THREE.MeshStandardMaterial({
+        map: ropeTexture,
+        roughness: 0.88,
+        metalness: 0.02,
+        color: 0xd8b478
+      }),
+      iron: new THREE.MeshStandardMaterial({
+        color: 0x2c3237,
+        roughness: 0.42,
+        metalness: 0.82
+      }),
+      brass: new THREE.MeshStandardMaterial({
+        color: 0xe6b347,
+        roughness: 0.28,
+        metalness: 0.88
+      }),
+      lanternGlow: new THREE.MeshStandardMaterial({
+        color: 0xffdf9e,
+        emissive: 0xff9d2e,
+        emissiveIntensity: 3.2,
+        roughness: 0.2
+      }),
+      windowGlow: new THREE.MeshStandardMaterial({
+        color: 0xffe4a8,
+        emissive: 0xffa63b,
+        emissiveIntensity: 1.9,
+        roughness: 0.15
+      })
+    };
+
+    // --- Lighting & HDRI Environment ---
+    const ambientLight = new THREE.HemisphereLight(0xffe9c4, 0x2c4229, 0.75);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xffdfa8, 2.8);
+    sunLight.position.set(28, 36, 22);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.set(2048, 2048);
+    sunLight.shadow.camera.near = 2;
+    sunLight.shadow.camera.far = 90;
+    const d = 24;
+    sunLight.shadow.camera.left = -d;
+    sunLight.shadow.camera.right = d;
+    sunLight.shadow.camera.top = d + 6;
+    sunLight.shadow.camera.bottom = -d + 6;
+    sunLight.shadow.bias = -0.0005;
+    scene.add(sunLight);
+
+    const fillLight = new THREE.DirectionalLight(0x8ab4f8, 0.65);
+    fillLight.position.set(-24, 18, -18);
+    scene.add(fillLight);
+
+    const hdrUrls = {
+      sunrise: 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/spruit_sunrise_1k.hdr',
+      twilight: 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/kloppenheim_06_puresky_1k.hdr'
+    };
+    const hdrCache = {};
+    let currentLightingMode = 'sunrise';
+
+    function applyEnvironmentMode(mode) {
+      currentLightingMode = mode;
+      const url = hdrUrls[mode];
+      const setTex = (tex) => {
+        tex.mapping = THREE.EquirectangularReflectionMapping;
+        scene.environment = tex;
+        scene.background = tex;
+      };
+      if (hdrCache[mode]) {
+        setTex(hdrCache[mode]);
+      } else {
+        rgbeLoader.load(url, (tex) => {
+          hdrCache[mode] = tex;
+          if (currentLightingMode === mode) setTex(tex);
+        });
+      }
+
+      if (mode === 'sunrise') {
+        renderer.toneMappingExposure = 1.12;
+        scene.fog.color.setHex(0x283325);
+        scene.fog.density = 0.0085;
+        sunLight.color.setHex(0xffdfa8);
+        sunLight.intensity = 2.8;
+        sunLight.position.set(28, 36, 22);
+        ambientLight.intensity = 0.75;
+        materials.lanternGlow.emissiveIntensity = 2.6;
+        materials.windowGlow.emissiveIntensity = 1.6;
+        document.getElementById('time-label').textContent = 'Golden Sunrise';
+      } else {
+        renderer.toneMappingExposure = 0.72;
+        scene.fog.color.setHex(0x101820);
+        scene.fog.density = 0.012;
+        sunLight.color.setHex(0x9bb8ff);
+        sunLight.intensity = 1.1;
+        sunLight.position.set(-22, 32, -16);
+        ambientLight.intensity = 0.35;
+        materials.lanternGlow.emissiveIntensity = 5.2;
+        materials.windowGlow.emissiveIntensity = 3.5;
+        document.getElementById('time-label').textContent = 'Twilight Glow';
+      }
+    }
+    applyEnvironmentMode('sunrise');
+
+    // --- Forest Floor Terrain & Clearing ---
+    const terrainGeo = new THREE.PlaneGeometry(140, 140, 96, 96);
+    terrainGeo.rotateX(-Math.PI / 2);
+    const tPos = terrainGeo.attributes.position;
+    for (let i = 0; i < tPos.count; i++) {
+      const x = tPos.getX(i);
+      const z = tPos.getZ(i);
+      const dist = Math.hypot(x, z);
+      // Slight mound around the base of the giant tree, gentle rolling hills further out
+      const rootMound = Math.exp(-(dist * dist) / 18) * 0.95;
+      const hills = (Math.sin(x * 0.08) * Math.cos(z * 0.08) + Math.sin((x + z) * 0.04)) * 1.4 * smoothstep(8, 35, dist);
+      tPos.setY(i, rootMound + hills);
+    }
+    terrainGeo.computeVertexNormals();
+
+    function smoothstep(min, max, value) {
+      const x = Math.max(0, Math.min(1, (value - min) / (max - min)));
+      return x * x * (3 - 2 * x);
+    }
+
+    const terrainMat = new THREE.MeshStandardMaterial({
+      map: groundTex.diff,
+      normalMap: groundTex.nor,
+      roughnessMap: groundTex.rough,
+      roughness: 0.95,
+      color: 0x99a882
+    });
+    const terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
+    terrainMesh.receiveShadow = true;
+    scene.add(terrainMesh);
+
+    // --- Giant Ancient Tree Trunk (Single Main Trunk + Buttress Roots + Canopy) ---
+    const treeGroup = new THREE.Group();
+    scene.add(treeGroup);
+
+    // Helper function: trunk radius at height y
+    function getTrunkRadiusAt(y) {
+      const t = Math.max(0, Math.min(1, y / 28));
+      const baseFlare = Math.exp(-y * 0.55) * 1.35;
+      return 2.05 * (1 - t * 0.48) + baseFlare;
+    }
+
+    function buildGiantTree() {
+      // Main central trunk with organic bark ridges & slight natural twist
+      const trunkHeight = 29;
+      const radialSegs = 40;
+      const heightSegs = 72;
+      const trunkGeo = new THREE.CylinderGeometry(1.0, 1.0, trunkHeight, radialSegs, heightSegs, false);
+      trunkGeo.translate(0, trunkHeight / 2, 0);
+
+      const pos = trunkGeo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const vx = pos.getX(i);
+        const vy = pos.getY(i);
+        const vz = pos.getZ(i);
+        const angle = Math.atan2(vz, vx);
+        const baseR = getTrunkRadiusAt(vy);
+
+        // Buttress root fluting near base + organic bark gnarl
+        const rootFlute = Math.exp(-vy * 0.35) * Math.sin(angle * 5 + 0.4) * 0.42;
+        const barkRidge = Math.sin(angle * 9 + vy * 0.45) * 0.07 + Math.cos(angle * 4 - vy * 0.25) * 0.08;
+        const r = Math.max(0.5, baseR + rootFlute + barkRidge);
+
+        // Subtle organic trunk lean/wobble (kept small so vertical collars fit cleanly)
+        const centerX = Math.sin(vy * 0.16) * 0.12;
+        const centerZ = Math.cos(vy * 0.14) * 0.12;
+
+        pos.setXYZ(i, Math.cos(angle) * r + centerX, vy, Math.sin(angle) * r + centerZ);
+      }
+      trunkGeo.computeVertexNormals();
+
+      const trunkMesh = new THREE.Mesh(trunkGeo, materials.bark);
+      trunkMesh.castShadow = true;
+      trunkMesh.receiveShadow = true;
+      treeGroup.add(trunkMesh);
+
+      // 6 Sprawling Buttress Roots radiating at ground level
+      for (let rIdx = 0; rIdx < 6; rIdx++) {
+        const baseAngle = (rIdx / 6) * Math.PI * 2 + 0.25;
+        const curvePts = [];
+        for (let s = 0; s <= 10; s++) {
+          const u = s / 10;
+          const dist = 1.6 + u * 5.8;
+          const ry = Math.pow(1 - u, 1.8) * 3.4 - 0.15;
+          const wobble = Math.sin(u * Math.PI * 1.5 + rIdx) * 0.35;
+          curvePts.push(new THREE.Vector3(
+            Math.cos(baseAngle + wobble * 0.1) * dist,
+            ry,
+            Math.sin(baseAngle + wobble * 0.1) * dist
+          ));
+        }
+        const rootCurve = new THREE.CatmullRomCurve3(curvePts);
+        const rootGeo = new THREE.TubeGeometry(rootCurve, 20, 0.55, 10, false);
+        // Taper root radius along curve
+        const rPos = rootGeo.attributes.position;
+        for (let i = 0; i < rPos.count; i++) {
+          const py = rPos.getY(i);
+          const scale = Math.max(0.25, Math.min(1.1, (py + 0.5) / 3.2));
+          rPos.setY(i, py * scale);
+        }
+        rootGeo.computeVertexNormals();
+        const rootMesh = new THREE.Mesh(rootGeo, materials.bark);
+        rootMesh.castShadow = true;
+        rootMesh.receiveShadow = true;
+        treeGroup.add(rootMesh);
+      }
+    }
+    buildGiantTree();
+
+    // --- Upper Canopy Limbs & Lush Swaying Foliage Clusters ---
+    const canopyClusters = [];
+    const foliageMats = [
+      new THREE.MeshStandardMaterial({ color: 0x3b6e38, roughness: 0.78, flatShading: true }),
+      new THREE.MeshStandardMaterial({ color: 0x4f8642, roughness: 0.75, flatShading: true }),
+      new THREE.MeshStandardMaterial({ color: 0x679c4c, roughness: 0.72, flatShading: true }),
+      new THREE.MeshStandardMaterial({ color: 0x2d572c, roughness: 0.82, flatShading: true })
+    ];
+
+    function buildCanopyAndBranches() {
+      const branchConfigs = [
+        { y: 23.0, angle: 0.2, len: 11.5, pitch: 0.35, rad: 0.85 },
+        { y: 23.8, angle: 1.45, len: 12.2, pitch: 0.32, rad: 0.90 },
+        { y: 24.4, angle: 2.65, len: 11.8, pitch: 0.38, rad: 0.82 },
+        { y: 23.5, angle: 3.85, len: 12.6, pitch: 0.30, rad: 0.88 },
+        { y: 24.8, angle: 5.10, len: 11.2, pitch: 0.36, rad: 0.80 },
+        { y: 26.2, angle: 0.85, len: 9.5,  pitch: 0.55, rad: 0.70 },
+        { y: 26.6, angle: 3.10, len: 9.8,  pitch: 0.52, rad: 0.72 },
+        { y: 27.0, angle: 4.65, len: 9.2,  pitch: 0.58, rad: 0.68 }
+      ];
+
+      const leafClusterGeo = new THREE.IcosahedronGeometry(1.0, 2);
+      // Perturb icosahedron vertices slightly for organic leafy crown look
+      const lPos = leafClusterGeo.attributes.position;
+      for (let i = 0; i < lPos.count; i++) {
+        const v = new THREE.Vector3().fromBufferAttribute(lPos, i);
+        const n = 1 + 0.14 * Math.sin(v.x * 4) * Math.cos(v.y * 4) + 0.08 * Math.sin(v.z * 6);
+        v.multiplyScalar(n);
+        lPos.setXYZ(i, v.x, v.y * 0.72, v.z);
+      }
+      leafClusterGeo.computeVertexNormals();
+
+      branchConfigs.forEach((cfg, idx) => {
+        const pts = [];
+        for (let s = 0; s <= 8; s++) {
+          const u = s / 8;
+          const rDist = u * cfg.len;
+          const by = cfg.y + u * cfg.len * Math.sin(cfg.pitch) + Math.sin(u * Math.PI) * 0.8;
+          const curveAngle = cfg.angle + Math.sin(u * Math.PI * 1.3 + idx) * 0.16;
+          pts.push(new THREE.Vector3(
+            Math.cos(curveAngle) * rDist,
+            by,
+            Math.sin(curveAngle) * rDist
+          ));
+        }
+        const curve = new THREE.CatmullRomCurve3(pts);
+        const bGeo = new THREE.TubeGeometry(curve, 16, cfg.rad * 0.65, 8, false);
+        const bMesh = new THREE.Mesh(bGeo, materials.bark);
+        bMesh.castShadow = true;
+        bMesh.receiveShadow = true;
+        treeGroup.add(bMesh);
+
+        // Add foliage clusters along outer half of each great limb
+        for (let c = 0; c < 5; c++) {
+          const u = 0.45 + (c / 4) * 0.55;
+          const pt = curve.getPoint(u);
+          const cluster = new THREE.Mesh(leafClusterGeo, foliageMats[(idx + c) % foliageMats.length]);
+          const scale = 2.6 + (1 - Math.abs(u - 0.75)) * 2.2;
+          cluster.scale.set(scale * 1.15, scale * 0.85, scale * 1.15);
+          cluster.position.set(
+            pt.x + (Math.sin(idx * 3 + c) * 1.4),
+            pt.y + 0.8 + (c % 2) * 0.6,
+            pt.z + (Math.cos(idx * 2 + c) * 1.4)
+          );
+          cluster.castShadow = true;
+          cluster.receiveShadow = true;
+          cluster.userData = {
+            baseY: cluster.position.y,
+            baseRotZ: cluster.rotation.z,
+            phase: idx * 1.1 + c * 0.8
+          };
+          treeGroup.add(cluster);
+          canopyClusters.push(cluster);
+        }
+      });
+
+      // Central top crown foliage dome
+      for (let t = 0; t < 7; t++) {
+        const ang = (t / 7) * Math.PI * 2;
+        const rad = t === 0 ? 0 : 3.6;
+        const crown = new THREE.Mesh(leafClusterGeo, foliageMats[t % foliageMats.length]);
+        const s = t === 0 ? 5.2 : 3.8;
+        crown.scale.set(s * 1.2, s * 0.9, s * 1.2);
+        crown.position.set(Math.cos(ang) * rad, 28.8 + (t === 0 ? 1.4 : 0), Math.sin(ang) * rad);
+        crown.castShadow = true;
+        crown.userData = { baseY: crown.position.y, baseRotZ: 0, phase: t * 0.9 };
+        treeGroup.add(crown);
+        canopyClusters.push(crown);
+      }
+
+      // Vertical Track Grooves on the Central Trunk (visual guide rails for the 3 platforms)
+      const trackAngles = [0.62, 2.52, -1.05]; // SE (Plat 1), SW/W (Plat 2), NE (Plat 3)
+      trackAngles.forEach((ang) => {
+        const railCurvePts = [];
+        for (let y = 2.5; y <= 22.8; y += 1.0) {
+          const tr = getTrunkRadiusAt(y) + 0.04;
+          const cx = Math.sin(y * 0.16) * 0.12;
+          const cz = Math.cos(y * 0.14) * 0.12;
+          railCurvePts.push(new THREE.Vector3(
+            cx + Math.cos(ang) * tr,
+            y,
+            cz + Math.sin(ang) * tr
+          ));
+        }
+        const railCurve = new THREE.CatmullRomCurve3(railCurvePts);
+        const railGeo = new THREE.TubeGeometry(railCurve, 36, 0.045, 6, false);
+        const railMesh = new THREE.Mesh(railGeo, materials.iron);
+        treeGroup.add(railMesh);
+      });
+    }
+    buildCanopyAndBranches();
+
+    // --- Ground Clearing Details (Entry Dock, Campfire, Boulders, Ferns) ---
+    const groundPropsGroup = new THREE.Group();
+    scene.add(groundPropsGroup);
+
+    // Small wooden base landing deck where the ground ladder touches down
+    const baseDockGroup = new THREE.Group();
+    baseDockGroup.position.set(4.5, 0.35, 5.2);
+    groundPropsGroup.add(baseDockGroup);
+
+    for (let i = -3; i <= 3; i++) {
+      const plank = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.12, 0.32), materials.woodDeck);
+      plank.position.set(0, 0.08, i * 0.36);
+      plank.rotation.y = (i % 2) * 0.02;
+      plank.castShadow = true;
+      plank.receiveShadow = true;
+      baseDockGroup.add(plank);
+    }
+    // Base dock posts
+    [[-1.0, -1.0], [1.0, -1.0], [-1.0, 1.0], [1.0, 1.0]].forEach(([px, pz]) => {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 1.3, 8), materials.woodDark);
+      post.position.set(px, -0.2, pz);
+      post.castShadow = true;
+      baseDockGroup.add(post);
+    });
+
+    // Load Poly Haven Boulders & Ferns around the giant trunk roots
+    gltfLoader.load(
+      'https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/rock_07/rock_07_1k.gltf',
+      (gltf) => {
+        const rockTemplate = gltf.scene;
+        rockTemplate.traverse(c => {
+          if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; }
+        });
+        const rockPlacements = [
+          { x: -4.8, y: 0.1, z: 4.5, s: 1.9, ry: 0.4 },
+          { x: -6.2, y: 0.0, z: 3.1, s: 1.2, ry: 1.8 },
+          { x: 5.5,  y: 0.1, z: -4.2, s: 2.1, ry: 2.5 },
+          { x: -2.5, y: 0.2, z: -5.8, s: 1.6, ry: 0.9 },
+          { x: 7.2,  y: 0.0, z: 1.8,  s: 1.4, ry: 3.9 }
+        ];
+        rockPlacements.forEach(p => {
+          const r = rockTemplate.clone();
+          r.position.set(p.x, p.y, p.z);
+          r.scale.setScalar(p.s);
+          r.rotation.y = p.ry;
+          groundPropsGroup.add(r);
+        });
+      }
+    );
+
+    const fernInstances = [];
+    gltfLoader.load(
+      'https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/fern_02/fern_02_1k.gltf',
+      (gltf) => {
+        const fernTemplate = gltf.scene;
+        fernTemplate.traverse(c => {
+          if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; }
+        });
+        const fernCoords = [
+          [-3.2, 0.35, 3.8, 2.2], [3.4, 0.3, -3.5, 2.5], [-4.5, 0.2, -3.2, 2.0],
+          [2.2, 0.45, 4.2, 1.8], [-1.8, 0.5, -4.4, 2.3], [5.8, 0.15, 3.4, 2.1],
+          [-5.6, 0.15, 1.2, 2.4], [4.2, 0.25, -5.2, 1.9], [0.8, 0.55, -3.6, 2.2]
+        ];
+        fernCoords.forEach(([fx, fy, fz, fs], idx) => {
+          const f = fernTemplate.clone();
+          f.position.set(fx, fy, fz);
+          f.scale.setScalar(fs);
+          f.rotation.y = idx * 1.3;
+          f.userData = { baseRotZ: 0, phase: idx * 0.7 };
+          groundPropsGroup.add(f);
+          fernInstances.push(f);
+        });
+      }
+    );
+
+    // Distant background pine/forest silhouette ring for depth
+    function buildDistantForestRing() {
+      const pineFoliageGeo = new THREE.ConeGeometry(2.4, 7.5, 7);
+      const pineTrunkGeo = new THREE.CylinderGeometry(0.25, 0.4, 4.0, 6);
+      for (let i = 0; i < 38; i++) {
+        const ang = (i / 38) * Math.PI * 2 + (i % 3) * 0.04;
+        const dist = 34 + (i % 5) * 6.5;
+        const tx = Math.cos(ang) * dist;
+        const tz = Math.sin(ang) * dist;
+        const ty = (Math.sin(tx * 0.08) * Math.cos(tz * 0.08) + Math.sin((tx + tz) * 0.04)) * 1.4;
+        const scale = 0.85 + (i % 4) * 0.32;
+
+        const bgTree = new THREE.Group();
+        bgTree.position.set(tx, ty, tz);
+        bgTree.scale.setScalar(scale);
+
+        const trunk = new THREE.Mesh(pineTrunkGeo, materials.woodDark);
+        trunk.position.y = 2.0;
+        bgTree.add(trunk);
+
+        for (let l = 0; l < 3; l++) {
+          const cone = new THREE.Mesh(pineFoliageGeo, foliageMats[(i + l) % foliageMats.length]);
+          cone.position.y = 5.0 + l * 2.8;
+          cone.scale.setScalar(1 - l * 0.22);
+          bgTree.add(cone);
+        }
+        scene.add(bgTree);
+      }
+    }
+    buildDistantForestRing();
+
+    // --- Treehouse Platforms Configuration & Builders ---
+    const platforms = [];
+    const draggableMeshes = [];
+    const lanternLights = [];
+    let hoistCrateGroup = null;
+    let windVaneGroup = null;
+
+    const platformConfigs = [
+      {
+        id: 0,
+        name: '1. Lower Hoist Deck',
+        color: '#5cd68d',
+        hex: 0x5cd68d,
+        angle: 0.62,      // Front-Right (SE)
+        dist: 4.45,
+        radius: 2.85,
+        defaultY: 6.0,
+        minY: 3.0,
+        maxY: 19.5,
+        // Gate angles (in local platform coordinates) where bridges/ladders attach
+        gates: [Math.PI * 0.96, -Math.PI * 0.56, Math.PI * 0.34] // To Plat 2, To Plat 3, Ground Ladder
+      },
+      {
+        id: 1,
+        name: '2. Main Cabin Deck',
+        color: '#f0b85c',
+        hex: 0xf0b85c,
+        angle: 2.52,      // Front-Left (SW/W)
+        dist: 4.75,
+        radius: 3.30,
+        defaultY: 11.2,
+        minY: 3.5,
+        maxY: 20.5,
+        gates: [0.02, -Math.PI * 0.32] // To Plat 1, To Plat 3
+      },
+      {
+        id: 2,
+        name: '3. Stargazer Nest',
+        color: '#e87a5d',
+        hex: 0xe87a5d,
+        angle: -1.05,     // Back-Right (NE)
+        dist: 4.45,
+        radius: 2.75,
+        defaultY: 16.5,
+        minY: 4.0,
+        maxY: 22.0,
+        gates: [Math.PI * 0.68, Math.PI * 0.44] // To Plat 2, To Plat 1
+      }
+    ];
+
+    // Helper: create a warm hanging lantern mesh + point light
+    function createHangingLantern(x, y, z, parentGroup) {
+      const lGroup = new THREE.Group();
+      lGroup.position.set(x, y, z);
+
+      const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.35, 6), materials.iron);
+      cord.position.y = -0.17;
+      lGroup.add(cord);
+
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.14, 8), materials.iron);
+      cap.position.y = -0.35;
+      lGroup.add(cap);
+
+      const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.09, 0.24, 8), materials.lanternGlow);
+      glass.position.y = -0.49;
+      lGroup.add(glass);
+
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.05, 8), materials.iron);
+      base.position.y = -0.62;
+      lGroup.add(base);
+
+      const pLight = new THREE.PointLight(0xff9d3b, 3.2, 11, 1.6);
+      pLight.position.set(0, -0.5, 0);
+      lGroup.add(pLight);
+
+      parentGroup.add(lGroup);
+      lanternLights.push({ light: pLight, mesh: lGroup, phase: Math.random() * Math.PI * 2 });
+      return lGroup;
+    }
+
+    // Build each of the 3 platforms
+    platformConfigs.forEach((cfg) => {
+      const rootGroup = new THREE.Group();
+      rootGroup.position.set(0, cfg.defaultY, 0);
+      scene.add(rootGroup);
+
+      const cx = Math.cos(cfg.angle) * cfg.dist;
+      const cz = Math.sin(cfg.angle) * cfg.dist;
+
+      // 1. Sliding Trunk Collar (clamps onto the central trunk at (0, y, 0))
+      const collarGroup = new THREE.Group();
+      rootGroup.add(collarGroup);
+
+      const collarTorus = new THREE.Mesh(
+        new THREE.TorusGeometry(1.0, 0.16, 12, 28),
+        materials.woodDark
+      );
+      collarTorus.rotation.x = Math.PI / 2;
+      collarTorus.castShadow = true;
+      collarGroup.add(collarTorus);
+
+      const ironBand = new THREE.Mesh(
+        new THREE.TorusGeometry(1.08, 0.055, 10, 28),
+        materials.brass
+      );
+      ironBand.rotation.x = Math.PI / 2;
+      collarGroup.add(ironBand);
+
+      // Glowing interactive vertical drag arrows on the trunk collar
+      const handleGroup = new THREE.Group();
+      handleGroup.position.set(Math.cos(cfg.angle) * 1.15, 0, Math.sin(cfg.angle) * 1.15);
+      const upCone = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.28, 8), materials.brass);
+      upCone.position.y = 0.34;
+      const dnCone = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.28, 8), materials.brass);
+      dnCone.rotation.x = Math.PI;
+      dnCone.position.y = -0.34;
+      handleGroup.add(upCone, dnCone);
+      collarGroup.add(handleGroup);
+
+      // 2. Cantilever Support Struts from Central Trunk to Deck
+      const strutGroup = new THREE.Group();
+      rootGroup.add(strutGroup);
+
+      // Main horizontal radial twin beams
+      [-0.45, 0.45].forEach((offset) => {
+        const perpX = -Math.sin(cfg.angle) * offset;
+        const perpZ = Math.cos(cfg.angle) * offset;
+        const beamLen = cfg.dist + cfg.radius * 0.7;
+        const beamGeo = new THREE.BoxGeometry(0.22, 0.26, beamLen);
+        const beam = new THREE.Mesh(beamGeo, materials.woodBeam);
+        beam.position.set(
+          Math.cos(cfg.angle) * (beamLen * 0.45) + perpX,
+          -0.18,
+          Math.sin(cfg.angle) * (beamLen * 0.45) + perpZ
+        );
+        beam.rotation.y = Math.atan2(Math.cos(cfg.angle), Math.sin(cfg.angle));
+        beam.castShadow = true;
+        beam.receiveShadow = true;
+        strutGroup.add(beam);
+      });
+
+      // 3 Diagonal Knee-Brace Struts anchored lower on the trunk collar
+      [-0.55, 0, 0.55].forEach((spread) => {
+        const sAngle = cfg.angle + spread * 0.35;
+        const pStart = new THREE.Vector3(Math.cos(sAngle) * 1.4, -2.1, Math.sin(sAngle) * 1.4);
+        const pEnd = new THREE.Vector3(
+          cx + Math.cos(cfg.angle + spread) * (cfg.radius * 0.58),
+          -0.15,
+          cz + Math.sin(cfg.angle + spread) * (cfg.radius * 0.58)
+        );
+        const dir = new THREE.Vector3().subVectors(pEnd, pStart);
+        const len = dir.length();
+        const strut = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, len, 8), materials.woodDark);
+        strut.position.copy(pStart).addScaledVector(dir, 0.5);
+        strut.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+        strut.castShadow = true;
+        strutGroup.add(strut);
+      });
+
+      // Lower collar ring for the diagonal knee braces
+      const lowerCollar = new THREE.Mesh(new THREE.TorusGeometry(1.04, 0.11, 10, 24), materials.woodDark);
+      lowerCollar.rotation.x = Math.PI / 2;
+      lowerCollar.position.y = -2.1;
+      collarGroup.add(lowerCollar);
+
+      // 3. Main Platform Deck Group at (cx, 0, cz)
+      const deckGroup = new THREE.Group();
+      deckGroup.position.set(cx, 0, cz);
+      rootGroup.add(deckGroup);
+
+      // Octagonal / Circular Timber Rim
+      const rimMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(cfg.radius, cfg.radius * 0.96, 0.24, 16),
+        materials.woodBeam
+      );
+      rimMesh.position.y = -0.10;
+      rimMesh.castShadow = true;
+      rimMesh.receiveShadow = true;
+      deckGroup.add(rimMesh);
+
+      // Individual Wooden Planks across the deck for authentic carpentry detail
+      const plankWidth = 0.27;
+      const numPlanks = Math.floor((cfg.radius * 1.92) / plankWidth);
+      for (let p = 0; p < numPlanks; p++) {
+        const zOff = (p - (numPlanks - 1) / 2) * (plankWidth + 0.025);
+        const halfChord = Math.sqrt(Math.max(0.1, cfg.radius * cfg.radius - zOff * zOff));
+        const plankGeo = new THREE.BoxGeometry(halfChord * 1.96, 0.08, plankWidth);
+        const plank = new THREE.Mesh(plankGeo, materials.woodDeck);
+        plank.position.set(0, 0.04, zOff);
+        plank.castShadow = true;
+        plank.receiveShadow = true;
+        deckGroup.add(plank);
+      }
+
+      // Highlight Ring (visible on hover / drag)
+      const highlightRing = new THREE.Mesh(
+        new THREE.RingGeometry(cfg.radius + 0.06, cfg.radius + 0.22, 32),
+        new THREE.MeshBasicMaterial({
+          color: cfg.hex,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.0
+        })
+      );
+      highlightRing.rotation.x = -Math.PI / 2;
+      highlightRing.position.y = 0.09;
+      deckGroup.add(highlightRing);
+
+      // 4. Perimeter Posts & Rope Railings (leaving gaps at gate angles)
+      const numPosts = 14;
+      const postPositions = [];
+      for (let i = 0; i < numPosts; i++) {
+        const pAng = (i / numPosts) * Math.PI * 2;
+        // Skip post if right inside a gate opening
+        const inGate = cfg.gates.some(g => {
+          const diff = Math.atan2(Math.sin(pAng - g), Math.cos(pAng - g));
+          return Math.abs(diff) < 0.28;
+        });
+        if (inGate) {
+          postPositions.push(null);
+          continue;
+        }
+        const px = Math.cos(pAng) * (cfg.radius - 0.14);
+        const pz = Math.sin(pAng) * (cfg.radius - 0.14);
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.075, 1.05, 8), materials.woodDark);
+        post.position.set(px, 0.52, pz);
+        post.castShadow = true;
+        deckGroup.add(post);
+
+        const capBall = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), materials.brass);
+        capBall.position.set(px, 1.06, pz);
+        deckGroup.add(capBall);
+
+        postPositions.push(new THREE.Vector3(px, 0, pz));
+      }
+
+      // Connect adjacent non-null posts with top & middle rope rails
+      for (let i = 0; i < numPosts; i++) {
+        const pA = postPositions[i];
+        const pB = postPositions[(i + 1) % numPosts];
+        if (!pA || !pB) continue;
+        // Check if segment crosses a gate
+        const midAng = Math.atan2((pA.z + pB.z) * 0.5, (pA.x + pB.x) * 0.5);
+        const crossesGate = cfg.gates.some(g => {
+          const diff = Math.atan2(Math.sin(midAng - g), Math.cos(midAng - g));
+          return Math.abs(diff) < 0.32;
+        });
+        if (crossesGate) continue;
+
+        [0.48, 0.88].forEach((railH) => {
+          const vA = pA.clone().setY(railH);
+          const vMid = pA.clone().add(pB).multiplyScalar(0.5).setY(railH - 0.05);
+          const vB = pB.clone().setY(railH);
+          const rCurve = new THREE.CatmullRomCurve3([vA, vMid, vB]);
+          const rMesh = new THREE.Mesh(new THREE.TubeGeometry(rCurve, 8, 0.025, 6, false), materials.rope);
+          rMesh.castShadow = true;
+          deckGroup.add(rMesh);
+        });
+      }
+
+      // Register all meshes in rootGroup as draggable for Platform cfg.id
+      rootGroup.userData.platformId = cfg.id;
+      draggableMeshes.push(rimMesh, collarTorus, ironBand);
+
+      platforms.push({
+        id: cfg.id,
+        cfg,
+        rootGroup,
+        collarGroup,
+        deckGroup,
+        highlightRing,
+        currentY: cfg.defaultY,
+        targetY: cfg.defaultY,
+        velocityY: 0,
+        centerXZ: new THREE.Vector2(cx, cz)
+      });
+    });
+
+    // --- Platform Architectural Structures & Real glTF 3D Props ---
+    function buildPlatformStructuresAndProps() {
+      // === PLATFORM 0: Lower Hoist Deck (Cargo Crane, Pulley & Hanging Crate) ===
+      const deck0 = platforms[0].deckGroup;
+      const craneGroup = new THREE.Group();
+      craneGroup.position.set(1.3, 0, -0.8);
+      craneGroup.rotation.y = -0.5;
+      deck0.add(craneGroup);
+
+      // Crane A-Frame legs & horizontal jib beam
+      const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 3.1, 8), materials.woodBeam);
+      legL.position.set(-0.35, 1.5, 0);
+      legL.rotation.z = -0.11;
+      legL.castShadow = true;
+      const legR = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 3.1, 8), materials.woodBeam);
+      legR.position.set(0.35, 1.5, 0);
+      legR.rotation.z = 0.11;
+      legR.castShadow = true;
+      const jib = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 2.7), materials.woodDark);
+      jib.position.set(0, 2.95, 0.65);
+      jib.rotation.x = -0.08;
+      jib.castShadow = true;
+      const pulleyWheel = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.05, 8, 18), materials.brass);
+      pulleyWheel.rotation.y = Math.PI / 2;
+      pulleyWheel.position.set(0, 2.82, 1.82);
+      craneGroup.add(legL, legR, jib, pulleyWheel);
+
+      // Hoist rope + suspended crate group
+      hoistCrateGroup = new THREE.Group();
+      hoistCrateGroup.position.set(0, 2.82, 1.82);
+      craneGroup.add(hoistCrateGroup);
+
+      const hoistLine = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 3.2, 6), materials.rope);
+      hoistLine.position.y = -1.6;
+      hoistCrateGroup.add(hoistLine);
+
+      const slingBox = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.85, 0.85), materials.woodBeam);
+      slingBox.position.y = -3.25;
+      slingBox.castShadow = true;
+      hoistCrateGroup.add(slingBox);
+
+      createHangingLantern(-0.2, 2.85, 1.15, craneGroup);
+      draggableMeshes.push(legL, legR, jib, slingBox);
+
+      // === PLATFORM 1: Main Living Cabin & Tavern Deck ===
+      const deck1 = platforms[1].deckGroup;
+      const cabinGroup = new THREE.Group();
+      cabinGroup.position.set(-0.75, 0, -0.35);
+      cabinGroup.rotation.y = 0.48;
+      deck1.add(cabinGroup);
+
+      // Octagonal wooden cabin walls
+      const cabinWalls = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.75, 1.82, 2.45, 8),
+        materials.woodBeam
+      );
+      cabinWalls.position.y = 1.22;
+      cabinWalls.castShadow = true;
+      cabinWalls.receiveShadow = true;
+      cabinGroup.add(cabinWalls);
+
+      // Conical + pitched thatched roof with wide eaves
+      const cabinRoof = new THREE.Mesh(
+        new THREE.ConeGeometry(2.55, 2.15, 8),
+        materials.thatch
+      );
+      cabinRoof.position.y = 3.42;
+      cabinRoof.rotation.y = Math.PI / 8;
+      cabinRoof.castShadow = true;
+      cabinRoof.receiveShadow = true;
+      cabinGroup.add(cabinRoof);
+
+      // Front Porch Awning & Support Pillars
+      const awning = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.1, 1.25), materials.thatch);
+      awning.position.set(0, 2.28, 1.95);
+      awning.rotation.x = 0.25;
+      awning.castShadow = true;
+      cabinGroup.add(awning);
+
+      [-0.82, 0.82].forEach((px) => {
+        const pPost = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 2.15, 8), materials.woodDark);
+        pPost.position.set(px, 1.07, 2.42);
+        pPost.castShadow = true;
+        cabinGroup.add(pPost);
+      });
+
+      // Cabin Door & Warm Glowing Windows
+      const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.85, 1.75, 0.16), materials.woodDark);
+      doorFrame.position.set(0, 0.88, 1.70);
+      cabinGroup.add(doorFrame);
+
+      const doorWindow = new THREE.Mesh(new THREE.PlaneGeometry(0.45, 0.55), materials.windowGlow);
+      doorWindow.position.set(0, 1.22, 1.79);
+      cabinGroup.add(doorWindow);
+
+      // Side glowing windows
+      [Math.PI * 0.35, -Math.PI * 0.35, Math.PI * 0.75].forEach((wAng) => {
+        const winGroup = new THREE.Group();
+        winGroup.position.set(Math.sin(wAng) * 1.72, 1.32, Math.cos(wAng) * 1.72);
+        winGroup.rotation.y = wAng;
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.76, 0.12), materials.woodDark);
+        const pane = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 0.58), materials.windowGlow);
+        pane.position.z = 0.07;
+        const mullionV = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.62, 0.15), materials.woodDark);
+        const mullionH = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.05, 0.15), materials.woodDark);
+        winGroup.add(frame, pane, mullionV, mullionH);
+        cabinGroup.add(winGroup);
+      });
+
+      createHangingLantern(-0.82, 2.15, 2.48, cabinGroup);
+      createHangingLantern(0.82, 2.15, 2.48, cabinGroup);
+      draggableMeshes.push(cabinWalls, cabinRoof, awning);
+
+      // === PLATFORM 2: Stargazer Nest (Gazebo Canopy, Brass Telescope, Wind Vane) ===
+      const deck2 = platforms[2].deckGroup;
+      const gazeboGroup = new THREE.Group();
+      deck2.add(gazeboGroup);
+
+      // 4 Curved/angled gazebo pillars supporting a high conical roof
+      for (let i = 0; i < 4; i++) {
+        const gAng = (i / 4) * Math.PI * 2 + Math.PI * 0.20;
+        const gx = Math.cos(gAng) * 1.85;
+        const gz = Math.sin(gAng) * 1.85;
+        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.09, 2.75, 8), materials.woodDark);
+        pillar.position.set(gx, 1.37, gz);
+        pillar.castShadow = true;
+        gazeboGroup.add(pillar);
+      }
+
+      const gazeboRoof = new THREE.Mesh(new THREE.ConeGeometry(2.65, 1.65, 12), materials.thatch);
+      gazeboRoof.position.y = 3.45;
+      gazeboRoof.castShadow = true;
+      gazeboRoof.receiveShadow = true;
+      gazeboGroup.add(gazeboRoof);
+
+      // Finial & Spinning Wind Pennant on top of Stargazer Nest
+      const finialPole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 1.1, 8), materials.brass);
+      finialPole.position.y = 4.65;
+      gazeboGroup.add(finialPole);
+
+      windVaneGroup = new THREE.Group();
+      windVaneGroup.position.y = 5.05;
+      gazeboGroup.add(windVaneGroup);
+      const pennantGeo = new THREE.ConeGeometry(0.22, 1.15, 4);
+      pennantGeo.rotateZ(Math.PI / 2);
+      pennantGeo.translate(0.58, 0, 0);
+      const pennantMat = new THREE.MeshStandardMaterial({ color: 0xe85d3f, roughness: 0.6, side: THREE.DoubleSide });
+      const pennantMesh = new THREE.Mesh(pennantGeo, pennantMat);
+      windVaneGroup.add(pennantMesh);
+
+      // Brass Stargazing Telescope on Tripod
+      const scopeGroup = new THREE.Group();
+      scopeGroup.position.set(0.65, 0, -0.75);
+      scopeGroup.rotation.y = -0.65;
+      deck2.add(scopeGroup);
+
+      for (let t = 0; t < 3; t++) {
+        const tAng = (t / 3) * Math.PI * 2;
+        const tLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.02, 1.35, 6), materials.woodDark);
+        tLeg.position.set(Math.cos(tAng) * 0.25, 0.62, Math.sin(tAng) * 0.25);
+        tLeg.rotation.z = Math.cos(tAng) * 0.26;
+        tLeg.rotation.x = -Math.sin(tAng) * 0.26;
+        scopeGroup.add(tLeg);
+      }
+      const scopeTube = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.095, 1.25, 12), materials.brass);
+      scopeTube.position.set(0, 1.32, 0);
+      scopeTube.rotation.x = Math.PI * 0.32;
+      scopeTube.castShadow = true;
+      scopeGroup.add(scopeTube);
+
+      createHangingLantern(0, 2.75, 0, gazeboGroup);
+      draggableMeshes.push(gazeboRoof, scopeTube);
+
+      // === Load Real CC0 glTF 3D Models onto the 3 Platforms ===
+      // 1. Wooden Table on Main Cabin Deck
+      gltfLoader.load(
+        'https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/wooden_table_02/wooden_table_02_1k.gltf',
+        (gltf) => {
+          const table = gltf.scene;
+          table.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; draggableMeshes.push(c); } });
+          table.scale.setScalar(1.35);
+          table.position.set(1.35, 0.06, 0.65);
+          table.rotation.y = 0.4;
+          deck1.add(table);
+        }
+      );
+
+      // 2. Wooden Chairs on Platform 2 & Platform 3
+      gltfLoader.load(
+        'https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/WoodenChair_01/WoodenChair_01_1k.gltf',
+        (gltf) => {
+          const chairTpl = gltf.scene;
+          chairTpl.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+
+          const c1 = chairTpl.clone();
+          c1.scale.setScalar(1.35);
+          c1.position.set(1.95, 0.06, 1.25);
+          c1.rotation.y = -2.3;
+          deck1.add(c1);
+
+          const c2 = chairTpl.clone();
+          c2.scale.setScalar(1.35);
+          c2.position.set(0.85, 0.06, 1.35);
+          c2.rotation.y = 2.6;
+          deck1.add(c2);
+
+          const c3 = chairTpl.clone();
+          c3.scale.setScalar(1.35);
+          c3.position.set(-0.95, 0.06, -0.55);
+          c3.rotation.y = 0.8;
+          deck2.add(c3);
+        }
+      );
+
+      // 3. Wooden Supply Crates on Platforms 0 & 2
+      gltfLoader.load(
+        'https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/wooden_crate_01/wooden_crate_01_1k.gltf',
+        (gltf) => {
+          const crateTpl = gltf.scene;
+          crateTpl.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+
+          const cr0 = crateTpl.clone();
+          cr0.scale.setScalar(1.1);
+          cr0.position.set(-0.6, 0.06, -1.2);
+          cr0.rotation.y = 0.5;
+          deck0.add(cr0);
+
+          const cr1 = crateTpl.clone();
+          cr1.scale.setScalar(0.85);
+          cr1.position.set(-0.55, 0.72, -1.15);
+          cr1.rotation.y = 1.2;
+          deck0.add(cr1);
+
+          const cr2 = crateTpl.clone();
+          cr2.scale.setScalar(0.95);
+          cr2.position.set(-0.2, 0.06, -1.45);
+          cr2.rotation.y = -0.4;
+          deck2.add(cr2);
+        }
+      );
+
+      // 4. Wine Barrels on Platforms 0 & 1
+      gltfLoader.load(
+        'https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/wine_barrel_01/wine_barrel_01_1k.gltf',
+        (gltf) => {
+          const barrelTpl = gltf.scene;
+          barrelTpl.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+
+          const b0 = barrelTpl.clone();
+          b0.scale.setScalar(1.25);
+          b0.position.set(0.35, 0.06, -1.55);
+          deck0.add(b0);
+
+          const b1 = barrelTpl.clone();
+          b1.scale.setScalar(1.2);
+          b1.position.set(-1.85, 0.06, 1.45);
+          deck1.add(b1);
+        }
+      );
+
+      // 5. Potted Plants on Platforms 0, 1, 2
+      gltfLoader.load(
+        'https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/potted_plant_02/potted_plant_02_1k.gltf',
+        (gltf) => {
+          const plantTpl = gltf.scene;
+          plantTpl.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+
+          const p0 = plantTpl.clone();
+          p0.scale.setScalar(1.6);
+          p0.position.set(1.45, 0.06, 0.85);
+          deck0.add(p0);
+
+          const p1 = plantTpl.clone();
+          p1.scale.setScalar(1.5);
+          p1.position.set(1.35, 0.88, 0.65); // On top of the wooden table!
+          deck1.add(p1);
+
+          const p2 = plantTpl.clone();
+          p2.scale.setScalar(1.6);
+          p2.position.set(1.25, 0.06, 0.55);
+          deck2.add(p2);
+        }
+      );
+
+      // 6. Khronos Sample Asset Lantern Post on Platform 0
+      gltfLoader.load(
+        'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Lantern/glTF/Lantern.gltf',
+        (gltf) => {
+          const lantern = gltf.scene;
+          lantern.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+          lantern.scale.setScalar(0.11);
+          lantern.position.set(-1.35, 0.05, 1.35);
+          lantern.rotation.y = 0.8;
+          deck0.add(lantern);
+        }
+      );
+    }
+    buildPlatformStructuresAndProps();
+
+    // --- Zero-Allocation Dynamic Rope Tube Helper ---
+    class DynamicRopeTube {
+      constructor(segments = 28, radialSegments = 6, radius = 0.03, material = materials.rope) {
+        this.segments = segments;
+        this.radialSegments = radialSegments;
+        this.radius = radius;
+
+        const geo = new THREE.BufferGeometry();
+        const vertexCount = (segments + 1) * (radialSegments + 1);
+        const positions = new Float32Array(vertexCount * 3);
+        const normals = new Float32Array(vertexCount * 3);
+        const uvs = new Float32Array(vertexCount * 2);
+        const indices = [];
+
+        for (let i = 0; i <= segments; i++) {
+          const v = i / segments;
+          for (let j = 0; j <= radialSegments; j++) {
+            const u = j / radialSegments;
+            const idx = i * (radialSegments + 1) + j;
+            uvs[idx * 2] = u;
+            uvs[idx * 2 + 1] = v * 12;
+          }
+        }
+
+        for (let i = 0; i < segments; i++) {
+          for (let j = 0; j < radialSegments; j++) {
+            const a = i * (radialSegments + 1) + j;
+            const b = (i + 1) * (radialSegments + 1) + j;
+            const c = (i + 1) * (radialSegments + 1) + (j + 1);
+            const d = i * (radialSegments + 1) + (j + 1);
+            indices.push(a, b, d, b, c, d);
+          }
+        }
+
+        geo.setIndex(indices);
+        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geo.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+        geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+
+        this.mesh = new THREE.Mesh(geo, material);
+        this.mesh.castShadow = true;
+        this.mesh.frustumCulled = false;
+
+        this._tan = new THREE.Vector3();
+        this._norm = new THREE.Vector3();
+        this._binorm = new THREE.Vector3();
+        this._up = new THREE.Vector3(0, 1, 0);
+      }
+
+      updateFromPoints(pts) {
+        const posAttr = this.mesh.geometry.attributes.position;
+        const normAttr = this.mesh.geometry.attributes.normal;
+        const posArr = posAttr.array;
+        const normArr = normAttr.array;
+        const R = this.radialSegments;
+        const S = this.segments;
+
+        for (let i = 0; i <= S; i++) {
+          const p = pts[i];
+          if (i < S) {
+            this._tan.subVectors(pts[i + 1], p).normalize();
+          } else {
+            this._tan.subVectors(p, pts[i - 1]).normalize();
+          }
+
+          this._up.set(0, 1, 0);
+          if (Math.abs(this._tan.y) > 0.92) this._up.set(1, 0, 0);
+          this._binorm.crossVectors(this._tan, this._up).normalize();
+          this._norm.crossVectors(this._binorm, this._tan).normalize();
+
+          for (let j = 0; j <= R; j++) {
+            const theta = (j / R) * Math.PI * 2;
+            const cosT = Math.cos(theta);
+            const sinT = Math.sin(theta);
+
+            const nx = this._binorm.x * cosT + this._norm.x * sinT;
+            const ny = this._binorm.y * cosT + this._norm.y * sinT;
+            const nz = this._binorm.z * cosT + this._norm.z * sinT;
+
+            const idx = (i * (R + 1) + j) * 3;
+            posArr[idx] = p.x + nx * this.radius;
+            posArr[idx + 1] = p.y + ny * this.radius;
+            posArr[idx + 2] = p.z + nz * this.radius;
+
+            normArr[idx] = nx;
+            normArr[idx + 1] = ny;
+            normArr[idx + 2] = nz;
+          }
+        }
+        posAttr.needsUpdate = true;
+        normAttr.needsUpdate = true;
+      }
+    }
+
+    // --- Dynamic Catenary Rope Bridge Connecting Two Platforms ---
+    class DynamicRopeBridge {
+      constructor(platA, gateAngleA, platB, gateAngleB, outwardBowVec, numPlanks = 22) {
+        this.platA = platA;
+        this.gateAngleA = gateAngleA;
+        this.platB = platB;
+        this.gateAngleB = gateAngleB;
+        this.outwardBowVec = outwardBowVec; // Ensures bridge arcs gracefully around the central trunk
+        this.numPlanks = numPlanks;
+        this.bridgeWidth = 0.98;
+
+        this.group = new THREE.Group();
+        scene.add(this.group);
+
+        // 4 Main Longitudinal Cables (2 lower deck cables, 2 upper handrail ropes)
+        this.cableSegs = 28;
+        this.lowerCableL = new DynamicRopeTube(this.cableSegs, 6, 0.032, materials.rope);
+        this.lowerCableR = new DynamicRopeTube(this.cableSegs, 6, 0.032, materials.rope);
+        this.handRailL = new DynamicRopeTube(this.cableSegs, 6, 0.036, materials.rope);
+        this.handRailR = new DynamicRopeTube(this.cableSegs, 6, 0.036, materials.rope);
+
+        this.group.add(
+          this.lowerCableL.mesh,
+          this.lowerCableR.mesh,
+          this.handRailL.mesh,
+          this.handRailR.mesh
+        );
+
+        // Pre-allocate Planks & Vertical Rope Suspenders
+        this.planks = [];
+        this.suspendersL = [];
+        this.suspendersR = [];
+
+        const plankGeo = new THREE.BoxGeometry(this.bridgeWidth + 0.14, 0.065, 0.23);
+        const suspGeo = new THREE.CylinderGeometry(0.014, 0.014, 1.0, 5);
+
+        for (let i = 0; i < numPlanks; i++) {
+          const plank = new THREE.Mesh(plankGeo, materials.woodDeck);
+          plank.castShadow = true;
+          plank.receiveShadow = true;
+          this.group.add(plank);
+          this.planks.push(plank);
+
+          if (i % 2 === 1) {
+            const sL = new THREE.Mesh(suspGeo, materials.rope);
+            const sR = new THREE.Mesh(suspGeo, materials.rope);
+            this.group.add(sL, sR);
+            this.suspendersL.push({ mesh: sL, plankIndex: i });
+            this.suspendersR.push({ mesh: sR, plankIndex: i });
+          }
+        }
+
+        // Gate Anchor Posts on each end of the bridge
+        this.postAL = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 1.15, 8), materials.woodDark);
+        this.postAR = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 1.15, 8), materials.woodDark);
+        this.postBL = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 1.15, 8), materials.woodDark);
+        this.postBR = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 1.15, 8), materials.woodDark);
+        this.group.add(this.postAL, this.postAR, this.postBL, this.postBR);
+
+        // Pre-allocate point arrays
+        this.ptsLowerL = Array.from({ length: this.cableSegs + 1 }, () => new THREE.Vector3());
+        this.ptsLowerR = Array.from({ length: this.cableSegs + 1 }, () => new THREE.Vector3());
+        this.ptsUpperL = Array.from({ length: this.cableSegs + 1 }, () => new THREE.Vector3());
+        this.ptsUpperR = Array.from({ length: this.cableSegs + 1 }, () => new THREE.Vector3());
+
+        this.lastSpan = 0;
+        this.lastSlopeDeg = 0;
+      }
+
+      getCenterPointAt(u, startPos, endPos, sagAmount, time) {
+        const x = THREE.MathUtils.lerp(startPos.x, endPos.x, u);
+        const yLin = THREE.MathUtils.lerp(startPos.y, endPos.y, u);
+        const z = THREE.MathUtils.lerp(startPos.z, endPos.z, u);
+
+        // Parabolic / Catenary sag + outward radial bow around trunk + subtle wind sway
+        const arch = Math.sin(u * Math.PI);
+        const catenarySag = 4 * u * (1 - u) * sagAmount;
+        const windSway = Math.sin(time * 2.1 + u * Math.PI * 2) * 0.045 * arch;
+
+        return new THREE.Vector3(
+          x + this.outwardBowVec.x * arch + windSway,
+          yLin - catenarySag + Math.cos(time * 1.7 + u * 4) * 0.02 * arch,
+          z + this.outwardBowVec.z * arch + windSway
+        );
+      }
+
+      update(time = 0) {
+        const rA = this.platA.cfg.radius - 0.12;
+        const rB = this.platB.cfg.radius - 0.12;
+
+        const startPos = new THREE.Vector3(
+          this.platA.centerXZ.x + Math.cos(this.gateAngleA) * rA,
+          this.platA.currentY + 0.02,
+          this.platA.centerXZ.y + Math.sin(this.gateAngleA) * rA
+        );
+        const endPos = new THREE.Vector3(
+          this.platB.centerXZ.x + Math.cos(this.gateAngleB) * rB,
+          this.platB.currentY + 0.02,
+          this.platB.centerXZ.y + Math.sin(this.gateAngleB) * rB
+        );
+
+        const spanDist = startPos.distanceTo(endPos);
+        const dy = Math.abs(endPos.y - startPos.y);
+        // Catenary sag increases slightly when platforms are level, tightens slightly when steep
+        const sagAmount = Math.max(0.45, Math.min(1.45, spanDist * 0.11 - dy * 0.025));
+
+        this.lastSpan = spanDist;
+        this.lastSlopeDeg = Math.round(THREE.MathUtils.radToDeg(Math.atan2(dy, Math.hypot(endPos.x - startPos.x, endPos.z - startPos.z))));
+
+        const halfW = this.bridgeWidth * 0.5;
+        const railHeight = 0.88;
+
+        for (let i = 0; i <= this.cableSegs; i++) {
+          const u = i / this.cableSegs;
+          const pCenter = this.getCenterPointAt(u, startPos, endPos, sagAmount, time);
+          const uNext = Math.min(1, u + 0.02);
+          const uPrev = Math.max(0, u - 0.02);
+          const pNext = this.getCenterPointAt(uNext, startPos, endPos, sagAmount, time);
+          const pPrev = this.getCenterPointAt(uPrev, startPos, endPos, sagAmount, time);
+
+          const tangent = pNext.sub(pPrev).normalize();
+          const side = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+
+          this.ptsLowerL[i].copy(pCenter).addScaledVector(side, -halfW);
+          this.ptsLowerR[i].copy(pCenter).addScaledVector(side, halfW);
+
+          // Handrails have slightly more sag in the middle for authentic suspension bridge look
+          const extraRailSag = 4 * u * (1 - u) * 0.14;
+          const railSpread = halfW + 0.06 * Math.sin(u * Math.PI);
+          this.ptsUpperL[i].copy(pCenter).addScaledVector(side, -railSpread);
+          this.ptsUpperL[i].y += railHeight - extraRailSag;
+
+          this.ptsUpperR[i].copy(pCenter).addScaledVector(side, railSpread);
+          this.ptsUpperR[i].y += railHeight - extraRailSag;
+        }
+
+        this.lowerCableL.updateFromPoints(this.ptsLowerL);
+        this.lowerCableR.updateFromPoints(this.ptsLowerR);
+        this.handRailL.updateFromPoints(this.ptsUpperL);
+        this.handRailR.updateFromPoints(this.ptsUpperR);
+
+        // Update Anchor Gate Posts
+        this.postAL.position.copy(this.ptsLowerL[0]).setY(startPos.y + 0.52);
+        this.postAR.position.copy(this.ptsLowerR[0]).setY(startPos.y + 0.52);
+        this.postBL.position.copy(this.ptsLowerL[this.cableSegs]).setY(endPos.y + 0.52);
+        this.postBR.position.copy(this.ptsLowerR[this.cableSegs]).setY(endPos.y + 0.52);
+
+        // Update Planks & Vertical Rope Suspenders
+        const dummy = new THREE.Object3D();
+        for (let k = 0; k < this.numPlanks; k++) {
+          const u = (k + 0.5) / this.numPlanks;
+          const pC = this.getCenterPointAt(u, startPos, endPos, sagAmount, time);
+          const pN = this.getCenterPointAt(Math.min(1, u + 0.025), startPos, endPos, sagAmount, time);
+          const pP = this.getCenterPointAt(Math.max(0, u - 0.025), startPos, endPos, sagAmount, time);
+
+          dummy.position.copy(pC);
+          dummy.position.y += 0.03;
+          dummy.lookAt(pN);
+          // Slight natural plank variation
+          dummy.rotateZ(Math.sin(k * 1.7 + time * 2.0) * 0.018);
+
+          const plank = this.planks[k];
+          plank.position.copy(dummy.position);
+          plank.quaternion.copy(dummy.quaternion);
+        }
+
+        // Update vertical suspender ropes
+        const upVec = new THREE.Vector3(0, 1, 0);
+        for (let s = 0; s < this.suspendersL.length; s++) {
+          const k = this.suspendersL[s].plankIndex;
+          const fIdx = Math.round(((k + 0.5) / this.numPlanks) * this.cableSegs);
+
+          const botL = this.ptsLowerL[fIdx];
+          const topL = this.ptsUpperL[fIdx];
+          const dirL = new THREE.Vector3().subVectors(topL, botL);
+          const lenL = dirL.length();
+          const meshL = this.suspendersL[s].mesh;
+          meshL.position.copy(botL).addScaledVector(dirL, 0.5);
+          meshL.scale.set(1, lenL, 1);
+          meshL.quaternion.setFromUnitVectors(upVec, dirL.normalize());
+
+          const botR = this.ptsLowerR[fIdx];
+          const topR = this.ptsUpperR[fIdx];
+          const dirR = new THREE.Vector3().subVectors(topR, botR);
+          const lenR = dirR.length();
+          const meshR = this.suspendersR[s].mesh;
+          meshR.position.copy(botR).addScaledVector(dirR, 0.5);
+          meshR.scale.set(1, lenR, 1);
+          meshR.quaternion.setFromUnitVectors(upVec, dirR.normalize());
+        }
+      }
+    }
+
+    // --- Dynamic Rope & Timber Ladder Class ---
+    class DynamicLadder {
+      constructor(getEndpointsFn, maxRungs = 42, width = 0.72, sagFactor = 0.06, isRigidRails = false) {
+        this.getEndpointsFn = getEndpointsFn;
+        this.maxRungs = maxRungs;
+        this.width = width;
+        this.sagFactor = sagFactor;
+        this.isRigidRails = isRigidRails;
+
+        this.group = new THREE.Group();
+        scene.add(this.group);
+
+        this.segs = 24;
+        const railMat = isRigidRails ? materials.woodBeam : materials.rope;
+        const railRadius = isRigidRails ? 0.042 : 0.028;
+
+        this.railL = new DynamicRopeTube(this.segs, 6, railRadius, railMat);
+        this.railR = new DynamicRopeTube(this.segs, 6, railRadius, railMat);
+        this.group.add(this.railL.mesh, this.railR.mesh);
+
+        // Pre-allocate rungs with rope/brass end bindings
+        this.rungs = [];
+        const rungGeo = new THREE.CylinderGeometry(0.036, 0.036, width + 0.08, 8);
+        rungGeo.rotateZ(Math.PI / 2);
+
+        const knotGeo = new THREE.TorusGeometry(0.046, 0.016, 6, 10);
+        knotGeo.rotateY(Math.PI / 2);
+
+        for (let i = 0; i < maxRungs; i++) {
+          const rGroup = new THREE.Group();
+          const bar = new THREE.Mesh(rungGeo, materials.woodDark);
+          bar.castShadow = true;
+          bar.receiveShadow = true;
+
+          const knotL = new THREE.Mesh(knotGeo, materials.rope);
+          knotL.position.x = -width * 0.5;
+          const knotR = new THREE.Mesh(knotGeo, materials.rope);
+          knotR.position.x = width * 0.5;
+
+          rGroup.add(bar, knotL, knotR);
+          this.group.add(rGroup);
+          this.rungs.push(rGroup);
+        }
+
+        this.ptsL = Array.from({ length: this.segs + 1 }, () => new THREE.Vector3());
+        this.ptsR = Array.from({ length: this.segs + 1 }, () => new THREE.Vector3());
+        this.lastLength = 0;
+        this.activeRungsCount = 0;
+      }
+
+      getPointAt(u, startPos, endPos, bowVec, sag, time) {
+        const x = THREE.MathUtils.lerp(startPos.x, endPos.x, u);
+        const y = THREE.MathUtils.lerp(startPos.y, endPos.y, u);
+        const z = THREE.MathUtils.lerp(startPos.z, endPos.z, u);
+        const arch = Math.sin(u * Math.PI);
+        const sway = Math.sin(time * 2.3 + u * 5.0) * 0.025 * arch * (this.isRigidRails ? 0.2 : 1.0);
+
+        return new THREE.Vector3(
+          x + bowVec.x * arch + sway,
+          y - 4 * u * (1 - u) * sag,
+          z + bowVec.z * arch + sway
+        );
+      }
+
+      update(time = 0) {
+        const { startPos, endPos, bowVec } = this.getEndpointsFn();
+        const totalDist = startPos.distanceTo(endPos);
+        this.lastLength = totalDist;
+
+        const sag = this.isRigidRails ? 0.05 : Math.min(1.1, totalDist * this.sagFactor);
+        const halfW = this.width * 0.5;
+
+        // Calculate side vector perpendicular to horizontal projection of ladder
+        const horizDir = new THREE.Vector3(endPos.x - startPos.x, 0, endPos.z - startPos.z);
+        if (horizDir.lengthSq() < 0.001) horizDir.set(0, 0, 1);
+        horizDir.normalize();
+        const side = new THREE.Vector3(-horizDir.z, 0, horizDir.x).normalize();
+
+        for (let i = 0; i <= this.segs; i++) {
+          const u = i / this.segs;
+          const pC = this.getPointAt(u, startPos, endPos, bowVec, sag, time);
+          this.ptsL[i].copy(pC).addScaledVector(side, -halfW);
+          this.ptsR[i].copy(pC).addScaledVector(side, halfW);
+        }
+
+        this.railL.updateFromPoints(this.ptsL);
+        this.railR.updateFromPoints(this.ptsR);
+
+        // Dynamically determine how many rungs should be active based on current stretched length!
+        const idealStep = 0.42;
+        const activeCount = Math.max(4, Math.min(this.maxRungs, Math.floor(totalDist / idealStep)));
+        this.activeRungsCount = activeCount;
+
+        const dummy = new THREE.Object3D();
+        for (let i = 0; i < this.maxRungs; i++) {
+          const rGroup = this.rungs[i];
+          if (i >= activeCount) {
+            rGroup.visible = false;
+            continue;
+          }
+          rGroup.visible = true;
+          const u = (i + 0.5) / activeCount;
+          const pC = this.getPointAt(u, startPos, endPos, bowVec, sag, time);
+          const pLook = pC.clone().add(horizDir);
+          dummy.position.copy(pC);
+          dummy.lookAt(pLook);
+
+          rGroup.position.copy(dummy.position);
+          rGroup.quaternion.copy(dummy.quaternion);
+        }
+      }
+    }
+
+    // --- Instantiate the Rope Bridges & Ladders Connecting All 3 Platforms ---
+    // 1. Bridge 1: Connects Platform 0 (Lower Hoist Deck, SE) <-> Platform 1 (Main Cabin Deck, SW/W)
+    const bridge1 = new DynamicRopeBridge(
+      platforms[0], platforms[0].cfg.gates[0],
+      platforms[1], platforms[1].cfg.gates[0],
+      new THREE.Vector3(0, 0, 0.55), // Gentle outward curve across the front of the trunk
+      22
+    );
+
+    // 2. Bridge 2: Connects Platform 1 (Main Cabin Deck, SW/W) <-> Platform 2 (Stargazer Nest, NE)
+    const bridge2 = new DynamicRopeBridge(
+      platforms[1], platforms[1].cfg.gates[1],
+      platforms[2], platforms[2].cfg.gates[0],
+      new THREE.Vector3(-2.15, 0, -2.05), // Graceful outward arc around the NW side of the central trunk
+      24
+    );
+
+    // 3. Inter-Platform Rope Ladder: Connects Platform 0 (SE) <-> Platform 2 (NE)
+    const ladder1To3 = new DynamicLadder(() => {
+      const p0 = platforms[0];
+      const p2 = platforms[2];
+      const g0 = p0.cfg.gates[1];
+      const g2 = p2.cfg.gates[1];
+      const r0 = p0.cfg.radius - 0.12;
+      const r2 = p2.cfg.radius - 0.12;
+
+      return {
+        startPos: new THREE.Vector3(
+          p0.centerXZ.x + Math.cos(g0) * r0,
+          p0.currentY + 0.02,
+          p0.centerXZ.y + Math.sin(g0) * r0
+        ),
+        endPos: new THREE.Vector3(
+          p2.centerXZ.x + Math.cos(g2) * r2,
+          p2.currentY + 0.02,
+          p2.centerXZ.y + Math.sin(g2) * r2
+        ),
+        bowVec: new THREE.Vector3(0.85, 0, 0) // Slight Eastward arc clear of the trunk
+      };
+    }, 38, 0.68, 0.055, false);
+
+    // 4. Telescoping Ground-Access Timber & Rope Ladder: Connects Ground Dock <-> Platform 0
+    const groundLadder = new DynamicLadder(() => {
+      const p0 = platforms[0];
+      const gGround = p0.cfg.gates[2];
+      const r0 = p0.cfg.radius - 0.10;
+
+      return {
+        startPos: new THREE.Vector3(4.5, 0.42, 5.2), // Ground entry dock
+        endPos: new THREE.Vector3(
+          p0.centerXZ.x + Math.cos(gGround) * r0,
+          p0.currentY + 0.02,
+          p0.centerXZ.y + Math.sin(gGround) * r0
+        ),
+        bowVec: new THREE.Vector3(0.15, 0, 0.15)
+      };
+    }, 48, 0.74, 0.02, true);
+
+    // 5. Central Trunk Bark Climbing Ladder connecting the lowest collar to highest collar
+    const trunkLadder = new DynamicLadder(() => {
+      const ys = platforms.map(p => p.currentY);
+      const minY = Math.min(...ys) - 1.8;
+      const maxY = Math.max(...ys) + 0.4;
+      const trunkAngle = 1.45; // Front-South face of the central trunk
+      const rBot = getTrunkRadiusAt(minY) + 0.12;
+      const rTop = getTrunkRadiusAt(maxY) + 0.12;
+
+      return {
+        startPos: new THREE.Vector3(Math.cos(trunkAngle) * rBot, Math.max(0.5, minY), Math.sin(trunkAngle) * rBot),
+        endPos: new THREE.Vector3(Math.cos(trunkAngle) * rTop, maxY, Math.sin(trunkAngle) * rTop),
+        bowVec: new THREE.Vector3(0, 0, 0.12)
+      };
+    }, 44, 0.52, 0.0, false);
+
+    // Update all dynamic structures and trunk collar scales
+    function updateTreehouseConnections(time = 0) {
+      platforms.forEach((p) => {
+        p.rootGroup.position.y = p.currentY;
+        // Dynamically scale collar to hug the tapered central trunk at height currentY
+        const tr = getTrunkRadiusAt(p.currentY);
+        const cx = Math.sin(p.currentY * 0.16) * 0.12;
+        const cz = Math.cos(p.currentY * 0.14) * 0.12;
+        p.collarGroup.position.set(cx, 0, cz);
+        p.collarGroup.scale.set(tr, 1, tr);
+      });
+
+      bridge1.update(time);
+      bridge2.update(time);
+      ladder1To3.update(time);
+      groundLadder.update(time);
+      trunkLadder.update(time);
+
+      // Update live telemetry in the HUD
+      document.getElementById('stat-bridge-1').textContent =
+        `${bridge1.lastSpan.toFixed(1)}m / ${bridge1.lastSlopeDeg}°`;
+      document.getElementById('stat-bridge-2').textContent =
+        `${bridge2.lastSpan.toFixed(1)}m / ${bridge2.lastSlopeDeg}°`;
+      document.getElementById('stat-ladder-13').textContent =
+        `${ladder1To3.lastLength.toFixed(1)}m (${ladder1To3.activeRungsCount} rungs)`;
+      document.getElementById('stat-ladder-g').textContent =
+        `${groundLadder.lastLength.toFixed(1)}m (${groundLadder.activeRungsCount} rungs)`;
+    }
+
+    updateTreehouseConnections(0);
+
+    // --- Atmospheric Fireflies & Forest Spores Particle System ---
+    const fireflyCount = 140;
+    const fireflyGeo = new THREE.BufferGeometry();
+    const fireflyPos = new Float32Array(fireflyCount * 3);
+    const fireflyData = [];
+
+    for (let i = 0; i < fireflyCount; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const rad = 2.2 + Math.random() * 11.5;
+      const fy = 1.0 + Math.random() * 21.0;
+      fireflyPos[i * 3] = Math.cos(ang) * rad;
+      fireflyPos[i * 3 + 1] = fy;
+      fireflyPos[i * 3 + 2] = Math.sin(ang) * rad;
+      fireflyData.push({
+        baseAngle: ang,
+        radius: rad,
+        baseY: fy,
+        speed: 0.25 + Math.random() * 0.45,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+    fireflyGeo.setAttribute('position', new THREE.BufferAttribute(fireflyPos, 3));
+
+    // Soft radial glow sprite for fireflies
+    function createGlowSprite() {
+      const c = document.createElement('canvas');
+      c.width = 64;
+      c.height = 64;
+      const ctx = c.getContext('2d');
+      const grad = ctx.createRadialGradient(32, 32, 2, 32, 32, 30);
+      grad.addColorStop(0, 'rgba(255, 245, 175, 1)');
+      grad.addColorStop(0.35, 'rgba(245, 195, 75, 0.65)');
+      grad.addColorStop(1, 'rgba(245, 195, 75, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 64, 64);
+      return new THREE.CanvasTexture(c);
+    }
+
+    const fireflyMat = new THREE.PointsMaterial({
+      map: createGlowSprite(),
+      size: 0.45,
+      transparent: true,
+      opacity: 0.85,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    const fireflies = new THREE.Points(fireflyGeo, fireflyMat);
+    scene.add(fireflies);
+
+    // --- Floating 3D-to-2D Interactive Platform Elevation Badges ---
+    const floatingLabels = platforms.map((p) => {
+      const el = document.createElement('div');
+      el.className = 'floating-label';
+      el.innerHTML = `<span class="drag-icon">↕</span><span>${p.cfg.name}: <strong id="lbl-val-${p.id}">${p.currentY.toFixed(1)}m</strong></span>`;
+      labelsContainer.appendChild(el);
+
+      // Allow dragging directly from the floating 3D badge too!
+      el.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        startPlatformDrag(p.id, e.clientY, null);
+      });
+      return el;
+    });
+
+    function updateFloatingLabels() {
+      const tempV = new THREE.Vector3();
+      const halfW = window.innerWidth * 0.5;
+      const halfH = window.innerHeight * 0.5;
+
+      platforms.forEach((p, idx) => {
+        const el = floatingLabels[idx];
+        const edgeDist = p.cfg.radius + 0.35;
+        tempV.set(
+          p.centerXZ.x + Math.cos(p.cfg.angle) * edgeDist,
+          p.currentY + 1.25,
+          p.centerXZ.y + Math.sin(p.cfg.angle) * edgeDist
+        );
+        tempV.project(camera);
+
+        if (tempV.z > 1) {
+          el.style.display = 'none';
+          return;
+        }
+        el.style.display = 'flex';
+        const sx = tempV.x * halfW + halfW;
+        const sy = -tempV.y * halfH + halfH;
+        el.style.left = `${sx}px`;
+        el.style.top = `${sy}px`;
+        const valSpan = document.getElementById(`lbl-val-${p.id}`);
+        if (valSpan) valSpan.textContent = `${p.currentY.toFixed(1)}m`;
+      });
+    }
+
+    // --- Interactive 3D Raycast & Vertical Drag System ---
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const dragPlane = new THREE.Plane();
+    const dragIntersectPoint = new THREE.Vector3();
+
+    let hoveredPlatformId = null;
+    let draggedPlatformId = null;
+    let dragStartPointerY = 0;
+    let dragStartWorldY = 0;
+    let dragPlaneOffsetY = 0;
+    let usePlaneDrag = false;
+
+    function findPlatformIdFromObject(obj) {
+      let curr = obj;
+      while (curr) {
+        if (curr.userData && typeof curr.userData.platformId === 'number') {
+          return curr.userData.platformId;
+        }
+        curr = curr.parent;
+      }
+      return null;
+    }
+
+    function setPlatformTargetY(id, newY) {
+      const p = platforms[id];
+      const clamped = Math.max(p.cfg.minY, Math.min(p.cfg.maxY, newY));
+      p.targetY = clamped;
+
+      const slider = document.getElementById(`slider-plat-${id}`);
+      const valText = document.getElementById(`val-plat-${id}`);
+      if (slider) slider.value = clamped.toFixed(1);
+      if (valText) valText.textContent = `${clamped.toFixed(1)} m`;
+    }
+
+    function updateHighlightStates() {
+      platforms.forEach((p) => {
+        const isActive = p.id === draggedPlatformId || p.id === hoveredPlatformId;
+        p.highlightRing.material.opacity = p.id === draggedPlatformId ? 0.78 : (p.id === hoveredPlatformId ? 0.42 : 0.0);
+
+        const card = document.getElementById(`card-plat-${p.id}`);
+        if (card) card.classList.toggle('dragging', p.id === draggedPlatformId);
+        if (floatingLabels[p.id]) floatingLabels[p.id].classList.toggle('active', isActive);
+      });
+
+      if (draggedPlatformId !== null) {
+        renderer.domElement.style.cursor = 'ns-resize';
+      } else if (hoveredPlatformId !== null) {
+        renderer.domElement.style.cursor = 'grab';
+      } else {
+        renderer.domElement.style.cursor = 'default';
+      }
+    }
+
+    function startPlatformDrag(platId, clientY, hitWorldPoint) {
+      draggedPlatformId = platId;
+      controls.enabled = false;
+      dragStartPointerY = clientY;
+      dragStartWorldY = platforms[platId].targetY;
+
+      if (hitWorldPoint) {
+        usePlaneDrag = true;
+        const camDir = new THREE.Vector3();
+        camera.getWorldDirection(camDir);
+        camDir.y = 0;
+        camDir.normalize();
+        dragPlane.setFromNormalAndCoplanarPoint(camDir, hitWorldPoint);
+        dragPlaneOffsetY = platforms[platId].targetY - hitWorldPoint.y;
+      } else {
+        usePlaneDrag = false;
+      }
+      updateHighlightStates();
+    }
+
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+
+      const hits = raycaster.intersectObjects(draggableMeshes, true);
+      if (hits.length > 0) {
+        const platId = findPlatformIdFromObject(hits[0].object);
+        if (platId !== null) {
+          startPlatformDrag(platId, e.clientY, hits[0].point);
+        }
+      }
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+      if (draggedPlatformId !== null) {
+        if (usePlaneDrag) {
+          raycaster.setFromCamera(pointer, camera);
+          if (raycaster.ray.intersectPlane(dragPlane, dragIntersectPoint)) {
+            setPlatformTargetY(draggedPlatformId, dragIntersectPoint.y + dragPlaneOffsetY);
+          }
+        } else {
+          const dyPixels = dragStartPointerY - e.clientY;
+          const worldDelta = dyPixels * 0.032;
+          setPlatformTargetY(draggedPlatformId, dragStartWorldY + worldDelta);
+        }
+        return;
+      }
+
+      // Hover detection
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(draggableMeshes, true);
+      const hitPlatId = hits.length > 0 ? findPlatformIdFromObject(hits[0].object) : null;
+      if (hitPlatId !== hoveredPlatformId) {
+        hoveredPlatformId = hitPlatId;
+        updateHighlightStates();
+      }
+    });
+
+    window.addEventListener('pointerup', () => {
+      if (draggedPlatformId !== null) {
+        draggedPlatformId = null;
+        controls.enabled = true;
+        updateHighlightStates();
+      }
+    });
+
+    // --- HUD Controls & Preset Bindings ---
+    platforms.forEach((p) => {
+      const slider = document.getElementById(`slider-plat-${p.id}`);
+      slider.addEventListener('input', (e) => {
+        setPlatformTargetY(p.id, parseFloat(e.target.value));
+      });
+    });
+
+    const presets = {
+      cascade:  [6.0, 11.2, 16.5],
+      level:    [11.5, 11.5, 11.5],
+      high:     [11.0, 16.2, 21.2],
+      inverted: [17.0, 11.5, 5.8]
+    };
+
+    document.querySelectorAll('[data-preset]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const vals = presets[btn.dataset.preset];
+        if (vals) {
+          vals.forEach((yVal, idx) => setPlatformTargetY(idx, yVal));
+        }
+      });
+    });
+
+    // Smooth Camera Focus Transitions
+    let camTransition = null;
+    function transitionCameraTo(targetPos, lookAtPos) {
+      camTransition = {
+        startPos: camera.position.clone(),
+        endPos: targetPos.clone(),
+        startTarget: controls.target.clone(),
+        endTarget: lookAtPos.clone(),
+        progress: 0
+      };
+    }
+
+    document.querySelectorAll('[data-cam]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.cam;
+        if (mode === 'overview') {
+          transitionCameraTo(new THREE.Vector3(18, 14, 22), new THREE.Vector3(0, 10.5, 0));
+        } else if (mode === 'plat0') {
+          const p = platforms[0];
+          transitionCameraTo(
+            new THREE.Vector3(p.centerXZ.x + 8.5, p.targetY + 3.2, p.centerXZ.y + 8.5),
+            new THREE.Vector3(p.centerXZ.x * 0.7, p.targetY + 0.8, p.centerXZ.y * 0.7)
+          );
+        } else if (mode === 'plat1') {
+          const p = platforms[1];
+          transitionCameraTo(
+            new THREE.Vector3(p.centerXZ.x - 8.5, p.targetY + 3.6, p.centerXZ.y + 8.5),
+            new THREE.Vector3(p.centerXZ.x * 0.7, p.targetY + 1.2, p.centerXZ.y * 0.7)
+          );
+        } else if (mode === 'plat2') {
+          const p = platforms[2];
+          transitionCameraTo(
+            new THREE.Vector3(p.centerXZ.x + 8.0, p.targetY + 3.5, p.centerXZ.y - 8.5),
+            new THREE.Vector3(p.centerXZ.x * 0.7, p.targetY + 1.2, p.centerXZ.y * 0.7)
+          );
+        }
+      });
+    });
+
+    // Top Bar Buttons
+    document.getElementById('btn-time').addEventListener('click', () => {
+      applyEnvironmentMode(currentLightingMode === 'sunrise' ? 'twilight' : 'sunrise');
+    });
+
+    const btnAutoRotate = document.getElementById('btn-autorotate');
+    btnAutoRotate.addEventListener('click', () => {
+      controls.autoRotate = !controls.autoRotate;
+      controls.autoRotateSpeed = 1.1;
+      btnAutoRotate.classList.toggle('active', controls.autoRotate);
+    });
+
+    document.getElementById('btn-camera-reset').addEventListener('click', () => {
+      transitionCameraTo(new THREE.Vector3(18, 14, 22), new THREE.Vector3(0, 10.5, 0));
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // --- Main Animation Loop ---
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(0.05, clock.getDelta());
+      const elapsed = clock.getElapsedTime();
+
+      // 1. Smoothly spring-damp platform elevations toward targetY
+      let anyMoved = false;
+      platforms.forEach((p) => {
+        const diff = p.targetY - p.currentY;
+        if (Math.abs(diff) > 0.0005) {
+          p.currentY += diff * Math.min(1, dt * 12.0);
+          anyMoved = true;
+        } else {
+          p.currentY = p.targetY;
+        }
+      });
+
+      // 2. Update dynamic catenary rope bridges & telescoping ladders
+      updateTreehouseConnections(elapsed);
+
+      // 3. Animate Canopy Foliage & Ground Ferns in the Breeze
+      for (let i = 0; i < canopyClusters.length; i++) {
+        const c = canopyClusters[i];
+        const ud = c.userData;
+        c.position.y = ud.baseY + Math.sin(elapsed * 1.4 + ud.phase) * 0.08;
+        c.rotation.z = ud.baseRotZ + Math.cos(elapsed * 1.1 + ud.phase) * 0.025;
+      }
+
+      for (let i = 0; i < fernInstances.length; i++) {
+        const f = fernInstances[i];
+        f.rotation.z = Math.sin(elapsed * 1.8 + f.userData.phase) * 0.04;
+      }
+
+      // 4. Animate Hoist Crate Sway, Wind Vane & Flickering Lanterns
+      if (hoistCrateGroup) {
+        hoistCrateGroup.rotation.z = Math.sin(elapsed * 1.5) * 0.045;
+        hoistCrateGroup.rotation.x = Math.cos(elapsed * 1.2) * 0.035;
+      }
+      if (windVaneGroup) {
+        windVaneGroup.rotation.y = Math.sin(elapsed * 0.9) * 0.45 + 0.4;
+      }
+
+      const baseLanternIntensity = currentLightingMode === 'sunrise' ? 2.6 : 4.8;
+      for (let i = 0; i < lanternLights.length; i++) {
+        const ll = lanternLights[i];
+        ll.light.intensity = baseLanternIntensity + Math.sin(elapsed * 7.5 + ll.phase) * 0.35 + Math.cos(elapsed * 13.0 + ll.phase) * 0.2;
+        ll.mesh.rotation.z = Math.sin(elapsed * 2.1 + ll.phase) * 0.04;
+      }
+
+      // 5. Animate Drifting Fireflies / Forest Spores
+      const fArr = fireflyGeo.attributes.position.array;
+      for (let i = 0; i < fireflyCount; i++) {
+        const fd = fireflyData[i];
+        const curAng = fd.baseAngle + elapsed * fd.speed * 0.15;
+        const r = fd.radius + Math.sin(elapsed * 0.8 + fd.phase) * 0.6;
+        fArr[i * 3] = Math.cos(curAng) * r;
+        fArr[i * 3 + 1] = fd.baseY + Math.sin(elapsed * 1.3 + fd.phase) * 0.65;
+        fArr[i * 3 + 2] = Math.sin(curAng) * r;
+      }
+      fireflyGeo.attributes.position.needsUpdate = true;
+
+      // 6. Camera Focus Transition
+      if (camTransition) {
+        camTransition.progress += dt * 1.8;
+        const t = Math.min(1, camTransition.progress);
+        const ease = t * t * (3 - 2 * t);
+        camera.position.lerpVectors(camTransition.startPos, camTransition.endPos, ease);
+        controls.target.lerpVectors(camTransition.startTarget, camTransition.endTarget, ease);
+        if (t >= 1) camTransition = null;
+      }
+
+      controls.update();
+      updateFloatingLabels();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+
+
+
+
+  </script>
+</body>
+</html>
